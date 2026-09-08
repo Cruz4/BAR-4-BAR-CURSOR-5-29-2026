@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Camera, Maximize2, Route, Sparkles } from 'lucide-react';
+import { Camera, Download, Route, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -38,13 +38,13 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 
 const WHATS_NEW_ITEMS = [
   {
-    title: 'Photos, clips, and a track',
-    desc: 'Shoot or upload on a post or comment, crop and filter, attach a Library or released song, and trim clips to 40 seconds.',
-    icon: Camera,
-    color: 'text-fuchsia-400',
-    bgColor: 'bg-fuchsia-500/5',
-    pathLabel: 'Path: Post a photo or clip',
-    pathLaneId: 'post-clip',
+    title: 'The Imprint',
+    desc: 'Your Booth — tap Imprint while you type. Your words become a live quote card on your wall. Pro unlocks mix faders, shuffle, and five saved styles.',
+    icon: Sparkles,
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/5',
+    pathLabel: 'Path: Style a booth post',
+    pathLaneId: 'imprint-post',
   },
   {
     title: 'Paths in Studio Manual',
@@ -56,11 +56,20 @@ const WHATS_NEW_ITEMS = [
     manualTab: 'paths' as const,
   },
   {
-    title: 'Preview before you drop',
-    desc: 'In Camera studio and Your Booth, tap the thumb to review fullscreen. Clips play with sound.',
-    icon: Maximize2,
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/5',
+    title: 'Library on your device',
+    desc: 'Save music you own or bought for offline play in Library. Turn on auto-download and new unlocks land on this device when you are online.',
+    icon: Download,
+    color: 'text-violet-400',
+    bgColor: 'bg-violet-500/5',
+    pathLabel: 'Path: Play or buy',
+    pathLaneId: 'play-buy',
+  },
+  {
+    title: 'Photos, clips, and a track',
+    desc: 'Shoot or upload on a post or comment, crop and filter, attach a Library or released song, and trim clips to 40 seconds.',
+    icon: Camera,
+    color: 'text-fuchsia-400',
+    bgColor: 'bg-fuchsia-500/5',
     pathLabel: 'Path: Post a photo or clip',
     pathLaneId: 'post-clip',
   },

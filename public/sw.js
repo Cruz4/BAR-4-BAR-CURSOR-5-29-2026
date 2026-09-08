@@ -2,6 +2,40 @@
 const CACHE_NAME = 'akasheet-static-v1';
 const SHELL_CACHE = 'akasheet-shell-v1';
 const STATIC_ASSETS = ['/Logo.png', '/B4B_Font.otf', '/YUSRB_font.ttf'];
+const BADGE_COUNT_CACHE_KEY = 'https://akasheet.internal/app-badge-count';
+
+async function applyAppBadge(count) {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  try {
+    const cache = await caches.open(SHELL_CACHE);
+    await cache.put(
+      BADGE_COUNT_CACHE_KEY,
+      new Response(JSON.stringify({ count: n, at: Date.now() }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+  } catch {
+    /* cache unavailable */
+  }
+  if (typeof self.navigator?.setAppBadge !== 'function') return;
+  if (n <= 0) {
+    await self.navigator.clearAppBadge?.().catch(() => undefined);
+  } else {
+    await self.navigator.setAppBadge(n).catch(() => undefined);
+  }
+}
+
+async function restorePersistedAppBadge() {
+  try {
+    const cache = await caches.open(SHELL_CACHE);
+    const res = await cache.match(BADGE_COUNT_CACHE_KEY);
+    if (!res) return;
+    const payload = await res.json();
+    await applyAppBadge(payload.count);
+  } catch {
+    /* ignore */
+  }
+}
 
 // Firebase Cloud Messaging (Activity push) — no-ops if messaging isn't used yet.
 importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js');
@@ -30,9 +64,7 @@ try {
         tag: payload.data?.type || 'akasheet-activity',
         renotify: true,
       }),
-      typeof self.navigator?.setAppBadge === 'function'
-        ? self.navigator.setAppBadge(unread).catch(() => undefined)
-        : Promise.resolve(),
+      applyAppBadge(unread),
     ]);
   });
 } catch (e) {
@@ -81,9 +113,7 @@ self.addEventListener('push', (event) => {
         badge: '/Logo.png',
         data: { href },
       }),
-      typeof self.navigator?.setAppBadge === 'function'
-        ? self.navigator.setAppBadge(unread).catch(() => undefined)
-        : Promise.resolve(),
+      applyAppBadge(unread),
     ])
   );
 });
@@ -108,6 +138,7 @@ self.addEventListener('activate', (event) => {
         )
       )
       .then(() => self.clients.claim())
+      .then(() => restorePersistedAppBadge())
   );
 });
 
@@ -115,12 +146,7 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
   if (event.data?.type === 'SET_APP_BADGE') {
     const count = Math.max(0, Math.floor(Number(event.data.count) || 0));
-    if (typeof self.navigator?.setAppBadge !== 'function') return;
-    if (count <= 0) {
-      void self.navigator.clearAppBadge?.().catch(() => undefined);
-    } else {
-      void self.navigator.setAppBadge(count).catch(() => undefined);
-    }
+    event.waitUntil(applyAppBadge(count));
   }
 });
 

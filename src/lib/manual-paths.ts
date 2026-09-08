@@ -159,6 +159,35 @@ export const MANUAL_PATHS: ManualPathLane[] = [
     ],
   },
   {
+    id: 'imprint-post',
+    title: 'Style a booth post',
+    blurb: 'Your Booth → Imprint toggle → live quote card from your words. Pro unlocks faders and lock slots.',
+    tier: 'pro',
+    group: 'also',
+    steps: [
+      {
+        id: 'booth',
+        title: 'Your Booth',
+        body: 'On The Scene, open Your Booth. Write a post, then tap Imprint to preview the styled quote card.',
+        href: `/#${SCENE_BOOTH_ID}`,
+        target: '[data-tour="scene-composer"]',
+        isDone: isScene,
+      },
+      {
+        id: 'mix',
+        title: 'Mix or lock (Pro)',
+        body: 'Studio Pro: open Imprint mix — Color, Texture, Rhythm, Depth faders, Shuffle, and up to five locked styles.',
+        target: '[data-tour="scene-composer"]',
+      },
+      {
+        id: 'send',
+        title: 'Post it',
+        body: 'Hit Post. The card stays styled on your wall and in feeds.',
+        target: '[data-tour="scene-composer"]',
+      },
+    ],
+  },
+  {
     id: 'go-public',
     title: 'Go public',
     blurb: 'Booth → turn Artist Home live → share your /profile. Free. Lyrics stay private.',

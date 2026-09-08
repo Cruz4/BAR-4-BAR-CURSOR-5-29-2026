@@ -81,6 +81,13 @@ export type GamificationSummary = {
     lockedAt: string;
     label: string;
   }>;
+  /** Saved Imprint fader presets for booth posts (Studio Pro). */
+  quotePressSlots?: Array<{
+    id: string;
+    faders: { heat: number; grain: number; pace: number; ink: number };
+    lockedAt: string;
+    label: string;
+  }>;
   leaderboardHidden: boolean;
   bonusInkGrantedThisMonth: number;
   bonusInkMonthKey: string;

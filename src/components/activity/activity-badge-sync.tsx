@@ -10,17 +10,27 @@ import { useActivityAlerts } from '@/hooks/use-activity-alerts';
 import { syncAppBadge } from '@/lib/activity/app-badge';
 import { getAppBadgeTotal } from '@/lib/app-badge-counts';
 
+function pushBadgeToLauncher() {
+  void syncAppBadge(getAppBadgeTotal());
+}
+
 export function ActivityBadgeSync() {
   useActivityAlerts();
 
   useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        syncAppBadge(getAppBadgeTotal());
-      }
+    pushBadgeToLauncher();
+
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') pushBadgeToLauncher();
     };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    const onPageHide = () => pushBadgeToLauncher();
+
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', onPageHide);
+    };
   }, []);
 
   return null;

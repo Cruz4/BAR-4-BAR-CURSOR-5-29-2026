@@ -16,6 +16,8 @@ import {
   artistHomeForPublic,
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
+import { IMPRINT_SHELF_MAX } from '@/lib/profile/imprint-shelf';
+import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
 import {
   isReleaseShareLive,
   loadAudioForPlay,
@@ -47,7 +49,10 @@ export async function saveArtistHomeConfig(
   const db = await getDb();
   const normalized = await validateFeaturedTrack(
     userId,
-    stripEmptyContact(stripAlbumRoomCovers(normalizeArtistHomeConfig(config)))
+    await validateImprintShelf(
+      userId,
+      stripEmptyContact(stripAlbumRoomCovers(normalizeArtistHomeConfig(config)))
+    )
   );
   await db.doc(CONFIG_DOC(userId)).set(
     { ...normalized, updatedAt: new Date().toISOString() },
@@ -127,6 +132,36 @@ async function validateFeaturedTrack(
       },
     },
   };
+}
+
+async function validateImprintShelf(
+  userId: string,
+  config: ArtistHomeConfig
+): Promise<ArtistHomeConfig> {
+  const ids = config.featured.imprintShelfPostIds;
+  if (!ids?.length) {
+    if (config.featured.imprintShelfPostIds) {
+      const { imprintShelfPostIds: _drop, ...featured } = config.featured;
+      return { ...config, featured };
+    }
+    return config;
+  }
+
+  const db = await getDb();
+  const validated: string[] = [];
+  for (const id of ids.slice(0, IMPRINT_SHELF_MAX)) {
+    const snap = await db.doc(`posts/${id}`).get();
+    if (!snap.exists) continue;
+    const data = snap.data() || {};
+    if (data.ownerId !== userId) continue;
+    if (!normalizeQuotePressConfig(data.quotePress)) continue;
+    validated.push(id);
+  }
+
+  const featured = { ...config.featured };
+  if (validated.length) featured.imprintShelfPostIds = validated;
+  else delete featured.imprintShelfPostIds;
+  return { ...config, featured };
 }
 
 /** Don't persist a request-mode chip with no line to reveal. */

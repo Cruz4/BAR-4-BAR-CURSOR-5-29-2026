@@ -196,6 +196,22 @@ async function foldAction(
 
 export const markFoldReadClient = (foldId: string) => foldAction('read', foldId);
 export const foldBackClient = (foldId: string) => foldAction('unread', foldId);
+
+async function foldBulkAction(action: 'read_all' | 'unread_all'): Promise<number> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in required');
+  const res = await fetch('/api/folds', {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ action, userId: user.uid }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { marked?: number; error?: string };
+  if (!res.ok) throw new Error(data.error || 'Could not update');
+  return typeof data.marked === 'number' ? data.marked : 0;
+}
+
+export const markAllFoldsReadClient = () => foldBulkAction('read_all');
+export const markAllFoldsUnreadClient = () => foldBulkAction('unread_all');
 export const acceptFoldClient = (foldId: string) => foldAction('accept', foldId);
 export const declineFoldClient = (foldId: string) => foldAction('decline', foldId);
 export const deleteFoldFromInboxClient = (foldId: string) => foldAction('delete', foldId);

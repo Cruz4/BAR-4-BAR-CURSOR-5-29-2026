@@ -1,7 +1,7 @@
 
 # AKAsheet: The Professional AI Rhyme Book & Studio Master Blueprint
 
-**AKAsheet (BA)** is a high-end, universal workstation for musicians, rappers, and lyricists. It is designed to transform the chaotic process of writing a concept album into a structured, AI-assisted workflow. It assists the artist's writing process; it is not a full-song generator.
+**AKAsheet (BA)** is a bar-by-bar AI songwriting workstation and artist home—not a full-song or finished-audio generator. Ink powers drafting and analysis in the sheet; you own the vault, DNA, page, scene, and releases. It is built to turn a concept album into a structured workflow without thematic drift.
 
 ---
 

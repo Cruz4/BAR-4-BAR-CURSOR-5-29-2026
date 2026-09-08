@@ -42,6 +42,7 @@ import {
   vesperfoldDataUrl,
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
+import { sanitizeQuotePressSlots, type QuotePressSlot } from '@/lib/profile/quote-press';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import type { PressingConfig } from '@/lib/profile/pressing';
@@ -118,6 +119,7 @@ function mergeSummary(existing: Partial<GamificationSummary>): GamificationSumma
     starMarkUseStar: Boolean(raw.starMarkUseStar),
     starMarkSeed: normalizeVesperfoldSeed(raw.starMarkSeed ?? 0),
     starMarkSlots: sanitizeVesperfoldSlots(raw.starMarkSlots),
+    quotePressSlots: sanitizeQuotePressSlots(raw.quotePressSlots),
     starMarkPinnedSlotId:
       typeof raw.starMarkPinnedSlotId === 'string' && raw.starMarkPinnedSlotId.trim()
         ? raw.starMarkPinnedSlotId.trim().slice(0, 64)
@@ -871,6 +873,7 @@ export async function updateGamificationSettings(
     starMarkSeed?: number;
     starMarkSlots?: VesperfoldSlot[] | null;
     starMarkPinnedSlotId?: string | null;
+    quotePressSlots?: QuotePressSlot[] | null;
   }
 ): Promise<GamificationSummary> {
   const db = await getDb();
@@ -947,6 +950,11 @@ export async function updateGamificationSettings(
     } else {
       summary.starMarkPinnedSlotId = null;
     }
+  }
+  if (settings.quotePressSlots === null) {
+    summary.quotePressSlots = [];
+  } else if (Array.isArray(settings.quotePressSlots)) {
+    summary.quotePressSlots = sanitizeQuotePressSlots(settings.quotePressSlots);
   }
   let clearCollageIds = false;
   if (settings.profileCollageAlbumIds === null) {
@@ -1753,7 +1761,7 @@ export async function searchPublicArtists(
   opts: { limit?: number; excludeUserId?: string } = {}
 ): Promise<PublicArtistSearchHit[]> {
   const needle = rawQuery.trim().toLowerCase().slice(0, 48);
-  if (needle.length < 2) return [];
+  if (needle.length < 1) return [];
   const limit = Math.min(Math.max(opts.limit ?? 12, 1), 24);
   const db = await getDb();
   const byUserId = new Map<string, PublicArtistSearchHit>();

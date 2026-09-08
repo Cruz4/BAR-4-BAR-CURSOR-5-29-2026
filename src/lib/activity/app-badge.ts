@@ -3,31 +3,56 @@
  * No-ops when unsupported (many desktop browsers / older iOS).
  */
 
+const BADGE_SW_MESSAGE = 'SET_APP_BADGE';
+
+function isInstalledMobilePwa(): boolean {
+  if (typeof window === 'undefined') return false;
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return standalone && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 async function syncServiceWorkerBadge(count: number) {
   try {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
     const registration = await navigator.serviceWorker.ready;
-    registration.active?.postMessage({ type: 'SET_APP_BADGE', count });
+    const message = { type: BADGE_SW_MESSAGE, count };
+    const workers = [
+      navigator.serviceWorker.controller,
+      registration.active,
+      registration.waiting,
+      registration.installing,
+    ].filter(Boolean);
+    for (const worker of workers) {
+      worker?.postMessage(message);
+    }
   } catch {
     /* SW not ready */
   }
 }
 
-export function syncAppBadge(count: number) {
+export async function syncAppBadge(count: number) {
   if (typeof navigator === 'undefined') return;
   const n = Math.max(0, Math.floor(count));
-  try {
-    if (n <= 0) {
-      if ('clearAppBadge' in navigator) {
-        void (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge();
+
+  // Android/iOS home-screen badges are most reliable from the service worker.
+  await syncServiceWorkerBadge(n);
+
+  // Desktop taskbar / dock badges work from the page context.
+  if (!isInstalledMobilePwa()) {
+    try {
+      if (n <= 0 && 'clearAppBadge' in navigator) {
+        await (navigator as Navigator & { clearAppBadge: () => Promise<void> }).clearAppBadge();
+      } else if (n > 0 && 'setAppBadge' in navigator) {
+        await (navigator as Navigator & { setAppBadge: (badge?: number) => Promise<void> }).setAppBadge(n);
       }
-    } else if ('setAppBadge' in navigator) {
-      void (navigator as Navigator & { setAppBadge: (n?: number) => Promise<void> }).setAppBadge(n);
+    } catch {
+      /* unsupported / denied */
     }
-  } catch {
-    /* unsupported / denied */
   }
-  void syncServiceWorkerBadge(n);
+
   void syncNativeAppBadge(n);
 }
 

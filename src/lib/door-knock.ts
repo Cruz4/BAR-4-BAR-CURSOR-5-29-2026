@@ -1,14 +1,14 @@
 /** Artist Home door knock — Discover "Recently live" only. */
 
 /** How many times one person may knock the same door in a day. */
-export const DOOR_KNOCK_MAX_PER_VISITOR_PER_DOOR = 3;
+export const DOOR_KNOCK_MAX_PER_VISITOR_PER_DOOR = 1;
 /** How many different doors one person may knock in a day. */
 export const DOOR_KNOCK_MAX_DOORS_PER_VISITOR_DAY = 5;
 
 /** How many different visitors may knock one artist's door in a day. */
 export const DOOR_KNOCK_MAX_VISITORS_PER_DOOR_DAY = 5;
-/** Hard cap on knocks one artist's door may receive in a day (5 × 3). */
-export const DOOR_KNOCK_MAX_KNOCKS_PER_DOOR_DAY = 15;
+/** Hard cap on knocks one artist's door may receive in a day (5 × 1). */
+export const DOOR_KNOCK_MAX_KNOCKS_PER_DOOR_DAY = 5;
 
 /** @deprecated Use DOOR_KNOCK_MAX_PER_VISITOR_PER_DOOR */
 export const DOOR_KNOCK_MAX_PER_TARGET_PER_DAY = DOOR_KNOCK_MAX_PER_VISITOR_PER_DOOR;
@@ -47,7 +47,7 @@ export function doorKnockBlockMessage(reason: DoorKnockBlockReason | undefined):
   switch (reason) {
     case 'your_knocks_here':
     case 'visitor_knocks_full':
-      return `You already knocked ${DOOR_KNOCK_MAX_PER_VISITOR_PER_DOOR} times here today.`;
+      return 'You already knocked here today.';
     case 'your_doors_today':
       return `You already visited ${DOOR_KNOCK_MAX_DOORS_PER_VISITOR_DAY} doors today.`;
     case 'door_visitors_full':

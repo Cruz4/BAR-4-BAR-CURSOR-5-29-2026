@@ -136,10 +136,10 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           {saleCount > 0 ? <Music className="h-4 w-4" /> : <Dna className="h-3.5 w-3.5 text-primary" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block font-code text-[8px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70 sm:text-[9px]">
+          <span className="block font-code text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/80 sm:text-[10px]">
             Release Catalog
           </span>
-          <span className="block text-[10px] leading-snug text-foreground/90 sm:text-xs sm:leading-relaxed">
+          <span className="block text-xs leading-snug text-foreground/90 sm:text-sm sm:leading-relaxed">
             {total === 0
               ? 'Nothing live yet. New release = music (free). DNA Drop = share lyrics from The Vault (Pro).'
               : `${saleCount} for sale · ${lyricPreviewCount} DNA Drop${lyricPreviewCount === 1 ? '' : 's'}`}
@@ -149,7 +149,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           <Button
             type="button"
             size="sm"
-            className="h-8 whitespace-nowrap bg-fuchsia-400 px-2.5 text-[9px] font-bold uppercase text-black hover:bg-fuchsia-300 sm:h-9 sm:px-3 sm:text-[10px] sm:w-auto"
+            className="h-8 whitespace-nowrap bg-fuchsia-400 px-2.5 text-[10px] font-bold uppercase text-black hover:bg-fuchsia-300 sm:h-9 sm:px-3 sm:text-xs sm:w-auto"
             onClick={() => openFirstDropLathe()}
           >
             New release
@@ -158,7 +158,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 whitespace-nowrap px-2.5 text-[9px] font-bold uppercase sm:h-9 sm:px-3 sm:text-[10px] sm:w-auto"
+            className="h-8 whitespace-nowrap px-2.5 text-[10px] font-bold uppercase sm:h-9 sm:px-3 sm:text-xs sm:w-auto"
             onClick={() => setOpen(true)}
           >
             Catalog

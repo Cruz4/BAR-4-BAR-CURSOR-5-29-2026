@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Share2, Trash2, Users } from 'lucide-react';
+import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Share2, Sparkles, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,8 +31,10 @@ import {
   fetchCommentCount,
   fetchHasLiked,
   fetchHasReverbed,
+  fetchPostById,
   fetchViewerReverbPost,
   fetchLikeCount,
+  fetchReverbCount,
   fetchPublicArtistAvatarMeta,
   likePost,
   toggleReverb,
@@ -61,9 +63,17 @@ import {
 import { activityOpenLinkHref, artistHomePostHref, publicScenePostHref } from '@/lib/activity/href';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
+import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { ImprintExportMenu } from '@/components/profile/imprint-export-menu';
+import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
+import { useGamification } from '@/context/gamification-context';
+import { useImprintComposer } from '@/hooks/use-imprint-composer';
+import { isProOrTrial } from '@/lib/subscription';
+import { quotePressSlotLabel } from '@/lib/profile/quote-press';
+import type { QuotePressConfig } from '@/lib/profile/quote-press';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionField } from '@/components/profile/mention-suggestions';
 import { MentionText } from '@/components/profile/mention-text';
 import { PostPollCard } from '@/components/profile/post-poll';
 
@@ -145,6 +155,24 @@ function ReverbSourceBody({
   const [starSeed, setStarSeed] = useState<number | undefined>(undefined);
   const [useStar, setUseStar] = useState(false);
   const [studioChrome, setStudioChrome] = useState<StudioNameChrome | undefined>(undefined);
+  const [reverbImprint, setReverbImprint] = useState<QuotePressConfig | undefined>(
+    post.reverbQuotePress
+  );
+
+  useEffect(() => {
+    setReverbImprint(post.reverbQuotePress);
+  }, [post.reverbQuotePress]);
+
+  useEffect(() => {
+    if (post.reverbQuotePress || !post.reverbPostId || !post.reverbText?.trim()) return;
+    let cancelled = false;
+    void fetchPostById(post.reverbPostId).then((original) => {
+      if (!cancelled && original?.quotePress) setReverbImprint(original.quotePress);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [post.reverbPostId, post.reverbQuotePress, post.reverbText]);
 
   useEffect(() => {
     if (!liveSlug) {
@@ -232,6 +260,16 @@ function ReverbSourceBody({
         <div className="mt-2">
           <LyricClipCard clip={post.reverbLyricClip} />
         </div>
+      ) : reverbImprint && post.reverbText ? (
+        <div className="mt-2">
+          <QuotePressCard
+            text={post.reverbText}
+            config={reverbImprint}
+            withMentions
+            compact
+            creatorSlug={post.reverbOwnerSlug}
+          />
+        </div>
       ) : post.reverbText ? (
         <ImmersiveClampedText
           text={post.reverbText}
@@ -307,11 +345,14 @@ function ReverbSourceBody({
 export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false, mediaActive }: PostCardProps) {
   const showInlineAuthor = showAuthor && !immersive;
   const { user, loading: authLoading } = useAuth();
+  const { summary } = useGamification();
+  const isPro = isProOrTrial(user);
   const { toast } = useToast();
   const articleRef = useRef<HTMLElement>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
+  const [reverbCount, setReverbCount] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
@@ -331,7 +372,22 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
   const [reverbPollVisibility, setReverbPollVisibility] =
     useState<PostPollResultsVisibility>('after_vote');
   const reverbQuoteRef = useRef<HTMLTextAreaElement | null>(null);
+  const [imprintRoot, setImprintRoot] = useState<HTMLDivElement | null>(null);
+  const [imprintSaveCount, setImprintSaveCount] = useState(post.imprintSaveCount || 0);
   const insertReverbEmoji = useEmojiInserter(reverbQuote, setReverbQuote, reverbQuoteRef);
+  const {
+    imprintOn: reverbImprintOn,
+    setImprintOn: setReverbImprintOn,
+    toggleImprint: toggleReverbImprint,
+    resetImprint: resetReverbImprint,
+    imprintFaders: reverbImprintFaders,
+    setImprintFaders: setReverbImprintFaders,
+    imprintSlots: reverbImprintSlots,
+    slotBusy: reverbImprintSlotBusy,
+    activeImprintConfig: reverbActiveImprintConfig,
+    persistImprintSlots: persistReverbImprintSlots,
+    imprintPayload: reverbImprintPayload,
+  } = useImprintComposer(reverbQuote, isPro, summary.quotePressSlots);
   const [loveBurst, setLoveBurst] = useState(false);
   const tapRef = useRef({ lastAt: 0, downX: 0, downY: 0 });
   const loveBusyRef = useRef(false);
@@ -367,18 +423,24 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       fetchLikeCount(post.id),
       fetchHasLiked(post.id),
       fetchCommentCount(post.id),
+      fetchReverbCount(rootIdForReverb),
     ])
-      .then(([count, hasLiked, replies]) => {
+      .then(([count, hasLiked, replies, reverbs]) => {
         if (cancelled || loveBusyRef.current) return;
         setLikeCount(count);
         setLiked(hasLiked);
         setCommentCount(replies);
+        setReverbCount(reverbs);
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [post.id, user?.id, authLoading]);
+  }, [post.id, rootIdForReverb, user?.id, authLoading]);
+
+  useEffect(() => {
+    setImprintSaveCount(post.imprintSaveCount || 0);
+  }, [post.imprintSaveCount]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -426,14 +488,24 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       viewerReverbPost?.voice ||
       viewerReverbPost?.imageUrl ||
       viewerReverbPost?.video ||
-      viewerReverbPost?.poll
+      viewerReverbPost?.poll ||
+      viewerReverbPost?.quotePress
   );
   const reverbPollReady =
     !reverbPollOpen ||
     (Boolean(reverbQuote.trim()) && reverbPollOptions.every((option) => option.trim()));
+  const reverbImprintReady = !reverbImprintOn || Boolean(reverbQuote.trim());
   const reverbComposerReady =
     reverbPollReady &&
-    Boolean(reverbQuote.trim() || reverbVoice || reverbImage || reverbClip || reverbPollOpen);
+    reverbImprintReady &&
+    Boolean(
+      reverbQuote.trim() ||
+        reverbVoice ||
+        reverbImage ||
+        reverbClip ||
+        reverbPollOpen ||
+        reverbImprintOn
+    );
 
   const resetReverbComposer = () => {
     setReverbQuote('');
@@ -445,6 +517,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     setReverbPollOpen(false);
     setReverbPollOptions(['', '']);
     setReverbPollVisibility('after_vote');
+    resetReverbImprint();
   };
 
   const openReverbComposer = () => {
@@ -462,6 +535,12 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       setReverbPollOpen(false);
       setReverbPollOptions(['', '']);
       setReverbPollVisibility('after_vote');
+    }
+    if (viewerReverbPost?.quotePress) {
+      setReverbImprintOn(true);
+      setReverbImprintFaders(viewerReverbPost.quotePress.faders);
+    } else {
+      resetReverbImprint();
     }
     setReverbComposerOpen(true);
   };
@@ -583,6 +662,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
       if (result.status === 'removed') {
         setViewerReverbQuote('');
         setViewerReverbPost(null);
+        setReverbCount((c) => Math.max(0, c - 1));
+      } else if (result.status === 'created') {
+        setReverbCount((c) => c + 1);
       } else if (result.post) {
         setViewerReverbPost(result.post);
         setViewerReverbQuote(result.post.text || '');
@@ -595,7 +677,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             composer.voice ||
             composer.image ||
             composer.video ||
-            composer.poll)
+            composer.poll ||
+            composer.quotePress)
       );
       toast({
         title: result.status === 'created'
@@ -606,7 +689,9 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             ? 'This post now echoes on your wall and Reverbs page.'
             : 'Taken off your Reverbs.',
       });
-      if (result.status === 'created' && result.post) onReverbed?.(result.post);
+      if ((result.status === 'created' || result.status === 'updated') && result.post) {
+        onReverbed?.(result.post);
+      }
     } catch (e) {
       toast({
         variant: 'destructive',
@@ -629,6 +714,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         ? { poll: { options: reverbPollOptions, resultsVisibility: reverbPollVisibility } }
         : {}),
       ...(viewerReverbPost?.poll && !reverbPollOpen ? { clearPoll: true } : {}),
+      ...reverbImprintPayload,
+      ...(viewerReverbPost?.quotePress && !reverbImprintOn ? { clearQuotePress: true } : {}),
     });
   };
 
@@ -758,6 +845,25 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
         <div className="mt-3">
           <LyricClipCard clip={post.lyricClip} />
         </div>
+      ) : post.quotePress && post.text ? (
+        <div className="mt-3">
+          <QuotePressCard
+            ref={setImprintRoot}
+            text={post.text}
+            config={post.quotePress}
+            withMentions
+            creatorSlug={post.ownerSlug}
+          />
+          <div className="mt-1 flex items-center justify-end gap-1">
+            <ImprintExportMenu
+              captureRoot={imprintRoot}
+              text={post.text}
+              post={{ ...post, imprintSaveCount }}
+              isAdmin={isAdmin}
+              onSaveCountChange={setImprintSaveCount}
+            />
+          </div>
+        </div>
       ) : post.text ? (
         <ImmersiveClampedText
           text={post.text}
@@ -846,7 +952,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
-        {canReverb && (
+        {canReverb ? (
           <DropdownMenu>
           <DropdownMenuTrigger asChild>
           <button
@@ -861,7 +967,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             title="Reverb — pass this post onto your wall (like a repost)"
           >
             <Repeat2 className={cn('h-3.5 w-3.5', reverbed && 'stroke-[2.5]')} />
-            {reverbed ? 'Reverbed' : 'Reverb'}
+            {reverbCount > 0 ? reverbCount : reverbed ? 'Reverbed' : 'Reverb'}
           </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
@@ -869,6 +975,18 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             <DropdownMenuItem onSelect={openReverbComposer}>{viewerHasQuoteContent ? 'Edit Quote' : 'Quote'}</DropdownMenuItem>
           </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <span
+            className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-violet-300/75"
+            title={
+              reverbCount > 0
+                ? `${reverbCount} Reverb${reverbCount === 1 ? '' : 's'}`
+                : 'Reverbs on this post'
+            }
+          >
+            <Repeat2 className="h-3.5 w-3.5" />
+            {reverbCount > 0 ? reverbCount : 'Reverb'}
+          </span>
         )}
         <button
           type="button"
@@ -884,8 +1002,8 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             content={
               <p className="text-[10px] font-bold leading-snug">
                 {post.viewCount || 0} {post.viewCount === 1 ? 'person saw' : 'people saw'} this
-                {likeCount + commentCount > 0
-                  ? ` · ${likeCount} love${likeCount === 1 ? '' : 's'} · ${commentCount} ${commentCount === 1 ? 'reply' : 'replies'}`
+                {likeCount + commentCount + reverbCount > 0
+                  ? ` · ${likeCount} love${likeCount === 1 ? '' : 's'} · ${commentCount} ${commentCount === 1 ? 'reply' : 'replies'}${reverbCount > 0 ? ` · ${reverbCount} Reverb${reverbCount === 1 ? '' : 's'}` : ''}`
                   : ''}
                 . Only you see this.
               </p>
@@ -897,10 +1015,10 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                 <Eye className="h-3 w-3" />
                 {compactReachCount(post.viewCount || 0)}
               </span>
-              {likeCount + commentCount > 0 ? (
+              {likeCount + commentCount + reverbCount > 0 ? (
                 <span className="inline-flex items-center gap-1">
                   <Users className="h-3 w-3" />
-                  {compactReachCount(likeCount + commentCount)}
+                  {compactReachCount(likeCount + commentCount + reverbCount)}
                 </span>
               ) : null}
             </span>
@@ -924,40 +1042,76 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               <Repeat2 className="h-5 w-5 text-violet-300" /> {viewerHasQuoteContent ? 'Edit Quote Reverb' : 'Reverb this post'}
             </DialogTitle>
             <DialogDescription>
-              Add your thought, voice, photo, or poll above the original, then pass both to your wall.
+              Add your thought, voice, photo, poll, or Imprint above the original, then pass both to your wall.
             </DialogDescription>
           </DialogHeader>
           <div className="relative space-y-3">
-            <Textarea
-              ref={reverbQuoteRef}
-              value={reverbQuote}
-              onChange={(event) => setReverbQuote(event.target.value.slice(0, 1000))}
-              onPaste={(event) => {
-                void attachPastedImage(event, {
-                  disabled: busy,
-                  image: reverbImage,
-                  onImageChange: setReverbImage,
-                  clip: reverbClip,
-                  onClipChange: setReverbClip,
-                  onError: (message) =>
-                    toast({
-                      variant: 'destructive',
-                      title: 'Could not attach photo',
-                      description: message,
-                    }),
-                });
-              }}
-              placeholder={
-                reverbVoice || reverbImage || reverbClip || reverbPollOpen
-                  ? 'Add a caption (optional)…'
-                  : 'Add your quote… or paste a link or photo'
-              }
-              rows={4}
-              maxLength={1000}
-              className="resize-none border-violet-400/20 bg-black/30"
-              autoFocus
-            />
-            <MentionSuggestions value={reverbQuote} onChange={setReverbQuote} excludeUserId={user?.id} />
+            <MentionField value={reverbQuote} onChange={setReverbQuote} excludeUserId={user?.id}>
+              <Textarea
+                ref={reverbQuoteRef}
+                value={reverbQuote}
+                onChange={(event) => setReverbQuote(event.target.value.slice(0, 1000))}
+                onPaste={(event) => {
+                  void attachPastedImage(event, {
+                    disabled: busy,
+                    image: reverbImage,
+                    onImageChange: setReverbImage,
+                    clip: reverbClip,
+                    onClipChange: setReverbClip,
+                    onError: (message) =>
+                      toast({
+                        variant: 'destructive',
+                        title: 'Could not attach photo',
+                        description: message,
+                      }),
+                  });
+                }}
+                placeholder={
+                  reverbVoice || reverbImage || reverbClip || reverbPollOpen || reverbImprintOn
+                    ? 'Add a caption (optional)…'
+                    : 'Add your quote… or paste a link or photo'
+                }
+                rows={4}
+                maxLength={1000}
+                className="resize-none border-violet-400/20 bg-black/30"
+                autoFocus
+              />
+            </MentionField>
+            {reverbImprintOn && reverbQuote.trim() ? (
+              <div className="space-y-2">
+                <QuotePressCard text={reverbQuote} config={reverbActiveImprintConfig} withMentions />
+                <QuotePressComposerPanel
+                  faders={reverbActiveImprintConfig.faders}
+                  onFadersChange={(next) => {
+                    if (!isPro) return;
+                    setReverbImprintFaders(next);
+                  }}
+                  slots={reverbImprintSlots}
+                  isPro={isPro}
+                  busy={busy || reverbImprintSlotBusy}
+                  onLockSlot={() => {
+                    if (!isPro) return;
+                    const label = quotePressSlotLabel(reverbImprintFaders);
+                    void persistReverbImprintSlots([
+                      ...reverbImprintSlots,
+                      {
+                        id: `qp-${Date.now()}`,
+                        faders: { ...reverbImprintFaders },
+                        lockedAt: new Date().toISOString(),
+                        label,
+                      },
+                    ]);
+                  }}
+                  onLoadSlot={(slot) => {
+                    if (!isPro) return;
+                    setReverbImprintFaders(slot.faders);
+                  }}
+                  onClearSlot={(slotId) => {
+                    void persistReverbImprintSlots(reverbImprintSlots.filter((s) => s.id !== slotId));
+                  }}
+                />
+              </div>
+            ) : null}
             {reverbPollOpen ? (
               <PollComposerFields
                 options={reverbPollOptions}
@@ -1004,6 +1158,22 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
                 )}
               >
                 <BarChart3 className="h-3.5 w-3.5" /> Poll
+              </button>
+              <button
+                type="button"
+                onClick={toggleReverbImprint}
+                disabled={busy}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                  reverbImprintOn
+                    ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+                    : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+                )}
+              >
+                <Sparkles
+                  className={cn('h-3.5 w-3.5', reverbImprintOn ? 'text-cyan-200' : 'text-cyan-400/80')}
+                />
+                Imprint
               </button>
             </div>
             <div className="rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">

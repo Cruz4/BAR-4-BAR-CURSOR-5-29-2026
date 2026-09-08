@@ -1,67 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { HandMetal, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import {
-  doorKnockBlockMessage,
-  doorKnockLedgerLines,
-  type DoorKnockQuota,
-} from '@/lib/door-knock';
+import { doorKnockBlockMessage, type DoorKnockQuota } from '@/lib/door-knock';
+import { playDoorKnockSound } from '@/lib/door-knock-sound';
 import {
   fetchDoorKnockQuota,
   knockArtistHomeDoorClient,
 } from '@/lib/door-knock-client';
-
-function KnockDots({
-  used,
-  max,
-  className,
-}: {
-  used: number;
-  max: number;
-  className?: string;
-}) {
-  return (
-    <span className={cn('inline-flex gap-0.5', className)} aria-hidden>
-      {Array.from({ length: max }, (_, i) => (
-        <span
-          key={i}
-          className={cn(
-            'h-1.5 w-1.5 rounded-full',
-            i < used ? 'bg-sky-300' : 'bg-sky-500/25'
-          )}
-        />
-      ))}
-    </span>
-  );
-}
-
-function DoorKnockLedger({ quota }: { quota: DoorKnockQuota }) {
-  const { doorLine, youLine } = doorKnockLedgerLines(quota);
-  return (
-    <div
-      className="mt-2 space-y-1 rounded-lg border border-sky-500/15 bg-sky-500/[0.04] px-2.5 py-2 font-code text-[9px] leading-relaxed tracking-wide text-sky-100/75"
-      aria-label="Door knock tally for today"
-    >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>{doorLine}</span>
-        <KnockDots
-          used={quota.visitorsAtDoor}
-          max={5}
-          className="hidden sm:inline-flex"
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sky-200/60">
-        <span>{youLine}</span>
-        <KnockDots used={quota.yourKnocksHere} max={3} className="inline-flex" />
-      </div>
-    </div>
-  );
-}
 
 export function DoorKnockButton({
   targetUserId,
@@ -69,30 +18,38 @@ export function DoorKnockButton({
   targetSlug,
   knockerSlug,
   className,
+  compact = false,
 }: {
   targetUserId: string;
   targetName: string;
   targetSlug?: string;
   knockerSlug?: string;
   className?: string;
+  /** Inline on Recently live card — sits beside Visit. */
+  compact?: boolean;
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [busy, setBusy] = useState(false);
+  const [punching, setPunching] = useState(false);
   const [quota, setQuota] = useState<DoorKnockQuota | null>(null);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!user?.id || user.id === targetUserId) return;
-    void fetchDoorKnockQuota(targetUserId).then(setQuota);
+    void fetchDoorKnockQuota(targetUserId).then((next) => {
+      setQuota(next);
+      if (next && !next.canKnock) setSent(true);
+    });
   }, [user?.id, targetUserId]);
 
   if (!user?.id || user.id === targetUserId) return null;
 
-  const canKnock = quota?.canKnock ?? true;
+  const canKnock = !sent && (quota?.canKnock ?? true);
 
   const knock = async () => {
-    if (busy || !canKnock) return;
-    setBusy(true);
+    if (!canKnock || punching) return;
+    setPunching(true);
+    playDoorKnockSound();
     try {
       const result = await knockArtistHomeDoorClient({
         targetUserId,
@@ -102,6 +59,7 @@ export function DoorKnockButton({
         knockerSlug,
       });
       if (!result.ok) {
+        setPunching(false);
         toast({
           variant: 'destructive',
           title: 'Knock not sent',
@@ -110,46 +68,46 @@ export function DoorKnockButton({
         if (result.quota) setQuota(result.quota);
         return;
       }
+      setSent(true);
       if (result.quota) setQuota(result.quota);
-      toast({
-        title: result.live ? 'Knock sent' : 'Knock logged',
-        description: result.live
-          ? `${targetName} is home — they may answer from Msgs.`
-          : `${targetName} will see it when they open their Artist Home.`,
-      });
+      window.setTimeout(() => setPunching(false), 360);
     } catch (error) {
+      setPunching(false);
       toast({
         variant: 'destructive',
         title: 'Knock not sent',
         description: error instanceof Error ? error.message : undefined,
       });
-    } finally {
-      setBusy(false);
     }
   };
 
+  const label = sent ? 'Knocked' : 'Knock';
+
   return (
-    <div className={cn('min-w-0', className)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={busy || !canKnock}
-          className="h-8 shrink-0 gap-1.5 border-sky-400/35 bg-sky-500/10 font-bold uppercase text-sky-100 hover:bg-sky-500/20"
-          onClick={() => void knock()}
-          aria-label={`Knock on ${targetName}'s door`}
-        >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HandMetal className="h-3.5 w-3.5" />}
-          Knock
-        </Button>
-        {quota && !quota.canKnock ? (
-          <span className="font-code text-[9px] text-sky-200/55">
-            {doorKnockBlockMessage(quota.blockReason)}
-          </span>
-        ) : null}
-      </div>
-      {quota ? <DoorKnockLedger quota={quota} /> : null}
-    </div>
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={!canKnock}
+      className={cn(
+        'shrink-0 gap-1.5 border-amber-400/40 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-amber-600/5 font-bold uppercase text-amber-50 shadow-[0_0_18px_rgba(251,191,36,0.12)] transition-all hover:border-amber-300/55 hover:from-amber-500/25 hover:to-orange-500/15 hover:shadow-[0_0_22px_rgba(251,191,36,0.2)] disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-muted-foreground/60 disabled:shadow-none',
+        compact ? 'h-8 px-2.5 text-[10px] tracking-wide' : 'h-9 px-3 text-[11px]',
+        className
+      )}
+      onClick={() => void knock()}
+      aria-label={sent ? `Already knocked on ${targetName}'s door today` : `Knock on ${targetName}'s door`}
+    >
+      <span
+        className={cn(
+          'inline-block text-base leading-none',
+          punching && 'animate-[door-knock-punch_0.36s_ease-in-out]',
+          sent && 'grayscale opacity-60'
+        )}
+        aria-hidden
+      >
+        ✊
+      </span>
+      {label}
+    </Button>
   );
 }

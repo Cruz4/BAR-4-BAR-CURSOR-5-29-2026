@@ -14,6 +14,7 @@ import {
 } from '@/lib/door-knock-client';
 import { DoorKnockAnswerDialog } from '@/components/profile/door-knock-answer-dialog';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
+import { playDoorKnockSound } from '@/lib/door-knock-sound';
 
 /**
  * When the profile owner is on their Artist Home: heartbeat presence,
@@ -72,6 +73,7 @@ export function DoorKnockHomeListener({
           const knockerId = typeof row.knockerId === 'string' ? row.knockerId : '';
           if (!knockerId || knockerId === user.id) continue;
           handledRef.current.add(knockId);
+          playDoorKnockSound(0.18);
           setLiveKnock({
             knockId,
             knockerId,

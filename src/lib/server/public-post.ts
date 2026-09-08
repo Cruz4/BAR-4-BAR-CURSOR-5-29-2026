@@ -8,6 +8,7 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 import type { VoiceNote } from '@/lib/profile/voice-notes';
 import type { WallClip } from '@/lib/profile/wall-clips';
 import { parsePostPoll } from '@/lib/profile/post-polls';
+import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
 
 export type PublicPostPageData = {
   post: ProfilePost;
@@ -65,6 +66,9 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
   const poll = parsePostPoll(data.poll);
   const reverbPoll = parsePostPoll(data.reverbPoll);
+  const quotePress = normalizeQuotePressConfig(data.quotePress);
+  const reverbQuotePress = normalizeQuotePressConfig(data.reverbQuotePress);
+  const giphySyndication = parseGiphySyndication(data.giphySyndication);
   return {
     id,
     ownerId: clean(data.ownerId, 128) || '',
@@ -83,6 +87,9 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
     ...(typeof data.viewCount === 'number' && data.viewCount > 0
       ? { viewCount: Math.floor(data.viewCount) }
       : {}),
+    ...(typeof data.imprintSaveCount === 'number' && data.imprintSaveCount > 0
+      ? { imprintSaveCount: Math.floor(data.imprintSaveCount) }
+      : {}),
     ...(data.isReverb === true ? { isReverb: true } : {}),
     ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
       ? { sourceKind: data.sourceKind }
@@ -100,6 +107,26 @@ export function postFromServerDoc(id: string, data: Record<string, unknown>): Pr
     ...(reverbLyricClip ? { reverbLyricClip } : {}),
     ...(poll ? { poll } : {}),
     ...(reverbPoll ? { reverbPoll } : {}),
+    ...(quotePress ? { quotePress } : {}),
+    ...(reverbQuotePress ? { reverbQuotePress } : {}),
+    ...(giphySyndication ? { giphySyndication } : {}),
+  };
+}
+
+function parseGiphySyndication(raw: unknown): ProfilePost['giphySyndication'] {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const data = raw as Record<string, unknown>;
+  const status = data.status;
+  if (status !== 'pending' && status !== 'live' && status !== 'failed') return undefined;
+  return {
+    status,
+    ...(clean(data.giphyId, 80) ? { giphyId: clean(data.giphyId, 80) } : {}),
+    ...(clean(data.giphyUrl, 500) ? { giphyUrl: clean(data.giphyUrl, 500) } : {}),
+    ...(clean(data.embedUrl, 500) ? { embedUrl: clean(data.embedUrl, 500) } : {}),
+    ...(clean(data.submittedAt, 40) ? { submittedAt: clean(data.submittedAt, 40) } : {}),
+    ...(clean(data.submittedBy, 128) ? { submittedBy: clean(data.submittedBy, 128) } : {}),
+    ...(clean(data.error, 240) ? { error: clean(data.error, 240) } : {}),
+    ...(data.auto === true ? { auto: true } : {}),
   };
 }
 

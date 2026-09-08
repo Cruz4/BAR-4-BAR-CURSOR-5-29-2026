@@ -21,6 +21,9 @@ import {
   type ArtistHomeContact,
 } from '@/lib/profile/contact';
 import {
+  normalizeImprintShelfPostIds,
+} from '@/lib/profile/imprint-shelf';
+import {
   normalizeSoundIdentity,
   type ArtistHomeSoundIdentity,
 } from '@/lib/profile/sound-identity';
@@ -33,6 +36,7 @@ export type ProfileModuleId =
   | 'openLock'
   | 'dropShelf'
   | 'proofWall'
+  | 'imprintShelf'
   | 'wall'
   | 'friends'
   | 'guestbook';
@@ -113,6 +117,8 @@ export type ArtistHomeFeatured = {
   dropShelfShareIds?: string[];
   /** Optional outbound socials — only filled ones appear under the portrait. */
   socials?: ArtistHomeSocials;
+  /** Curated imprint post ids (must already exist as wall/scene posts). */
+  imprintShelfPostIds?: string[];
   /** Optional 3-second hello — first badge in the social row under the portrait. */
   voiceMemo?: VoiceNote;
   /** Optional contact line under the streak boxes — public or request-to-see. */
@@ -172,6 +178,12 @@ export const MODULE_META: Record<
     defaultSize: 'M',
     defaultEnabled: true,
   },
+  imprintShelf: {
+    label: 'Imprint Shelf',
+    description: 'Imprints you saved and chose to show on your home.',
+    defaultSize: 'L',
+    defaultEnabled: false,
+  },
   wall: {
     label: 'The Wall',
     description: 'Your posts — thoughts, releases, embeds.',
@@ -197,6 +209,7 @@ export const MODULE_ORDER_DEFAULT: ProfileModuleId[] = [
   'dropShelf',
   'barOfWeek',
   'wall',
+  'imprintShelf',
   'openLock',
   'barBoard',
   'rhymeFingerprint',
@@ -426,6 +439,9 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
 
   const contact = normalizeContact(obj.contact);
   if (contact) featured.contact = contact;
+
+  const imprintShelfPostIds = normalizeImprintShelfPostIds(obj.imprintShelfPostIds);
+  if (imprintShelfPostIds) featured.imprintShelfPostIds = imprintShelfPostIds;
 
   return featured;
 }

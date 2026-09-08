@@ -136,6 +136,67 @@ export async function foldBackUnread(opts: { foldId: string; userId: string }): 
   return (await getFold(opts.foldId)) as FoldDoc;
 }
 
+export async function markAllFoldsRead(userId: string): Promise<number> {
+  const db = await getDb();
+  const snap = await db.collection('folds').where('memberIds', 'array-contains', userId).get();
+  const now = new Date().toISOString();
+  let count = 0;
+  let batch = db.batch();
+  let batchSize = 0;
+
+  for (const doc of snap.docs) {
+    const fold = asFold(doc.id, doc.data());
+    if (!fold || fold.deletedFor?.[userId] || fold.status === 'declined') continue;
+    if (fold.status === 'pending' && fold.initiatedBy !== userId) continue;
+    if (asUnreadCount(fold.unread[userId]) <= 0) continue;
+    batch.update(doc.ref, {
+      [`unread.${userId}`]: 0,
+      [`foldedBack.${userId}`]: false,
+      [`lastReadAt.${userId}`]: now,
+      updatedAt: now,
+    });
+    count += 1;
+    batchSize += 1;
+    if (batchSize >= 400) {
+      await batch.commit();
+      batch = db.batch();
+      batchSize = 0;
+    }
+  }
+  if (batchSize > 0) await batch.commit();
+  return count;
+}
+
+export async function markAllFoldsUnread(userId: string): Promise<number> {
+  const db = await getDb();
+  const snap = await db.collection('folds').where('memberIds', 'array-contains', userId).get();
+  const now = new Date().toISOString();
+  let count = 0;
+  let batch = db.batch();
+  let batchSize = 0;
+
+  for (const doc of snap.docs) {
+    const fold = asFold(doc.id, doc.data());
+    if (!fold || fold.deletedFor?.[userId] || fold.status !== 'open') continue;
+    if (!fold.lastBarId) continue;
+    if (asUnreadCount(fold.unread[userId]) > 0) continue;
+    batch.update(doc.ref, {
+      [`unread.${userId}`]: 1,
+      [`foldedBack.${userId}`]: true,
+      updatedAt: now,
+    });
+    count += 1;
+    batchSize += 1;
+    if (batchSize >= 400) {
+      await batch.commit();
+      batch = db.batch();
+      batchSize = 0;
+    }
+  }
+  if (batchSize > 0) await batch.commit();
+  return count;
+}
+
 export async function acceptFold(opts: { foldId: string; userId: string }): Promise<FoldDoc> {
   const fold = await getFold(opts.foldId);
   if (!fold) throw new Error('Conversation not found.');

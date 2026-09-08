@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { StudioLoader } from '@/components/studio-loader';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { FoldReadToggle } from '@/components/folds/fold-read-toggle';
+import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { useAuth } from '@/hooks/use-auth';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
@@ -35,10 +36,11 @@ export function getRecentFolds(folds: FoldDoc[], me: string, limit = PREVIEW_LIM
 export function FoldNavButton() {
   const router = useRouter();
   const { user } = useAuth();
-  const { folds, unread, waiting, ready } = useFoldInbox();
+  const { folds, unread, waiting, ready, markAllFoldsRead, markAllFoldsUnread } = useFoldInbox();
   const { enabled } = useFoldsFeature();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const me = user?.id || '';
   const previewFolds = useMemo(() => getRecentFolds(folds, me, PREVIEW_LIMIT), [folds, me]);
@@ -48,6 +50,26 @@ export function FoldNavButton() {
   const openThread = (foldId: string) => {
     setOpen(false);
     router.push(`/msgs/${foldId}`);
+  };
+
+  const handleMarkAllRead = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllFoldsRead();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleMarkAllUnread = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllFoldsUnread();
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   return (
@@ -64,7 +86,7 @@ export function FoldNavButton() {
         >
           <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
           {unread > 0 && (
-            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold leading-none text-black shadow ring-2 ring-background">
+            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold leading-none text-black shadow">
               {unread > 99 ? '99+' : unread}
             </span>
           )}
@@ -78,11 +100,21 @@ export function FoldNavButton() {
           <h4 className="text-[10px] font-bold uppercase tracking-widest text-amber-300 flex items-center gap-1.5">
             <MessageSquare className="h-3 w-3" /> Msgs
           </h4>
-          {waiting > 0 ? (
-            <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200">
-              {waiting} request{waiting === 1 ? '' : 's'}
-            </span>
-          ) : null}
+          <div className="flex items-center gap-1.5">
+            {waiting > 0 ? (
+              <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200">
+                {waiting} request{waiting === 1 ? '' : 's'}
+              </span>
+            ) : null}
+            <InboxBulkReadToggle
+              unreadCount={unread}
+              onMarkAllRead={handleMarkAllRead}
+              onMarkAllUnread={handleMarkAllUnread}
+              busy={bulkBusy}
+              variant="amber"
+              compact
+            />
+          </div>
         </div>
 
         <div className="max-h-[min(22rem,50vh)] overflow-y-auto">

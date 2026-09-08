@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { markActivityRead, markActivityUnread, markAllActivityRead } from '@/lib/server/activity';
+import {
+  markActivityRead,
+  markActivityUnread,
+  markAllActivityRead,
+  markAllActivityUnread,
+} from '@/lib/server/activity';
 import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
@@ -23,7 +28,9 @@ export async function POST(req: Request) {
     }
 
     if (body.all === true) {
-      const marked = await markAllActivityRead(userId);
+      const marked = body.unread === true
+        ? await markAllActivityUnread(userId)
+        : await markAllActivityRead(userId);
       return NextResponse.json({ ok: true, marked });
     }
 

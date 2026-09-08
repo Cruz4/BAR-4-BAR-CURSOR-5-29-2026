@@ -30,6 +30,8 @@ import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
 import { firstInlineHref } from '@/lib/profile/inline-links';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
+import { normalizeQuotePressConfig, type QuotePressConfig } from '@/lib/profile/quote-press';
+import { emitWallPostFeed } from '@/lib/scene/wall-post-feed-events';
 import {
   deleteVoiceStorage,
   parseVoiceNote,
@@ -79,6 +81,34 @@ import {
   type PostPoll,
 } from '@/lib/profile/post-polls';
 
+export type ImprintGiphySyndication = {
+  status: 'pending' | 'live' | 'failed';
+  giphyId?: string;
+  giphyUrl?: string;
+  embedUrl?: string;
+  submittedAt?: string;
+  submittedBy?: string;
+  error?: string;
+  auto?: boolean;
+};
+
+function parseImprintGiphySyndication(raw: unknown): ImprintGiphySyndication | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const data = raw as Record<string, unknown>;
+  const status = data.status;
+  if (status !== 'pending' && status !== 'live' && status !== 'failed') return undefined;
+  return {
+    status,
+    ...(typeof data.giphyId === 'string' ? { giphyId: data.giphyId } : {}),
+    ...(typeof data.giphyUrl === 'string' ? { giphyUrl: data.giphyUrl } : {}),
+    ...(typeof data.embedUrl === 'string' ? { embedUrl: data.embedUrl } : {}),
+    ...(typeof data.submittedAt === 'string' ? { submittedAt: data.submittedAt } : {}),
+    ...(typeof data.submittedBy === 'string' ? { submittedBy: data.submittedBy } : {}),
+    ...(typeof data.error === 'string' ? { error: data.error } : {}),
+    ...(data.auto === true ? { auto: true } : {}),
+  };
+}
+
 export type ProfilePost = {
   id: string;
   ownerId: string;
@@ -98,6 +128,8 @@ export type ProfilePost = {
   createdAt: string;
   /** Unique people who saw this post. Owner-only in the UI. */
   viewCount?: number;
+  /** Times this imprint was saved to a collection. */
+  imprintSaveCount?: number;
   /** True when this wall post is a Reverb (repost) of another artist's post. */
   isReverb?: boolean;
   /** New shares identify the original content kind; legacy records safely omit it. */
@@ -121,8 +153,14 @@ export type ProfilePost = {
   poll?: PostPoll;
   /** Snapshot of the original poll when this wall item is a Reverb. */
   reverbPoll?: PostPoll;
+  /** Snapshot of the original Imprint when this wall item is a Reverb. */
+  reverbQuotePress?: QuotePressConfig;
   /** Public Artist Home Pressing, attached only to lightweight Scene summaries. */
   pressing?: PressingConfig;
+  /** The Imprint — generative quote-card typography for this post. */
+  quotePress?: QuotePressConfig;
+  /** Platform Giphy syndication status (admin / auto pipeline). */
+  giphySyndication?: ImprintGiphySyndication;
   /** Baked public chip — skip live avatar waterfalls in feeds. */
   ownerAvatarUrl?: string;
   ownerStarMarkUseStar?: boolean;
@@ -143,6 +181,10 @@ export type PostComment = {
   video?: WallClip;
   /** Reply to another comment on the same post. */
   parentCommentId?: string;
+  /** The Imprint — generative quote-card typography for this reply. */
+  quotePress?: QuotePressConfig;
+  /** Poll attached to this reply (votes live in server-only subcollections). */
+  poll?: PostPoll;
 };
 
 export type FriendshipStatus = 'pending' | 'accepted';
@@ -257,11 +299,13 @@ export async function createPost(input: {
   lyricClip?: LyricClip;
   sourceKind?: 'post' | 'song' | 'dna';
   poll?: CreatePostPoll;
+  quotePress?: QuotePressConfig;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
   const poll = buildPostPoll(input.poll);
+  const quotePress = normalizeQuotePressConfig(input.quotePress);
   const embedUrl = (input.embedUrl?.trim() || firstInlineHref(text) || '').slice(0, 500) || undefined;
   let imageUrl = input.imageUrl?.trim() || undefined;
   let imageStoragePath: string | undefined;
@@ -342,6 +386,7 @@ export async function createPost(input: {
     ...(parsedLyricClip ? { lyricClip: parsedLyricClip } : {}),
     ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
     ...(poll ? { poll } : {}),
+    ...(quotePress ? { quotePress } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id: postId, ...data } = post;
@@ -370,6 +415,7 @@ export async function createPost(input: {
   } catch {
     /* ignore */
   }
+  emitWallPostFeed({ kind: 'upsert', post });
   return post;
 }
 
@@ -400,6 +446,7 @@ export async function deletePost(postId: string): Promise<void> {
     /* still attempt post delete */
   }
   await deleteDoc(doc(db, 'posts', postId));
+  emitWallPostFeed({ kind: 'deleted', postId });
 }
 
 function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
@@ -411,6 +458,9 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
   const reverbLyricClip = parseLyricClip(data.reverbLyricClip);
   const poll = parsePostPoll(data.poll);
   const reverbPoll = parsePostPoll(data.reverbPoll);
+  const quotePress = normalizeQuotePressConfig(data.quotePress);
+  const reverbQuotePress = normalizeQuotePressConfig(data.reverbQuotePress);
+  const giphySyndication = parseImprintGiphySyndication(data.giphySyndication);
   return {
     id,
     ownerId: String(data.ownerId || ''),
@@ -426,6 +476,9 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(parsedReverbVideo ? { reverbVideo: parsedReverbVideo } : {}),
     ...(typeof data.viewCount === 'number' && data.viewCount > 0
       ? { viewCount: Math.floor(data.viewCount) }
+      : {}),
+    ...(typeof data.imprintSaveCount === 'number' && data.imprintSaveCount > 0
+      ? { imprintSaveCount: Math.floor(data.imprintSaveCount) }
       : {}),
     ...(data.isReverb === true ? { isReverb: true } : {}),
     ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
@@ -448,6 +501,9 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
     ...(reverbLyricClip ? { reverbLyricClip } : {}),
     ...(poll ? { poll } : {}),
     ...(reverbPoll ? { reverbPoll } : {}),
+    ...(quotePress ? { quotePress } : {}),
+    ...(reverbQuotePress ? { reverbQuotePress } : {}),
+    ...(giphySyndication ? { giphySyndication } : {}),
   };
 }
 
@@ -502,6 +558,9 @@ export type ReverbComposerOptions = {
   poll?: CreatePostPoll;
   /** Strip an existing quote poll when editing a Reverb. */
   clearPoll?: boolean;
+  quotePress?: QuotePressConfig;
+  /** Strip an existing quote imprint when editing a Reverb. */
+  clearQuotePress?: boolean;
 };
 
 function reverbComposerHasContent(options?: ReverbComposerOptions): boolean {
@@ -622,6 +681,10 @@ export async function toggleReverb(
       : source.lyricClip;
   const rootPoll = source.isReverb && source.reverbPoll ? source.reverbPoll : source.poll;
   const rootVideo = source.isReverb && source.reverbVideo ? source.reverbVideo : source.video;
+  const rootQuotePress =
+    source.isReverb && source.reverbQuotePress
+      ? source.reverbQuotePress
+      : source.quotePress;
   const rootSourceKind = source.sourceKind || (rootEmbed?.includes('/song/') ? 'song' : rootEmbed?.includes('/share/') ? 'dna' : 'post');
 
   const pointerRef = doc(db, 'users', user.uid, 'reverbs', rootPostId);
@@ -637,7 +700,9 @@ export async function toggleReverb(
         const wallData = wall.data() as Record<string, unknown>;
         const quote = options.quote?.trim().slice(0, MAX_POST_TEXT) ?? '';
         const poll = buildPostPoll(options.poll);
+        const quotePress = normalizeQuotePressConfig(options.quotePress);
         if (poll && !quote) throw new Error('Write the poll question in your quote.');
+        if (quotePress && !quote) throw new Error('Write your quote text before adding an Imprint.');
         const existingVoice = parseVoiceNote(wallData.voice);
         const existingVideo = parseWallClip(wallData.video);
         const existingImagePath = parseImageStoragePath(wallData.imageStoragePath);
@@ -659,6 +724,11 @@ export async function toggleReverb(
             ? { imageUrl: media.imageUrl, imageStoragePath: media.imageStoragePath }
             : {}),
           ...(poll ? { poll } : options.clearPoll ? { poll: deleteField() } : {}),
+          ...(quotePress
+            ? { quotePress }
+            : options.clearQuotePress
+              ? { quotePress: deleteField() }
+              : {}),
         };
         await updateDoc(wallRef, patch);
         if (reverbComposerHasContent({ ...options, quote })) {
@@ -666,27 +736,33 @@ export async function toggleReverb(
           void postVerifiedQuoteReverb(wallPostId);
         }
         const refreshed = await getDoc(wallRef);
+        const updated = refreshed.exists() ? postFromDoc(refreshed.id, refreshed.data()) : undefined;
+        if (updated) emitWallPostFeed({ kind: 'upsert', post: updated });
         return {
           status: 'updated',
-          post: refreshed.exists() ? postFromDoc(refreshed.id, refreshed.data()) : undefined,
+          post: updated,
         };
       }
     }
     if (wallPostId) {
       try {
         await deleteDoc(doc(db, 'posts', wallPostId));
+        emitWallPostFeed({ kind: 'deleted', postId: wallPostId });
       } catch {
         /* wall post may already be gone */
       }
     }
     await deleteDoc(pointerRef);
+    await deleteDoc(doc(db, 'posts', rootPostId, 'reverbs', user.uid)).catch(() => undefined);
     return { status: 'removed' };
   }
 
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const quote = options?.quote?.trim().slice(0, MAX_POST_TEXT) || '';
   const poll = buildPostPoll(options?.poll);
+  const quotePress = normalizeQuotePressConfig(options?.quotePress);
   if (poll && !quote) throw new Error('Write the poll question in your quote.');
+  if (quotePress && !quote) throw new Error('Write your quote text before adding an Imprint.');
 
   const id = newestFirstId();
   const media =
@@ -716,16 +792,22 @@ export async function toggleReverb(
     ...(rootLyricClip ? { reverbLyricClip: rootLyricClip } : {}),
     ...(rootPoll ? { reverbPoll: rootPoll } : {}),
     ...(rootVideo ? { reverbVideo: rootVideo } : {}),
+    ...(rootQuotePress ? { reverbQuotePress: rootQuotePress } : {}),
     ...(media.imageUrl ? { imageUrl: media.imageUrl } : {}),
     ...(media.imageStoragePath ? { imageStoragePath: media.imageStoragePath } : {}),
     ...(media.video ? { video: media.video } : {}),
     ...(media.voice ? { voice: media.voice } : {}),
     ...(poll ? { poll } : {}),
+    ...(quotePress ? { quotePress } : {}),
   };
 
   const { id: postId, ...data } = post;
   await setDoc(doc(db, 'posts', postId), data);
   await setDoc(pointerRef, { wallPostId: postId, createdAt: post.createdAt });
+  await setDoc(doc(db, 'posts', rootPostId, 'reverbs', user.uid), {
+    createdAt: post.createdAt,
+    wallPostId: postId,
+  });
 
   const quoted = reverbComposerHasContent({ ...options, quote });
   try {
@@ -750,6 +832,7 @@ export async function toggleReverb(
     href: profileHref(post.ownerSlug, `post-${id}`),
   });
 
+  emitWallPostFeed({ kind: 'upsert', post });
   return { status: 'created', post };
 }
 
@@ -761,6 +844,24 @@ export async function fetchHasReverbed(originalPostId: string): Promise<boolean>
     return snap.exists();
   } catch {
     return false;
+  }
+}
+
+export async function fetchReverbCount(postId: string): Promise<number> {
+  const id = postId.trim();
+  if (!id) return 0;
+  try {
+    const snap = await getCountFromServer(
+      query(collection(db, 'posts'), where('reverbPostId', '==', id))
+    );
+    return snap.data().count;
+  } catch {
+    try {
+      const snap = await getCountFromServer(collection(db, 'posts', id, 'reverbs'));
+      return snap.data().count;
+    } catch {
+      return 0;
+    }
   }
 }
 
@@ -944,12 +1045,18 @@ export async function addComment(
     recipientId?: string;
     recipientName?: string;
     video?: PendingWallClip;
+    quotePress?: QuotePressConfig;
+    poll?: CreatePostPoll;
   }
 ): Promise<PostComment> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const clean = text.trim().slice(0, MAX_COMMENT_TEXT);
+  const poll = buildPostPoll(opts?.poll);
+  const quotePress = normalizeQuotePressConfig(opts?.quotePress);
   if (!clean && !voiceClip && !image && !opts?.video) throw new Error('Comment is empty.');
+  if (poll && !clean) throw new Error('Poll replies need text.');
+  if (quotePress && !clean) throw new Error('Imprint replies need text.');
   const parentCommentId = opts?.parentCommentId?.trim().slice(0, 80) || undefined;
   const id = chronoId();
   let voice: VoiceNote | undefined;
@@ -1012,6 +1119,8 @@ export async function addComment(
     ...(imageUrl ? { imageUrl } : {}),
     ...(imageStoragePath ? { imageStoragePath } : {}),
     ...(video ? { video } : {}),
+    ...(quotePress ? { quotePress } : {}),
+    ...(poll ? { poll } : {}),
   };
   const { id: commentId, ...data } = comment;
   try {
@@ -1051,6 +1160,8 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
       const video = parseWallClip(data.video);
       const parentCommentId =
         typeof data.parentCommentId === 'string' ? data.parentCommentId : undefined;
+      const quotePress = normalizeQuotePressConfig(data.quotePress);
+      const poll = parsePostPoll(data.poll);
       return {
         id: d.id,
         authorId: String(data.authorId || ''),
@@ -1063,6 +1174,8 @@ export async function fetchComments(postId: string, max = 50): Promise<PostComme
         ...(imageUrl ? { imageUrl } : {}),
         ...(imageStoragePath ? { imageStoragePath } : {}),
         ...(video ? { video } : {}),
+        ...(quotePress ? { quotePress } : {}),
+        ...(poll ? { poll } : {}),
       };
     });
     const ids = [...new Set(comments.map((c) => c.authorId).filter(Boolean))];

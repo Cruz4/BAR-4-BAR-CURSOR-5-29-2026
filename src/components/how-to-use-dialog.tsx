@@ -216,6 +216,10 @@ const CORE_FAQS = [
       a: "The Block is your friends feed on The Scene—wall posts, requests, and Discover when your circle is quiet. Search music people to invite, or copy your referral link. Your circle (/friends) lists friends and blocked accounts."
     },
     {
+      q: "What is The Imprint on Your Booth?",
+      a: "In Your Booth composer, tap Imprint to turn your post into a live quote card — fonts, color, highlights, and backdrop pressed from what you type. Free accounts get one look per bar; Studio Pro unlocks faders, shuffle, and five lockable style slots."
+    },
+    {
       q: "How do I post lines from the sheet to The Block?",
       a: "On a lyrics sheet, use the line number itself (01, 02, 04…) — not the words. Right-click it, or press and hold for about half a second. A dialog lets you pick the range and style, then post. A normal tap on the number still does nothing. Guests can open it; posting needs a signed-in account.",
     },

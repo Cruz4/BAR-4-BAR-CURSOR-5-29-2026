@@ -136,7 +136,7 @@ export function Header() {
 
   return (
     <>
-    <header data-app-header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header data-app-header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
       {progress > 0 && progress < 100 && (
           <div className="absolute bottom-0 left-0 w-full h-[2px] z-50 overflow-hidden bg-amber-950/30">
               <div

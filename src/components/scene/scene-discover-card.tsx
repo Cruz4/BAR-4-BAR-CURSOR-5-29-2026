@@ -136,17 +136,19 @@ export function SceneDiscoverCard({
               {artist.updatedAt ? <span className="whitespace-nowrap sm:ml-1">· updated {timeAgo(artist.updatedAt)}</span> : null}
             </p>
           </div>
-          <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-            <Link href={profileHref(artist.slug) || `/${artist.slug}`}>Visit</Link>
-          </Button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <DoorKnockButton
+              compact
+              targetUserId={artist.userId}
+              targetName={artist.displayName}
+              targetSlug={artist.slug}
+              knockerSlug={viewerSlug}
+            />
+            <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
+              <Link href={profileHref(artist.slug) || `/${artist.slug}`}>Visit</Link>
+            </Button>
+          </div>
         </div>
-        <DoorKnockButton
-          className="mt-2"
-          targetUserId={artist.userId}
-          targetName={artist.displayName}
-          targetSlug={artist.slug}
-          knockerSlug={viewerSlug}
-        />
       </Card>
     );
   }

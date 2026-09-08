@@ -19,7 +19,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     if (!owner) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
     const { searchParams } = new URL(req.url);
-    const kind = searchParams.get('kind') === 'images' ? 'images' : 'wall';
+    const kind = searchParams.get('kind') === 'images'
+      ? 'images'
+      : searchParams.get('kind') === 'imprints'
+        ? 'imprints'
+        : 'wall';
     const target = parseActivityPostHash(searchParams.get('target'));
     let page = pageNumber(searchParams.get('page'));
     const posts = db.collection('posts');
@@ -51,6 +55,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         posts: rows,
         nextCursor: !exhausted && lastCreatedAt ? lastCreatedAt : null,
       });
+    }
+
+    if (kind === 'imprints') {
+      const ids = (searchParams.get('ids') || '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .slice(0, 12);
+      const rows: ReturnType<typeof postFromServerDoc>[] = [];
+      for (const id of ids) {
+        const snap = await posts.doc(id).get();
+        const data = snap.data() || {};
+        if (!snap.exists || data.ownerId !== owner.userId || !data.quotePress) continue;
+        rows.push(postFromServerDoc(snap.id, data as Record<string, unknown>));
+      }
+      return NextResponse.json({ posts: rows });
     }
 
     if (target?.postId) {

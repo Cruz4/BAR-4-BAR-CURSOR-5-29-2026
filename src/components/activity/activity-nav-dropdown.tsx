@@ -36,6 +36,8 @@ import {
   FRIENDSHIP_CHANGED_EVENT,
   markActivityEventsRead,
   markActivityEventsUnread,
+  markAllActivityEventsRead,
+  markAllActivityEventsUnread,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
@@ -45,6 +47,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
 import { fetchFriendships } from '@/lib/profile/social-client';
 import { fetchPendingContactRequesterIds } from '@/lib/profile/contact-client';
+import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
 
 function TypeIcon({ type }: { type: ActivityType }) {
   const className = 'h-3.5 w-3.5 shrink-0';
@@ -118,6 +121,7 @@ export function ActivityNavDropdown({
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ActivityEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [hiddenNewCount, setHiddenNewCount] = useState(0);
 
   const loadRecent = useCallback(async () => {
@@ -237,6 +241,32 @@ export function ActivityNavDropdown({
     }
   };
 
+  const handleMarkAllRead = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllActivityEventsRead();
+      const readAt = new Date().toISOString();
+      setItems((prev) => prev.map((event) => (event.readAt ? event : { ...event, readAt })));
+      setHiddenNewCount(0);
+      refreshActivityAlerts();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleMarkAllUnread = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllActivityEventsUnread();
+      setItems((prev) => prev.map((event) => ({ ...event, readAt: null })));
+      refreshActivityAlerts();
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const openEvent = async (event: ActivityEvent) => {
     setOpen(false);
     try {
@@ -263,7 +293,7 @@ export function ActivityNavDropdown({
         >
           <Bell className="h-4 w-4 md:h-5 md:w-5" />
           {unreadCount > 0 && (
-            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-black shadow ring-2 ring-background">
+            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-black shadow">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -277,9 +307,14 @@ export function ActivityNavDropdown({
           <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
             <Bell className="h-3 w-3" /> Recent activity
           </h4>
-          <span className="text-[9px] font-code uppercase tracking-wider text-muted-foreground">
-            Tap to open
-          </span>
+          <InboxBulkReadToggle
+            unreadCount={unreadCount}
+            onMarkAllRead={handleMarkAllRead}
+            onMarkAllUnread={handleMarkAllUnread}
+            busy={bulkBusy}
+            variant="emerald"
+            compact
+          />
         </div>
 
         <div className="max-h-[min(22rem,50vh)] overflow-y-auto">

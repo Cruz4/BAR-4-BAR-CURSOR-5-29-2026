@@ -37,6 +37,7 @@ import {
   markActivityEventsRead,
   markActivityEventsUnread,
   markAllActivityEventsRead,
+  markAllActivityEventsUnread,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
@@ -55,7 +56,9 @@ import {
 } from '@/lib/profile/contact-client';
 import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
 import { profileHref } from '@/lib/profile/profile-slug';
-import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
+import { refreshActivityAlerts, useActivityAlerts } from '@/hooks/use-activity-alerts';
+import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
+import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
 
 type TabId = 'inbox' | 'requests' | 'sent';
 
@@ -302,7 +305,7 @@ function EmptyState({
   body: string;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/15 bg-black/20 px-4 py-12 text-center">
+    <div className="rounded-lg border border-dashed border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-12 text-center shadow-[inset_0_0_32px_rgba(16,185,129,0.06)]">
       <Icon className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
       <p className="font-headline text-sm font-bold uppercase tracking-wide">{title}</p>
       <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-muted-foreground">{body}</p>
@@ -327,6 +330,8 @@ function ActivityPageInner() {
   const [sentCursor, setSentCursor] = useState<string | null>(null);
   const [loadError, setLoadError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const { unreadReceived } = useActivityAlerts();
   /** Actor user ids whose incoming friend request is still pending in Firestore. */
   const [pendingRequesterIds, setPendingRequesterIds] = useState<Set<string>>(() => new Set());
   const [pendingContactRequesterIds, setPendingContactRequesterIds] = useState<Set<string>>(
@@ -600,13 +605,36 @@ function ActivityPageInner() {
   const unreadRequestCount = requestRows.filter((e) => !e.readAt).length;
 
   const handleMarkAll = async () => {
-    await markAllActivityEventsRead();
-    sessionUnreadIdsRef.current?.clear();
-    setInbox((prev) =>
-      prev.map((e) => ({ ...e, readAt: e.readAt || new Date().toISOString() }))
-    );
-    refreshActivityAlerts();
-    toast({ title: 'All caught up' });
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllActivityEventsRead();
+      sessionUnreadIdsRef.current?.clear();
+      setInbox((prev) =>
+        prev.map((e) => ({ ...e, readAt: e.readAt || new Date().toISOString() }))
+      );
+      refreshActivityAlerts();
+      toast({ title: 'All caught up' });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleMarkAllUnread = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllActivityEventsUnread();
+      if (!sessionUnreadIdsRef.current) sessionUnreadIdsRef.current = new Set();
+      setInbox((prev) => {
+        prev.forEach((event) => sessionUnreadIdsRef.current?.add(event.id));
+        return prev.map((event) => ({ ...event, readAt: null }));
+      });
+      refreshActivityAlerts();
+      toast({ title: 'Marked unread' });
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   const handleMarkUnread = async (event: ActivityEvent) => {
@@ -703,8 +731,10 @@ function ActivityPageInner() {
   }
 
   return (
-    <div className="container relative z-10 mx-auto max-w-2xl px-4 py-8 font-code">
-      <Card className="border-2 border-primary/20 bg-card/80">
+    <div className="relative min-h-[calc(100dvh-3.5rem)] overflow-hidden">
+      <InboxPageAtmosphere variant="activity" />
+      <div className="container relative z-10 mx-auto max-w-2xl px-4 py-8 font-code">
+      <Card className="border-2 border-emerald-500/25 bg-[#07111f]/75 shadow-[0_0_48px_rgba(16,185,129,0.1)] backdrop-blur-md">
         <CardHeader className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -715,14 +745,14 @@ function ActivityPageInner() {
                 Loves, replies, friend and contact requests, and DNA Drop imports — received and sent.
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 shrink-0 gap-1.5 text-[10px] font-bold uppercase"
-              onClick={() => void handleMarkAll()}
-            >
-              <CheckCheck className="h-3.5 w-3.5" /> Mark all read
-            </Button>
+            <InboxBulkReadToggle
+              unreadCount={unreadReceived}
+              onMarkAllRead={handleMarkAll}
+              onMarkAllUnread={handleMarkAllUnread}
+              busy={bulkBusy}
+              variant="emerald"
+              className="h-9 px-2.5"
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -734,7 +764,7 @@ function ActivityPageInner() {
               router.replace(next === 'inbox' ? '/activity' : `/activity?tab=${next}`);
             }}
           >
-            <TabsList className="mb-4 grid h-auto w-full grid-cols-3 gap-1 bg-muted/40 p-1">
+            <TabsList className="mb-4 grid h-auto w-full grid-cols-3 gap-1 border border-emerald-500/20 bg-emerald-500/[0.06] p-1">
               <TabsTrigger value="inbox" className="text-[10px] font-bold uppercase">
                 Inbox
               </TabsTrigger>
@@ -858,6 +888,7 @@ function ActivityPageInner() {
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -174,6 +174,23 @@ service cloud.firestore {
         && (data.options.size() < 6 || validPollOption(data.options[5], 'option_6'));
     }
 
+    function validQuotePressFaders(faders) {
+      return faders is map
+        && faders.keys().hasAll(['heat', 'grain', 'pace', 'ink'])
+        && faders.keys().hasOnly(['heat', 'grain', 'pace', 'ink'])
+        && faders.heat is int && faders.heat >= 0 && faders.heat <= 100
+        && faders.grain is int && faders.grain >= 0 && faders.grain <= 100
+        && faders.pace is int && faders.pace >= 0 && faders.pace <= 100
+        && faders.ink is int && faders.ink >= 0 && faders.ink <= 100;
+    }
+
+    function validQuotePress(data) {
+      return data is map
+        && data.keys().hasAll(['faders'])
+        && data.keys().hasOnly(['faders'])
+        && validQuotePressFaders(data.faders);
+    }
+
     // Client bootstrap only — privileged billing/admin fields must stay at safe defaults
     function isSafeUserBootstrap() {
       let data = request.resource.data;
@@ -403,6 +420,12 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Personal imprint collection — server writes via Admin SDK
+      match /imprintCollection/{postId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+
       // Activity inbox — Admin SDK writes events; owner reads / marks read / manages prefs+push
       match /activity/{eventId} {
         allow read: if isOwner(userId);
@@ -597,13 +620,29 @@ service cloud.firestore {
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['poll', 'reverbPoll'])
-        && lockedServerNumber('viewCount');
+        && lockedServerNumber('viewCount')
+        && lockedServerNumber('imprintSaveCount');
       allow delete: if request.auth != null
         && (resource.data.ownerId == request.auth.uid || isAdmin());
 
       match /likes/{likerId} {
         allow read: if true;
         allow create, delete: if request.auth != null && request.auth.uid == likerId;
+      }
+
+      match /reverbs/{reverberId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.auth.uid == reverberId
+          && request.resource.data.wallPostId is string
+          && request.resource.data.wallPostId.size() > 0
+          && request.resource.data.createdAt is string;
+        allow delete: if request.auth != null && request.auth.uid == reverberId;
+      }
+
+      match /imprintSaves/{saverId} {
+        allow read: if true;
+        allow write: if false;
       }
 
       match /comments/{commentId} {
@@ -625,6 +664,12 @@ service cloud.firestore {
             || validWallImagePath(request.resource.data.imageStoragePath))
           && (!('video' in request.resource.data)
             || validWallClip(request.resource.data.video))
+          && (!('poll' in request.resource.data)
+            || (validPostPoll(request.resource.data.poll)
+              && request.resource.data.text.size() > 0))
+          && (!('quotePress' in request.resource.data)
+            || (validQuotePress(request.resource.data.quotePress)
+              && request.resource.data.text.size() > 0))
           && (
             request.resource.data.text.size() > 0
             || ('voice' in request.resource.data && validVoiceNote(request.resource.data.voice))
@@ -639,6 +684,14 @@ service cloud.firestore {
         match /likes/{likerId} {
           allow read: if true;
           allow create, delete: if request.auth != null && request.auth.uid == likerId;
+        }
+
+        match /pollVotes/{voterId} {
+          allow read, write: if false;
+        }
+
+        match /pollPrivate/{documentId} {
+          allow read, write: if false;
         }
       }
 

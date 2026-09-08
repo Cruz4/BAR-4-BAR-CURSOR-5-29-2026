@@ -22,6 +22,7 @@ import {
   PenLine,
   Quote,
   Send,
+  Sparkles,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -74,8 +75,14 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import { isMasterAdminEmail } from '@/lib/master-admin';
-import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionField } from '@/components/profile/mention-suggestions';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { queueAutoImprintSyndication } from '@/lib/profile/imprint-syndicate-client';
+import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
+import { useImprintComposer } from '@/hooks/use-imprint-composer';
+import { isProOrTrial } from '@/lib/subscription';
+import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 import { activityPostHash, parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 
@@ -582,6 +589,82 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 }
 
 // ---------------------------------------------------------------------------
+// Imprint Shelf — curated imprint posts
+// ---------------------------------------------------------------------------
+
+const IMPRINT_SHELF_LAYOUT: Record<ModuleSize, string> = {
+  S: 'flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [&>*]:w-[min(88%,18rem)] [&>*]:shrink-0 [&>*]:snap-center',
+  M: 'grid grid-cols-1 gap-4 sm:grid-cols-2',
+  L: 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3',
+};
+
+export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
+  const ids = ctx.featured.imprintShelfPostIds;
+  const idKey = ids?.join(',') || '';
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!ids?.length || !ctx.profileSlug) {
+      setPosts([]);
+      setLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setLoaded(false);
+    const params = new URLSearchParams({
+      kind: 'imprints',
+      ids: ids.join(','),
+    });
+    void fetch(`/api/profile/${encodeURIComponent(ctx.profileSlug)}/posts?${params}`)
+      .then((res) => res.json())
+      .then((data: { posts?: ProfilePost[] }) => {
+        if (cancelled) return;
+        const rows = Array.isArray(data.posts) ? data.posts : [];
+        const byId = new Map(rows.map((post) => [post.id, post]));
+        setPosts(ids.map((id) => byId.get(id)).filter((post): post is ProfilePost => Boolean(post)));
+      })
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.profileSlug, idKey]);
+
+  if (!ids?.length) return null;
+  if (loaded && !posts.length) return null;
+
+  const grid = IMPRINT_SHELF_LAYOUT[ctx.size] ?? IMPRINT_SHELF_LAYOUT.L;
+
+  return (
+    <ModuleShell icon={Sparkles} title="Imprints" ctx={ctx}>
+      {!loaded ? (
+        <p className="text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+          Loading imprints…
+        </p>
+      ) : (
+        <div className={grid}>
+          {posts.map((post) => (
+            <div key={post.id} id={activityPostHash(post.id)} className="min-w-0">
+              <QuotePressCard
+                text={post.text}
+                config={post.quotePress!}
+                withMentions
+                creatorSlug={ctx.profileSlug || post.ownerSlug}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </ModuleShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Proof Wall (badges)
 // ---------------------------------------------------------------------------
 
@@ -644,6 +727,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
+  const isPro = isProOrTrial(user);
   const playground = ctx.playgroundWall;
   const [posts, setPosts] = useState<ProfilePost[]>(playground?.posts || []);
   const [loaded, setLoaded] = useState(Boolean(playground));
@@ -659,7 +743,20 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [wallPageCount, setWallPageCount] = useState(1);
   const [wallTotal, setWallTotal] = useState(playground?.posts.length || 0);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
+  const {
+    imprintOn,
+    toggleImprint,
+    resetImprint,
+    imprintFaders,
+    setImprintFaders,
+    imprintSlots,
+    slotBusy,
+    activeImprintConfig,
+    persistImprintSlots,
+    imprintPayload,
+  } = useImprintComposer(text, isPro, summary.quotePressSlots);
   const [focusPostId, setFocusPostId] = useState('');
 
   useEffect(() => {
@@ -850,7 +947,12 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ...(image ? { image } : {}),
         ...(clip ? { video: clip } : {}),
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
+        ...imprintPayload,
       });
+      const captureRoot = imprintPreviewRef.current;
+      if (post.quotePress && captureRoot) {
+        void queueAutoImprintSyndication({ post, captureRoot });
+      }
       setPosts((prev) => [post, ...prev]);
       setWallTotal((value) => value + 1);
       setText('');
@@ -862,6 +964,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setPollOpen(false);
       setPollOptions(['', '']);
       setPollVisibility('after_vote');
+      resetImprint();
       setPage(0);
     } catch (e) {
       toast({
@@ -892,35 +995,77 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       ) : null}
       {canCompose && (
         <div className={cn(inkWellClass, 'relative mb-5 space-y-2 p-4')}>
-          <Textarea
-            ref={textRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onPaste={(e) => {
-              void attachPastedImage(e, {
-                disabled: busy,
-                image,
-                onImageChange: setImage,
-                ...(playground ? {} : { clip, onClipChange: setClip }),
-                maxBytes: playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined,
-                onError: (message) =>
-                  toast({
-                    variant: 'destructive',
-                    title: 'Could not attach photo',
-                    description: message,
-                  }),
-              });
-            }}
-            maxLength={1000}
-            rows={2}
-            placeholder={
-              playground
-                ? 'Try a wall post — claim your profile to keep it…'
-                : 'Drop a thought, a link, a photo, a release…'
-            }
-            className="border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
-          />
+          <MentionField value={text} onChange={setText} excludeUserId={user?.id}>
+            <Textarea
+              ref={textRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onPaste={(e) => {
+                void attachPastedImage(e, {
+                  disabled: busy,
+                  image,
+                  onImageChange: setImage,
+                  ...(playground ? {} : { clip, onClipChange: setClip }),
+                  maxBytes: playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined,
+                  onError: (message) =>
+                    toast({
+                      variant: 'destructive',
+                      title: 'Could not attach photo',
+                      description: message,
+                    }),
+                });
+              }}
+              maxLength={1000}
+              rows={2}
+              placeholder={
+                playground
+                  ? 'Try a wall post — claim your profile to keep it…'
+                  : 'Drop a thought, a link, a photo, a release…'
+              }
+              className="border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
+            />
+          </MentionField>
           <ComposerLinkPreview text={text} />
+          {!playground && imprintOn && text.trim() ? (
+            <div className="space-y-2">
+              <QuotePressCard
+                ref={imprintPreviewRef}
+                text={text}
+                config={activeImprintConfig}
+                creatorSlug={ctx.profileSlug}
+              />
+              <QuotePressComposerPanel
+                faders={activeImprintConfig.faders}
+                onFadersChange={(next) => {
+                  if (!isPro) return;
+                  setImprintFaders(next);
+                }}
+                slots={imprintSlots}
+                isPro={isPro}
+                busy={busy || slotBusy}
+                onLockSlot={() => {
+                  if (!isPro) return;
+                  const label = quotePressSlotLabel(imprintFaders);
+                  void persistImprintSlots([
+                    ...imprintSlots,
+                    {
+                      id: `qp-${Date.now()}`,
+                      faders: { ...imprintFaders },
+                      lockedAt: new Date().toISOString(),
+                      label,
+                    },
+                  ]);
+                }}
+                onLoadSlot={(slot) => {
+                  if (!isPro) return;
+                  setImprintFaders(slot.faders);
+                }}
+                onClearSlot={(slotId) => {
+                  void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
+                }}
+              />
+            </div>
+          ) : null}
           {!playground && pollOpen ? (
             <PollComposerFields
               options={pollOptions}
@@ -964,7 +1109,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 }
               />
             </div>
-          {!playground ? <MentionSuggestions value={text} onChange={setText} excludeUserId={user?.id} /> : null}
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
             {!playground ? (
               <Button
@@ -977,6 +1121,22 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
               >
                 <BarChart3 className="h-3.5 w-3.5" /> Poll
               </Button>
+            ) : null}
+            {!playground ? (
+              <button
+                type="button"
+                onClick={toggleImprint}
+                disabled={busy}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                  imprintOn
+                    ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+                    : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+                )}
+              >
+                <Sparkles className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')} />
+                Imprint
+              </button>
             ) : null}
           </div>
           <div className="flex justify-end">

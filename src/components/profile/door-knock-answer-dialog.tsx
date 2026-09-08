@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { HandMetal, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import { playDoorKnockSound } from '@/lib/door-knock-sound';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { PassBarDialog } from '@/components/folds/pass-bar-dialog';
-import { useAuth } from '@/hooks/use-auth';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { foldIdFor } from '@/lib/folds/types';
@@ -38,6 +38,13 @@ export function DoorKnockAnswerDialog({
   const { enabled: foldsOn } = useFoldsFeature();
   const [messageOpen, setMessageOpen] = useState(false);
   const [open, setOpen] = useState(true);
+  const playedSoundRef = useRef(false);
+
+  useEffect(() => {
+    if (playedSoundRef.current) return;
+    playedSoundRef.current = true;
+    playDoorKnockSound(0.18);
+  }, []);
 
   const close = () => {
     setOpen(false);
@@ -66,7 +73,7 @@ export function DoorKnockAnswerDialog({
         <DialogContent className="max-w-md border-sky-500/30 bg-[#07111f] sm:rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-headline text-xl uppercase tracking-tight text-sky-100">
-              <HandMetal className="h-5 w-5 text-sky-300" /> Someone&apos;s at the door
+              <span className="text-xl leading-none" aria-hidden>✊</span> Someone&apos;s at the door
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
               <span className="font-bold text-sky-100">{knock.knockerName}</span> knocked on your

@@ -18,7 +18,15 @@ import { auth } from '@/lib/firebase/client/firebase';
 import type { PostPoll, PostPollViewerState } from '@/lib/profile/post-polls';
 import { cn } from '@/lib/utils';
 
-export function PostPollCard({ postId, poll }: { postId: string; poll: PostPoll }) {
+export function PostPollCard({
+  postId,
+  poll,
+  commentId,
+}: {
+  postId: string;
+  poll: PostPoll;
+  commentId?: string;
+}) {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -44,12 +52,20 @@ export function PostPollCard({ postId, poll }: { postId: string; poll: PostPoll 
     return () => observer.disconnect();
   }, [active]);
 
+  const pollPath = useMemo(
+    () =>
+      commentId
+        ? `/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}/poll`
+        : `/api/posts/${encodeURIComponent(postId)}/poll`,
+    [commentId, postId]
+  );
+
   useEffect(() => {
     if (!active || authLoading) return;
     let cancelled = false;
     setLoading(true);
     void Promise.resolve(auth.currentUser ? auth.currentUser.getIdToken().catch(() => undefined) : undefined)
-      .then((token) => fetch(`/api/posts/${encodeURIComponent(postId)}/poll`, {
+      .then((token) => fetch(pollPath, {
         cache: 'no-store',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       }))
@@ -61,7 +77,7 @@ export function PostPollCard({ postId, poll }: { postId: string; poll: PostPoll 
       .catch(() => { if (!cancelled) setState({ hasVoted: false, resultsVisible: false }); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [active, authLoading, postId, user?.id]);
+  }, [active, authLoading, pollPath, user?.id]);
 
   const totalVotes = state?.totalVotes || 0;
   const selected = useMemo(
@@ -78,7 +94,7 @@ export function PostPollCard({ postId, poll }: { postId: string; poll: PostPoll 
     setVoting(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      const response = await fetch(`/api/posts/${encodeURIComponent(postId)}/poll`, {
+      const response = await fetch(pollPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ optionId: pendingOptionId }),

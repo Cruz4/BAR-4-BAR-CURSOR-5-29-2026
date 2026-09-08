@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import { searchPublicArtists } from '@/lib/server/gamification';
-import { getDb } from '@/lib/firebase/server';
-import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
+import { getAuth, getDb } from '@/lib/firebase/server';
 
 export const runtime = 'nodejs';
+
+async function verifyViewerId(req: Request, viewerId: string): Promise<boolean> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ') || !viewerId) return false;
+  try {
+    const auth = await getAuth();
+    const decoded = await auth.verifyIdToken(header.slice('Bearer '.length));
+    return decoded.uid === viewerId;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(req: Request) {
   try {
@@ -11,12 +22,11 @@ export async function GET(req: Request) {
     const q = searchParams.get('q') || '';
     const excludeUserId = searchParams.get('excludeUserId') || undefined;
     const viewerId = searchParams.get('viewerId') || '';
-    if (q.trim().length < 2) {
+    if (q.trim().length < 1) {
       return NextResponse.json({ artists: [] });
     }
     let artists = await searchPublicArtists(q, { excludeUserId, limit: 12 });
-    if (viewerId) {
-      await verifyCheckoutUser(req, viewerId);
+    if (viewerId && (await verifyViewerId(req, viewerId))) {
       const db = await getDb();
       const refs = artists.flatMap((artist) => {
         const friendshipId = [viewerId, artist.userId].sort().join('_');
@@ -41,9 +51,6 @@ export async function GET(req: Request) {
     }
     return NextResponse.json({ artists });
   } catch (err) {
-    if (err instanceof CheckoutAuthError) {
-      return NextResponse.json({ error: err.message }, { status: 401 });
-    }
     console.error('[profile/search]', err);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
   }

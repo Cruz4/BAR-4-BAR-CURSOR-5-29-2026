@@ -698,6 +698,62 @@ export async function markAllActivityRead(userId: string): Promise<number> {
   return marked;
 }
 
+export async function markAllActivityUnread(userId: string): Promise<number> {
+  const db = await getDb();
+  const now = new Date().toISOString();
+  let marked = 0;
+  let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+  while (true) {
+    let query = db
+      .collection(`users/${userId}/activity`)
+      .where('direction', '==', 'received')
+      .orderBy('createdAt', 'desc')
+      .limit(400);
+    if (lastDoc) query = query.startAfter(lastDoc);
+    const snap = await query.get();
+    if (snap.empty) break;
+
+    const toUnread = snap.docs.filter((doc) => Boolean(doc.data().readAt));
+    if (toUnread.length) {
+      const batch = db.batch();
+      toUnread.forEach((doc) => batch.update(doc.ref, { readAt: null }));
+      await batch.commit();
+      marked += toUnread.length;
+    }
+    lastDoc = snap.docs[snap.docs.length - 1];
+    if (snap.size < 400) break;
+  }
+
+  const houseEvents = await listHouseReleaseActivity(userId);
+  const readHouseEvents = houseEvents.filter((event) => event.readAt);
+  for (let index = 0; index < readHouseEvents.length; index += 400) {
+    const batch = db.batch();
+    readHouseEvents.slice(index, index + 400).forEach((event) => {
+      batch.set(
+        db.doc(`users/${userId}/activityGlobalReads/${event.id}`),
+        { readAt: null },
+        { merge: true }
+      );
+    });
+    await batch.commit();
+  }
+  marked += readHouseEvents.length;
+
+  if (marked > 0) {
+    const houseMarked = readHouseEvents.length;
+    await db.doc(`users/${userId}/activityMeta/summary`).set(
+      {
+        unreadReceived: FieldValue.increment(marked),
+        ...(houseMarked > 0 ? { unreadHouseReleases: FieldValue.increment(houseMarked) } : {}),
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  }
+  return marked;
+}
+
 /**
  * Mark inbox friend_request rows from a given actor as read (Admin SDK).
  * Used when Neo's invite is upgraded to an accepted friendship so Accept UI dies.

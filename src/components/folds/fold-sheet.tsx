@@ -41,6 +41,7 @@ import {
 } from '@/lib/folds/types';
 import { formatFoldMessageTime, outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
+import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
 
 function BarStanza({
   bar,
@@ -291,8 +292,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const peerName = peer?.name || 'Artist';
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-x-hidden bg-[#0a0c12]/95 lg:max-w-5xl">
-      <header className="flex items-center gap-2 border-b border-amber-500/20 bg-[#100c09]/90 px-2 py-2 backdrop-blur-md">
+    <div className="relative mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-hidden lg:max-w-5xl">
+      <InboxPageAtmosphere variant="msgs-thread" />
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+      <header className="flex items-center gap-2 border-b border-amber-500/25 bg-[#100c09]/85 px-2 py-2 backdrop-blur-md">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
           <Link href="/msgs" aria-label="Back to Msgs">
             <ArrowLeft className="h-4 w-4" />
@@ -393,7 +396,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6"
         style={{
           backgroundImage:
-            'linear-gradient(180deg, rgba(255,236,210,0.05), rgba(8,6,4,0.35)), repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(251,191,36,0.05) 28px)',
+            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,191,36,0.08), transparent 65%), linear-gradient(180deg, rgba(255,236,210,0.06), rgba(8,6,4,0.2)), repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(251,191,36,0.06) 28px)',
         }}
       >
         {sealedForMe ? (
@@ -457,7 +460,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         </div>
       ) : (
         <form
-          className="border-t border-amber-500/20 bg-[#100c09] px-3 py-2.5"
+          className="border-t border-amber-500/25 bg-[#100c09]/90 px-3 py-2.5 backdrop-blur-md"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -509,6 +512,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           </div>
         </form>
       )}
+      </div>
     </div>
   );
 }

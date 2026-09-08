@@ -89,6 +89,12 @@ export async function patchGamificationSettings(settings: {
     label: string;
   }> | null;
   starMarkPinnedSlotId?: string | null;
+  quotePressSlots?: Array<{
+    id: string;
+    faders: { heat: number; grain: number; pace: number; ink: number };
+    lockedAt: string;
+    label: string;
+  }> | null;
 }) {
   const { user, token } = await authHeaders();
   const res = await fetch('/api/gamification/settings', {

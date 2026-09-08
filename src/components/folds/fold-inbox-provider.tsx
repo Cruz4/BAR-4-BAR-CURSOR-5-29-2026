@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { setFoldBadgeCount } from '@/lib/app-badge-counts';
-import { foldBackClient, markFoldReadClient, subscribeFolds } from '@/lib/folds/client';
+import { foldBackClient, markAllFoldsReadClient, markAllFoldsUnreadClient, markFoldReadClient, subscribeFolds } from '@/lib/folds/client';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { FoldLiveSlip, type FoldSlip } from '@/components/folds/fold-live-slip';
@@ -16,6 +16,8 @@ type FoldInboxValue = {
   ready: boolean;
   markFoldRead: (foldId: string) => Promise<void>;
   markFoldUnread: (foldId: string) => Promise<void>;
+  markAllFoldsRead: () => Promise<void>;
+  markAllFoldsUnread: () => Promise<void>;
 };
 
 const FoldInboxContext = createContext<FoldInboxValue>({
@@ -25,6 +27,8 @@ const FoldInboxContext = createContext<FoldInboxValue>({
   ready: false,
   markFoldRead: async () => undefined,
   markFoldUnread: async () => undefined,
+  markAllFoldsRead: async () => undefined,
+  markAllFoldsUnread: async () => undefined,
 });
 
 export function useFoldInbox() {
@@ -163,9 +167,27 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
     });
   }, [folds]);
 
+  const markAllFoldsRead = useCallback(async () => {
+    await markAllFoldsReadClient();
+    setHeldUnread({});
+  }, []);
+
+  const markAllFoldsUnread = useCallback(async () => {
+    await markAllFoldsUnreadClient();
+  }, []);
+
   const value = useMemo(
-    () => ({ folds: foldsForUi, unread, waiting, ready, markFoldRead, markFoldUnread }),
-    [foldsForUi, unread, waiting, ready, markFoldRead, markFoldUnread]
+    () => ({
+      folds: foldsForUi,
+      unread,
+      waiting,
+      ready,
+      markFoldRead,
+      markFoldUnread,
+      markAllFoldsRead,
+      markAllFoldsUnread,
+    }),
+    [foldsForUi, unread, waiting, ready, markFoldRead, markFoldUnread, markAllFoldsRead, markAllFoldsUnread]
   );
 
   return (

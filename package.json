@@ -27,6 +27,7 @@
     "verify:music-charts": "tsx scripts/verify-music-charts.ts",
     "verify:vault-backups": "tsx scripts/verify-vault-backups.ts",
     "verify:release-management": "tsx scripts/verify-release-management.ts",
+    "verify:quote-press": "tsx scripts/verify-quote-press.ts",
     "verify:booth-memory": "tsx scripts/verify-booth-memory-isolation.ts",
     "verify:drop-cart": "tsx scripts/verify-drop-cart.ts",
     "verify:drop-fee-preview": "tsx scripts/verify-drop-fee-preview.ts",

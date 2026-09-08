@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { Archive, ChevronDown, ChevronUp, Compass, ExternalLink, Radio, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { StudioLoader } from '@/components/studio-loader';
 import { PostCard } from '@/components/profile/post-card';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { SceneDiscoverCard } from '@/components/scene/scene-discover-card';
@@ -51,7 +52,11 @@ type SceneImmersiveFeedDialogProps = {
   discoverCards: DiscoverCard[];
   viewerSlug?: string;
   onPostDeleted?: (postId: string) => void;
+  onPostUpserted?: (post: ProfilePost) => void;
   onLockRemoved?: (lockId: string) => void;
+  blockLoading?: boolean;
+  discoverLoading?: boolean;
+  onRememberFeed?: () => void;
 };
 
 function blockMeta(post: ProfilePost): SlideMeta {
@@ -215,7 +220,11 @@ export function SceneImmersiveFeedDialog({
   discoverCards,
   viewerSlug,
   onPostDeleted,
+  onPostUpserted,
   onLockRemoved,
+  blockLoading = false,
+  discoverLoading = false,
+  onRememberFeed,
 }: SceneImmersiveFeedDialogProps) {
   const { user } = useAuth();
   const open = mode !== null;
@@ -250,7 +259,8 @@ export function SceneImmersiveFeedDialog({
   const leaveForNavigation = useCallback(() => {
     if (!mode) return;
     rememberScenePortalSlide(mode, items[activeIndexRef.current]?.meta.key);
-  }, [items, mode]);
+    onRememberFeed?.();
+  }, [items, mode, onRememberFeed]);
 
   const leaveForNavigationIfHref = useCallback(
     (href: string | null) => {
@@ -350,6 +360,7 @@ export function SceneImmersiveFeedDialog({
 
   const current = items[activeIndex]?.meta;
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
+  const feedLoading = mode === 'block' ? blockLoading : mode === 'discover' ? discoverLoading : false;
   const paintedSlides = useMemo(() => {
     const keep = new Set<number>();
     for (let i = activeIndex - SLIDE_PAINT_WINDOW; i <= activeIndex + SLIDE_PAINT_WINDOW; i += 1) {
@@ -397,7 +408,11 @@ export function SceneImmersiveFeedDialog({
             <div className="min-w-0 flex-1">
               <p className="whitespace-nowrap font-headline text-[0.85rem] font-bold uppercase leading-none tracking-tight text-white sm:text-lg">{title}</p>
               <p className="mt-1 font-code text-[8px] font-bold uppercase tracking-[0.18em] text-white/40">
-                {items.length ? `${activeIndex + 1} of ${items.length} · swipe or scroll` : 'Waiting for the Scene'}
+                {feedLoading && !items.length
+                  ? 'Loading…'
+                  : items.length
+                    ? `${activeIndex + 1} of ${items.length} · swipe or scroll`
+                    : 'Waiting for the Scene'}
               </p>
             </div>
             <button
@@ -497,6 +512,7 @@ export function SceneImmersiveFeedDialog({
                       showAuthor
                       viewerSlug={viewerSlug}
                       onDeleted={onPostDeleted}
+                      onReverbed={onPostUpserted}
                       immersive
                       mediaActive={index === activeIndex}
                     />
@@ -556,7 +572,22 @@ export function SceneImmersiveFeedDialog({
               ) : null}
             </section>
             );
-          }) : (
+          }) : feedLoading ? (
+            <section
+              className="flex h-[100dvh] snap-start flex-col items-center justify-center gap-4 px-6 pt-24 text-center"
+              style={{ paddingTop: headerPx }}
+            >
+              <StudioLoader
+                size="md"
+                message={mode === 'block' ? 'Opening Your Block…' : 'Opening Discover…'}
+              />
+              <p className="max-w-xs text-sm leading-relaxed text-white/45">
+                {mode === 'block'
+                  ? 'Pulling posts from your circle.'
+                  : 'Finding artists, songs, and posts on the Scene.'}
+              </p>
+            </section>
+          ) : (
             <section className="flex h-[100dvh] snap-start items-center justify-center px-6 pt-24 text-center">
               <div className="max-w-sm rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-10">
                 <p className="font-headline text-xl font-bold uppercase text-white">Nothing here yet</p>

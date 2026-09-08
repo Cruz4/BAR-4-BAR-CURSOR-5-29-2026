@@ -7,6 +7,8 @@ import {
   deleteFoldForUser,
   foldBackUnread,
   getFold,
+  markAllFoldsRead,
+  markAllFoldsUnread,
   markFoldRead,
   passBar,
 } from '@/lib/server/folds';
@@ -89,6 +91,15 @@ export async function POST(req: Request) {
         replyTo,
       });
       return NextResponse.json(result);
+    }
+
+    if (action === 'read_all') {
+      const marked = await markAllFoldsRead(userId);
+      return NextResponse.json({ ok: true, marked });
+    }
+    if (action === 'unread_all') {
+      const marked = await markAllFoldsUnread(userId);
+      return NextResponse.json({ ok: true, marked });
     }
 
     const foldId = typeof body.foldId === 'string' ? body.foldId.trim() : '';

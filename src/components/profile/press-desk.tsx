@@ -108,6 +108,7 @@ import type { PublicProfileData } from '@/components/profile/public-profile-show
 import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { dnaStatusOf } from '@/lib/release-management';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
+import { ImprintShelfEditor } from '@/components/profile/imprint-shelf-editor';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { auth } from '@/lib/firebase/client/firebase';
 import {
@@ -2289,6 +2290,23 @@ export function PressDesk() {
         }
       >
         <LiveDnaDropsManage />
+      </DeskSection>
+
+      {/* 8b. Imprint Shelf */}
+      <DeskSection
+        id="artist-home-imprints"
+        icon={Sparkles}
+        title="Imprint Shelf"
+        hint="Save imprints from posts via the Imprint menu, then choose which saved pieces show on your Artist Home. Toggle the Imprint Shelf module in the deck below."
+      >
+        {user?.id ? (
+          <ImprintShelfEditor
+            userId={user.id}
+            profileSlug={summary?.profileSlug || profileSlug || undefined}
+            config={config}
+            update={update}
+          />
+        ) : null}
       </DeskSection>
 
       {/* 9. Module deck */}

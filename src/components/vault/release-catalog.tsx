@@ -2,7 +2,7 @@
 
 import React, { useContext, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Disc3, ExternalLink, FileText, Link2, Loader, Music, Radio, Settings2, Trash2, Unlink } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Disc3, ExternalLink, FileText, Link2, Loader, Music, Radio, Settings2, Trash2, Unlink } from 'lucide-react';
 import { DataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,17 +18,103 @@ type Row = { album: Album; track?: Track };
 type UnpressTarget = { kind: 'album' | 'track'; album: Album; track?: Track };
 type RemoveTarget = UnpressTarget;
 
-const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string }> = [
-  { key: 'privateDrafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
-  { key: 'offlineReleases', label: 'Offline releases', note: 'Hidden releases that can be republished at the same link or retired completely.' },
-  { key: 'liveSinglesWithLyrics', label: 'Live singles · lyrics on sheet', note: 'Music is live and the Vault sheet has lyrics written (private until you DNA Drop).' },
-  { key: 'liveSinglesAudioOnly', label: 'Live singles · audio only', note: 'Music is live; add lyrics on the Vault sheet, then DNA Drop when you want them public (Pro).' },
-  { key: 'liveAlbumsAllLyrics', label: 'Live albums · all lyrics attached', note: 'Bundle releases whose audio tracks all have lyrics.' },
-  { key: 'liveAlbumsMixedLyrics', label: 'Live albums · mixed', note: 'Bundle releases with some lyric sheets and some audio-only tracks.' },
-  { key: 'liveAlbumsAudioOnly', label: 'Live albums · audio only', note: 'Bundle releases that do not require lyric sheets.' },
-  { key: 'dnaPreviews', label: 'Live DNA Drops', note: 'Public lyric pages from a Vault sheet — Studio Pro to publish, view, or import.' },
-  { key: 'unpressed', label: 'Not released yet', note: 'Vault tracks and albums that are not publicly available.' },
+const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string; shortLabel: string }> = [
+  { key: 'privateDrafts', shortLabel: 'Drafts', label: 'Private release drafts', note: 'Uploaded recordings only you can test.' },
+  { key: 'offlineReleases', shortLabel: 'Offline', label: 'Offline releases', note: 'Hidden releases you can republish or retire.' },
+  { key: 'liveSinglesWithLyrics', shortLabel: 'Live + lyrics', label: 'Live singles · lyrics on sheet', note: 'Music is live and the Vault sheet has lyrics.' },
+  { key: 'liveSinglesAudioOnly', shortLabel: 'Live audio', label: 'Live singles · audio only', note: 'Music is live — add lyrics on the sheet when ready.' },
+  { key: 'liveAlbumsAllLyrics', shortLabel: 'Albums', label: 'Live albums · all lyrics attached', note: 'Bundles whose tracks all have lyric sheets.' },
+  { key: 'liveAlbumsMixedLyrics', shortLabel: 'Mixed albums', label: 'Live albums · mixed', note: 'Bundles with some lyric sheets and some audio-only tracks.' },
+  { key: 'liveAlbumsAudioOnly', shortLabel: 'Audio albums', label: 'Live albums · audio only', note: 'Bundle releases without lyric requirements.' },
+  { key: 'dnaPreviews', shortLabel: 'DNA Drops', label: 'Live DNA Drops', note: 'Public lyric pages from your Vault sheet (Pro).' },
+  { key: 'unpressed', shortLabel: 'Vault only', label: 'Not released yet', note: 'Vault work that is not public yet.' },
 ];
+
+type GroupKey = keyof VaultReleaseGroups;
+
+const GROUP_STYLE: Record<
+  GroupKey,
+  { border: string; surface: string; iconWrap: string; icon: string; badge: string; chip: string }
+> = {
+  privateDrafts: {
+    border: 'border-cyan-400/35',
+    surface: 'bg-gradient-to-br from-cyan-500/[0.12] via-cyan-950/20 to-black/30',
+    iconWrap: 'border-cyan-400/30 bg-cyan-400/15',
+    icon: 'text-cyan-200',
+    badge: 'border-cyan-400/35 bg-cyan-400/15 text-cyan-100',
+    chip: 'border-cyan-400/40 bg-cyan-500/15 text-cyan-100 hover:bg-cyan-500/25',
+  },
+  offlineReleases: {
+    border: 'border-amber-400/30',
+    surface: 'bg-gradient-to-br from-amber-500/[0.1] via-amber-950/15 to-black/30',
+    iconWrap: 'border-amber-400/30 bg-amber-400/12',
+    icon: 'text-amber-200',
+    badge: 'border-amber-400/35 bg-amber-400/12 text-amber-100',
+    chip: 'border-amber-400/35 bg-amber-500/12 text-amber-100 hover:bg-amber-500/22',
+  },
+  liveSinglesWithLyrics: {
+    border: 'border-fuchsia-400/35',
+    surface: 'bg-gradient-to-br from-fuchsia-500/[0.12] via-fuchsia-950/20 to-black/30',
+    iconWrap: 'border-fuchsia-400/30 bg-fuchsia-400/15',
+    icon: 'text-fuchsia-200',
+    badge: 'border-fuchsia-400/35 bg-fuchsia-400/15 text-fuchsia-100',
+    chip: 'border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-100 hover:bg-fuchsia-500/25',
+  },
+  liveSinglesAudioOnly: {
+    border: 'border-emerald-400/35',
+    surface: 'bg-gradient-to-br from-emerald-500/[0.1] via-emerald-950/20 to-black/30',
+    iconWrap: 'border-emerald-400/30 bg-emerald-400/15',
+    icon: 'text-emerald-200',
+    badge: 'border-emerald-400/35 bg-emerald-400/15 text-emerald-100',
+    chip: 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25',
+  },
+  liveAlbumsAllLyrics: {
+    border: 'border-sky-400/35',
+    surface: 'bg-gradient-to-br from-sky-500/[0.1] via-sky-950/20 to-black/30',
+    iconWrap: 'border-sky-400/30 bg-sky-400/15',
+    icon: 'text-sky-200',
+    badge: 'border-sky-400/35 bg-sky-400/15 text-sky-100',
+    chip: 'border-sky-400/40 bg-sky-500/15 text-sky-100 hover:bg-sky-500/25',
+  },
+  liveAlbumsMixedLyrics: {
+    border: 'border-indigo-400/35',
+    surface: 'bg-gradient-to-br from-indigo-500/[0.1] via-indigo-950/20 to-black/30',
+    iconWrap: 'border-indigo-400/30 bg-indigo-400/15',
+    icon: 'text-indigo-200',
+    badge: 'border-indigo-400/35 bg-indigo-400/15 text-indigo-100',
+    chip: 'border-indigo-400/40 bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25',
+  },
+  liveAlbumsAudioOnly: {
+    border: 'border-blue-400/35',
+    surface: 'bg-gradient-to-br from-blue-500/[0.1] via-blue-950/20 to-black/30',
+    iconWrap: 'border-blue-400/30 bg-blue-400/15',
+    icon: 'text-blue-200',
+    badge: 'border-blue-400/35 bg-blue-400/15 text-blue-100',
+    chip: 'border-blue-400/40 bg-blue-500/15 text-blue-100 hover:bg-blue-500/25',
+  },
+  dnaPreviews: {
+    border: 'border-violet-400/35',
+    surface: 'bg-gradient-to-br from-violet-500/[0.12] via-violet-950/20 to-black/30',
+    iconWrap: 'border-violet-400/30 bg-violet-400/15',
+    icon: 'text-violet-200',
+    badge: 'border-violet-400/35 bg-violet-400/15 text-violet-100',
+    chip: 'border-violet-400/40 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25',
+  },
+  unpressed: {
+    border: 'border-slate-400/30',
+    surface: 'bg-gradient-to-br from-slate-500/[0.08] via-slate-950/20 to-black/30',
+    iconWrap: 'border-slate-400/25 bg-slate-400/10',
+    icon: 'text-slate-200',
+    badge: 'border-slate-400/30 bg-slate-400/10 text-slate-100',
+    chip: 'border-slate-400/35 bg-slate-500/12 text-slate-100 hover:bg-slate-500/20',
+  },
+};
+
+function groupIcon(key: GroupKey) {
+  if (key === 'dnaPreviews') return Radio;
+  if (key.includes('Album')) return Disc3;
+  return Music;
+}
 
 function asRows(value: VaultReleaseGroups[keyof VaultReleaseGroups]): Row[] {
   return value.map((item) => ('album' in item ? item : { album: item as Album }));
@@ -166,113 +252,238 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
     }
   };
 
+  const [showEmptySections, setShowEmptySections] = useState(false);
+
+  const groupRows = useMemo(
+    () =>
+      GROUPS.map((group) => ({
+        ...group,
+        rows: asRows(groups[group.key]),
+        style: GROUP_STYLE[group.key],
+        Icon: groupIcon(group.key),
+      })),
+    [groups]
+  );
+
+  const totalCount = useMemo(
+    () => groupRows.reduce((sum, group) => sum + group.rows.length, 0),
+    [groupRows]
+  );
+
+  const activeGroups = useMemo(
+    () => groupRows.filter((group) => group.rows.length > 0),
+    [groupRows]
+  );
+
+  const emptyGroups = useMemo(
+    () => groupRows.filter((group) => group.rows.length === 0),
+    [groupRows]
+  );
+
+  const scrollToGroup = (key: GroupKey) => {
+    document.getElementById(`release-catalog-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const node = document.getElementById(`release-catalog-${key}`) as HTMLDetailsElement | null;
+    if (node) node.open = true;
+  };
+
+  const renderRows = (key: GroupKey, rows: Row[]) => (
+    <ul className="space-y-2 border-t border-white/10 p-2.5">
+      {rows.map(({ album, track }) => {
+        const dnaGroup = key === 'dnaPreviews';
+        const dnaId = track?.shareId || album.shareId;
+        const releaseId = dnaGroup ? undefined : releaseShareIdOf(track || { ...album, tracks: album.tracks });
+        const status = releaseStatusOf(track || { ...album, tracks: album.tracks });
+        const rowKey = `${key}:${album.id}:${track?.id || 'album'}`;
+        return (
+          <li key={rowKey} className="rounded-lg border border-white/10 bg-slate-950/75 p-2.5">
+            <div className="flex min-w-0 items-start gap-2">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-base font-bold">{track?.title || album.title || 'Untitled'}</span>
+                <span className="block truncate font-code text-[11px] uppercase tracking-wider text-muted-foreground sm:text-xs">
+                  {track ? `${album.title} · ${hasLyrics(track) ? 'lyrics attached' : 'audio only'}` : `${album.tracks.length} tracks`}
+                  {dnaGroup ? ' · DNA Drop live' : status ? ` · ${status}` : ''}
+                  {!dnaGroup && (track?.houseRelease || (!track && album.houseRelease)) ? ' · House · Free' : ''}
+                  {!dnaGroup && (track?.houseLibraryNotice || (!track && album.houseLibraryNotice)) ? ' · Library notice on' : ''}
+                </span>
+              </span>
+              {busy.endsWith(track?.id || album.id) ? <Loader className="h-4 w-4 animate-spin" /> : null}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {dnaGroup && dnaId ? (
+                <Button asChild size="sm" variant="secondary" className="h-9 text-xs font-bold uppercase">
+                  <Link href={`/share/${dnaId}`}><ExternalLink className="mr-1 h-3 w-3" /> Open lyric page</Link>
+                </Button>
+              ) : null}
+              {releaseId && status === 'live' ? (
+                <Button asChild size="sm" variant="secondary" className="h-9 text-xs font-bold uppercase">
+                  <Link href={track ? `/song/${releaseId}` : `/share/${releaseId}`}>
+                    <ExternalLink className="mr-1 h-3 w-3" /> Open release
+                  </Link>
+                </Button>
+              ) : null}
+              {dnaGroup ? (
+                <Button asChild size="sm" variant="outline" className="h-9 text-xs font-bold uppercase">
+                  <Link href={track ? `/albums/${album.id}/tracks/${track.id}` : `/albums/${album.id}`}><Settings2 className="mr-1 h-3 w-3" /> Manage in Vault</Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" className="h-9 text-xs font-bold uppercase" onClick={() => openFirstDropLathe({ albumId: album.id, ...(track ? { trackId: track.id } : { mode: 'album' as const }) })}>
+                  <Settings2 className="mr-1 h-3 w-3" /> {status === 'live' ? 'Update' : 'Open release desk'}
+                </Button>
+              )}
+              {track && !hasLyrics(track) && normalizeDropAudio(track.dropAudio) ? (
+                <>
+                  <Button asChild size="sm" variant="outline" className="h-9 text-xs font-bold uppercase">
+                    <Link href={`/albums/${album.id}/tracks/${track.id}`}><FileText className="mr-1 h-3 w-3" /> Start lyrics</Link>
+                  </Button>
+                  {lyricSheets.length ? (
+                    <Button size="sm" variant="outline" className="h-9 text-xs font-bold uppercase" onClick={() => setAttach({ album, track })}>
+                      <Link2 className="mr-1 h-3 w-3" /> Attach existing
+                    </Button>
+                  ) : null}
+                </>
+              ) : null}
+              {!dnaGroup && status === 'live' ? (
+                <Button size="sm" variant="outline" className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300" onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}>
+                  <Unlink className="mr-1 h-3 w-3" /> Take offline
+                </Button>
+              ) : null}
+              {!dnaGroup && status === 'unlisted' && releaseId ? (
+                <Button size="sm" variant="outline" className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300" onClick={() => setRemove({ kind: track ? 'track' : 'album', album, track })}>
+                  <Trash2 className="mr-1 h-3 w-3" /> Remove release
+                </Button>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const renderGroupCard = (
+    { key, label, note, shortLabel, rows, style, Icon }: (typeof groupRows)[number],
+    opts?: { compactEmpty?: boolean }
+  ) => (
+    <details
+      key={key}
+      id={`release-catalog-${key}`}
+      className={cn(
+        'group scroll-mt-3 overflow-hidden rounded-xl border shadow-sm',
+        style.border,
+        style.surface,
+        rows.length === 0 && opts?.compactEmpty && 'opacity-70'
+      )}
+      open={rows.length > 0}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden">
+        <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border', style.iconWrap, style.icon)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold uppercase tracking-wide text-foreground">{label}</span>
+          <span className="block text-xs leading-relaxed text-muted-foreground sm:text-sm">{note}</span>
+        </span>
+        <span className={cn('rounded-full border px-2 py-1 font-code text-xs font-bold', style.badge)}>
+          {rows.length}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      {rows.length ? (
+        renderRows(key, rows)
+      ) : (
+        <p className="border-t border-white/10 px-3 py-3 text-xs text-muted-foreground sm:text-sm">
+          Nothing in {shortLabel.toLowerCase()} yet.
+        </p>
+      )}
+    </details>
+  );
+
   return (
     <section className={cn('min-w-0 space-y-4', className)} aria-label="Release catalog contents">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            Upload and test recordings privately, then press music live when ready — free on every account.
-          </p>
-          <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-cyan-100/75">
-            Lyrics live on your Vault sheet. To share them publicly, publish a DNA Drop from that sheet (Studio Pro to publish, view, or import). New release is for the recording, not the lyric link. Take offline keeps the link; Remove retires it — Vault audio and buyer Library access stay.
-          </p>
+          {totalCount === 0 ? (
+            <>
+              <p className="max-w-2xl text-sm leading-relaxed text-foreground/90 sm:text-base">
+                Your catalog is empty — that is normal when you are just getting started.
+              </p>
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                Upload a recording with <strong className="text-foreground">New release</strong>, write lyrics in The Vault, then DNA Drop when you want lyrics public (Pro).
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <span className="font-bold text-foreground">{totalCount}</span> item{totalCount === 1 ? '' : 's'} across{' '}
+                <span className="font-bold text-foreground">{activeGroups.length}</span> section{activeGroups.length === 1 ? '' : 's'}.
+                Jump below or expand a colored group.
+              </p>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-cyan-100/75 sm:text-sm">
+                New release = music. DNA Drop = public lyrics from your Vault sheet.
+              </p>
+            </>
+          )}
         </div>
         <Button type="button" className="bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
           <Disc3 className="mr-2 h-4 w-4" /> New release
         </Button>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-2">
-        {GROUPS.map(({ key, label, note }) => {
-          const rows = asRows(groups[key]);
-          return (
-            <details key={key} className="group rounded-xl border border-white/10 bg-black/25" open={key === 'privateDrafts' || key === 'offlineReleases' || key === 'liveSinglesWithLyrics' || key === 'liveSinglesAudioOnly'}>
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/25 bg-cyan-400/10 text-cyan-200">
-                  {key.includes('Album') || key.includes('Albums') ? <Disc3 className="h-4 w-4" /> : <Music className="h-4 w-4" />}
+      {totalCount === 0 ? (
+        <div className="rounded-2xl border border-dashed border-cyan-400/30 bg-gradient-to-br from-cyan-500/[0.08] via-fuchsia-500/[0.05] to-violet-500/[0.08] px-5 py-10 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-fuchsia-400/35 bg-fuchsia-500/15 text-fuchsia-200">
+            <Disc3 className="h-7 w-7" />
+          </span>
+          <p className="mt-4 font-headline text-lg font-bold uppercase tracking-tight text-foreground">Nothing released yet</p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Sections for live singles, albums, DNA Drops, and drafts appear here automatically once you create them. No need to hunt through empty folders.
+          </p>
+          <Button type="button" className="mt-5 bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
+            <Disc3 className="mr-2 h-4 w-4" /> Start your first release
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {activeGroups.map((group) => (
+              <button
+                key={group.key}
+                type="button"
+                onClick={() => scrollToGroup(group.key)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs',
+                  group.style.chip
+                )}
+              >
+                {group.shortLabel} · {group.rows.length}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-2 lg:grid-cols-2">
+            {activeGroups.map((group) => renderGroupCard(group))}
+          </div>
+
+          {emptyGroups.length > 0 ? (
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <button
+                type="button"
+                onClick={() => setShowEmptySections((value) => !value)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground sm:text-sm">
+                  {showEmptySections ? 'Hide' : 'Show'} empty sections ({emptyGroups.length})
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold uppercase tracking-wide">{label}</span>
-                  <span className="block text-[10px] leading-relaxed text-muted-foreground">{note}</span>
-                </span>
-                <span className="rounded-full border border-white/10 px-2 py-1 font-code text-[10px]">{rows.length}</span>
-              </summary>
-              {rows.length ? (
-                <ul className="space-y-2 border-t border-white/10 p-2.5">
-                  {rows.map(({ album, track }) => {
-                    const dnaGroup = key === 'dnaPreviews';
-                    const dnaId = track?.shareId || album.shareId;
-                    const releaseId = dnaGroup ? undefined : releaseShareIdOf(track || { ...album, tracks: album.tracks });
-                    const status = releaseStatusOf(track || { ...album, tracks: album.tracks });
-                    const rowKey = `${key}:${album.id}:${track?.id || 'album'}`;
-                    return (
-                      <li key={rowKey} className="rounded-lg border border-white/10 bg-slate-950/75 p-2.5">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-bold">{track?.title || album.title || 'Untitled'}</span>
-                            <span className="block truncate font-code text-[9px] uppercase tracking-wider text-muted-foreground">
-                              {track ? `${album.title} · ${hasLyrics(track) ? 'lyrics attached' : 'audio only'}` : `${album.tracks.length} tracks`}
-                              {dnaGroup ? ' · DNA Drop live' : status ? ` · ${status}` : ''}
-                              {!dnaGroup && (track?.houseRelease || (!track && album.houseRelease)) ? ' · House · Free' : ''}
-                              {!dnaGroup && (track?.houseLibraryNotice || (!track && album.houseLibraryNotice)) ? ' · Library notice on' : ''}
-                            </span>
-                          </span>
-                          {busy.endsWith(track?.id || album.id) ? <Loader className="h-4 w-4 animate-spin" /> : null}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {dnaGroup && dnaId ? (
-                            <Button asChild size="sm" variant="secondary" className="h-8 text-[9px] font-bold uppercase">
-                              <Link href={`/share/${dnaId}`}><ExternalLink className="mr-1 h-3 w-3" /> Open lyric page</Link>
-                            </Button>
-                          ) : null}
-                          {releaseId && status === 'live' ? (
-                            <Button asChild size="sm" variant="secondary" className="h-8 text-[9px] font-bold uppercase">
-                              <Link href={track ? `/song/${releaseId}` : `/share/${releaseId}`}>
-                                <ExternalLink className="mr-1 h-3 w-3" /> Open release
-                              </Link>
-                            </Button>
-                          ) : null}
-                          {dnaGroup ? (
-                            <Button asChild size="sm" variant="outline" className="h-8 text-[9px] font-bold uppercase">
-                              <Link href={track ? `/albums/${album.id}/tracks/${track.id}` : `/albums/${album.id}`}><Settings2 className="mr-1 h-3 w-3" /> Manage in Vault</Link>
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="outline" className="h-8 text-[9px] font-bold uppercase" onClick={() => openFirstDropLathe({ albumId: album.id, ...(track ? { trackId: track.id } : { mode: 'album' as const }) })}>
-                              <Settings2 className="mr-1 h-3 w-3" /> {status === 'live' ? 'Update' : 'Open release desk'}
-                            </Button>
-                          )}
-                          {track && !hasLyrics(track) && normalizeDropAudio(track.dropAudio) ? (
-                            <>
-                              <Button asChild size="sm" variant="outline" className="h-8 text-[9px] font-bold uppercase">
-                                <Link href={`/albums/${album.id}/tracks/${track.id}`}><FileText className="mr-1 h-3 w-3" /> Start lyrics</Link>
-                              </Button>
-                              {lyricSheets.length ? (
-                                <Button size="sm" variant="outline" className="h-8 text-[9px] font-bold uppercase" onClick={() => setAttach({ album, track })}>
-                                  <Link2 className="mr-1 h-3 w-3" /> Attach existing
-                                </Button>
-                              ) : null}
-                            </>
-                          ) : null}
-                          {!dnaGroup && status === 'live' ? (
-                            <Button size="sm" variant="outline" className="h-8 border-red-400/30 text-[9px] font-bold uppercase text-red-300" onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}>
-                              <Unlink className="mr-1 h-3 w-3" /> Take offline
-                            </Button>
-                          ) : null}
-                          {!dnaGroup && status === 'unlisted' && releaseId ? (
-                            <Button size="sm" variant="outline" className="h-8 border-red-400/30 text-[9px] font-bold uppercase text-red-300" onClick={() => setRemove({ kind: track ? 'track' : 'album', album, track })}>
-                              <Trash2 className="mr-1 h-3 w-3" /> Remove release
-                            </Button>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : <p className="border-t border-white/10 px-3 py-3 text-[10px] text-muted-foreground">Nothing in this group yet.</p>}
-            </details>
-          );
-        })}
-      </div>
+                <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showEmptySections && 'rotate-180')} />
+              </button>
+              {showEmptySections ? (
+                <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                  {emptyGroups.map((group) => renderGroupCard(group, { compactEmpty: true }))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
 
       <Dialog open={Boolean(unpress)} onOpenChange={(open) => !open && setUnpress(null)}>
         <DialogContent className="max-w-md">
@@ -322,7 +533,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
             {lyricSheets.map(({ album, track }) => (
               <button key={`${album.id}:${track.id}`} type="button" disabled={Boolean(busy)} className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/25 p-3 text-left hover:border-cyan-400/40" onClick={() => void attachSheet(album.id, track.id)}>
                 <Radio className="h-4 w-4 shrink-0 text-cyan-300" />
-                <span className="min-w-0"><span className="block truncate text-sm font-bold">{track.title}</span><span className="block truncate text-[10px] text-muted-foreground">{album.title}</span></span>
+                <span className="min-w-0"><span className="block truncate text-base font-bold">{track.title}</span><span className="block truncate text-xs text-muted-foreground sm:text-sm">{album.title}</span></span>
               </button>
             ))}
           </div>
@@ -345,7 +556,7 @@ export function ReleaseCatalogDialog({ open, onOpenChange, className }: ReleaseC
           <DialogTitle className="font-headline text-2xl font-bold uppercase tracking-tight">
             Release Catalog
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm leading-relaxed sm:text-base">
             Manage music releases, live DNA Drops, and drafts from one place.
           </DialogDescription>
         </DialogHeader>

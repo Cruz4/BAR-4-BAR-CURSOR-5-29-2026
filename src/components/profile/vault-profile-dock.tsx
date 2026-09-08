@@ -324,7 +324,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             <span
               className={cn(
                 'block whitespace-normal font-headline font-bold uppercase leading-tight tracking-tight text-foreground',
-                compact ? 'text-xs' : 'text-[10px]'
+                compact ? 'text-sm' : 'text-xs'
               )}
             >
               {compact ? (
@@ -340,7 +340,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             <span
               className={cn(
                 'mt-1 block font-code font-bold uppercase tracking-[0.18em] text-cyan-300/90',
-                compact ? 'text-[9px]' : 'text-[8px]'
+                compact ? 'text-[10px]' : 'text-[9px]'
               )}
             >
               Manage

@@ -3,11 +3,22 @@
  * button can return to the same feed after opening a profile.
  */
 
+import type { ProfilePost } from '@/lib/profile/social-client';
+import type { DiscoverData } from '@/lib/scene/discover-client';
+
 export const SCENE_PORTAL_PARAM = 'scene';
 
 export type ScenePortalFeed = 'block' | 'discover';
 
 const SLIDE_KEY = 'aka.scene.portal.slide';
+const FEED_CACHE_KEY = 'aka.scene.portal.feed';
+const FEED_CACHE_MAX_MS = 30 * 60 * 1000;
+
+export type ScenePortalFeedCache = {
+  savedAt: string;
+  posts: ProfilePost[];
+  discover: DiscoverData | null;
+};
 
 export function parseScenePortalFeed(
   search: string | { get: (key: string) => string | null } | null | undefined
@@ -52,6 +63,42 @@ export function clearScenePortalSlide() {
     sessionStorage.removeItem(SLIDE_KEY);
   } catch {
     /* ignore */
+  }
+}
+
+/** Snapshot Block + Discover so phone back from a profile restores the feed instantly. */
+export function rememberScenePortalFeedCache(posts: ProfilePost[], discover: DiscoverData | null) {
+  if (typeof window === 'undefined') return;
+  if (!posts.length && !discover) return;
+  try {
+    sessionStorage.setItem(
+      FEED_CACHE_KEY,
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        posts,
+        discover,
+      } satisfies ScenePortalFeedCache)
+    );
+  } catch {
+    /* quota */
+  }
+}
+
+export function readScenePortalFeedCache(): ScenePortalFeedCache | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(FEED_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ScenePortalFeedCache;
+    if (!parsed?.savedAt || !Array.isArray(parsed.posts)) return null;
+    const age = Date.now() - new Date(parsed.savedAt).getTime();
+    if (!Number.isFinite(age) || age > FEED_CACHE_MAX_MS) {
+      sessionStorage.removeItem(FEED_CACHE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
   }
 }
 

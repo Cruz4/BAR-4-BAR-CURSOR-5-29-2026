@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
+import { BarChart3, Heart, MessageCircle, Send, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -37,9 +37,18 @@ import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import { activityCommentElementId } from '@/lib/activity/post-deep-link';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { isMasterAdminEmail } from '@/lib/master-admin';
-import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionField } from '@/components/profile/mention-suggestions';
 import { MentionText } from '@/components/profile/mention-text';
 import { ComposerLinkPreview, FieldsLinkPreview } from '@/components/profile/inline-link-preview';
+import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
+import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import { PostPollCard } from '@/components/profile/post-poll';
+import { useAuth } from '@/hooks/use-auth';
+import { useImprintComposer } from '@/hooks/use-imprint-composer';
+import { isProOrTrial } from '@/lib/subscription';
+import { quotePressSlotLabel } from '@/lib/profile/quote-press';
+import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 
 type PostCommentThreadProps = {
   postId?: string;
@@ -78,18 +87,38 @@ export function PostCommentThread({
   isOwner,
 }: PostCommentThreadProps) {
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
+  const isPro = isProOrTrial(authUser);
   const [likeStates, setLikeStates] = useState<Record<string, { count: number; liked: boolean }>>({});
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
   const [draft, setDraft] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
   const [clip, setClip] = useState<PendingWallClip | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
   const [busy, setBusy] = useState(false);
   const draftRef = useRef<HTMLInputElement>(null);
   const insertEmoji = useEmojiInserter(draft, setDraft, draftRef);
+  const {
+    imprintOn,
+    toggleImprint,
+    resetImprint,
+    imprintFaders,
+    setImprintFaders,
+    imprintSlots,
+    slotBusy,
+    activeImprintConfig,
+    persistImprintSlots,
+    imprintPayload,
+  } = useImprintComposer(draft, isPro, summary.quotePressSlots);
   const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
   const canWritePublic = Boolean(user && !profileLoading && profileLive);
+  const pollReady = !pollOpen || (Boolean(draft.trim()) && pollOptions.every((option) => option.trim()));
+  const composerReady =
+    pollReady && Boolean(draft.trim() || voice || image || clip || (pollOpen && draft.trim()));
   const isAdmin = Boolean(
     user && (user.role === 'admin' || isMasterAdminEmail(user.email))
   );
@@ -114,7 +143,7 @@ export function PostCommentThread({
   }, [postId, shareId, comments, user?.id]);
 
   const submitComment = async () => {
-    if (!user || (!draft.trim() && !voice && !image && !clip)) return;
+    if (!user || !composerReady) return;
     if (!canWritePublic) {
       toast({
         variant: 'destructive',
@@ -144,7 +173,14 @@ export function PostCommentThread({
             author,
             voice || undefined,
             image || undefined,
-            { ...replyOpts, ...(clip ? { video: clip } : {}) }
+            {
+              ...replyOpts,
+              ...(clip ? { video: clip } : {}),
+              ...imprintPayload,
+              ...(pollOpen
+                ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } }
+                : {}),
+            }
           )
         : await addDropComment(shareId!, draft, author, image || undefined, {
             ...replyOpts,
@@ -158,6 +194,10 @@ export function PostCommentThread({
       setImage(null);
       revokeWallClipPreview(clip);
       setClip(null);
+      setPollOpen(false);
+      setPollOptions(['', '']);
+      setPollVisibility('after_vote');
+      resetImprint();
       setReplyTo(null);
     } catch (e) {
       toast({
@@ -235,11 +275,24 @@ export function PostCommentThread({
             >
               {node.authorName}
             </ArtistHomeLink>
-            {node.text ? (
+            {node.text && node.quotePress ? (
+              <div className="mt-1.5">
+                <QuotePressCard
+                  text={node.text}
+                  config={node.quotePress}
+                  withMentions
+                  compact
+                  creatorSlug={node.authorSlug}
+                />
+              </div>
+            ) : node.text ? (
               <span className="text-[var(--ph-text,#fff)]/90"><MentionText text={node.text} /></span>
             ) : null}
-            {node.text ? (
+            {node.text && !node.quotePress ? (
               <FieldsLinkPreview text={node.text} compact className="mt-1.5 max-w-md" />
+            ) : null}
+            {node.poll && postId ? (
+              <PostPollCard postId={postId} commentId={node.id} poll={node.poll} />
             ) : null}
             {node.video ? (
               <div className="mt-1.5">
@@ -379,51 +432,130 @@ export function PostCommentThread({
               />
             </div>
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
+            {postId ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setPollOpen((value) => !value)}
+                  disabled={busy}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider transition-colors',
+                    pollOpen ? 'text-cyan-300' : 'text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:text-cyan-300'
+                  )}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" /> Poll
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleImprint}
+                  disabled={busy}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-0.5 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                    imprintOn
+                      ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+                      : 'border-transparent text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+                  )}
+                >
+                  <Sparkles className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')} />
+                  Imprint
+                </button>
+              </>
+            ) : null}
           </div>
-          <div className="relative flex items-center gap-2">
-            <Input
-              ref={draftRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onPaste={(e) => {
-                void attachPastedImage(e, {
-                  disabled: busy,
-                  image,
-                  onImageChange: setImage,
-                  clip,
-                  onClipChange: setClip,
-                  onError: (message) =>
-                    toast({
-                      variant: 'destructive',
-                      title: 'Could not attach photo',
-                      description: message,
-                    }),
-                });
+          {imprintOn && draft.trim() ? (
+            <div className="space-y-2">
+              <QuotePressCard text={draft} config={activeImprintConfig} withMentions compact />
+              <QuotePressComposerPanel
+                faders={activeImprintConfig.faders}
+                onFadersChange={(next) => {
+                  if (!isPro) return;
+                  setImprintFaders(next);
+                }}
+                slots={imprintSlots}
+                isPro={isPro}
+                busy={busy || slotBusy}
+                onLockSlot={() => {
+                  if (!isPro) return;
+                  const label = quotePressSlotLabel(imprintFaders);
+                  void persistImprintSlots([
+                    ...imprintSlots,
+                    {
+                      id: `qp-${Date.now()}`,
+                      faders: { ...imprintFaders },
+                      lockedAt: new Date().toISOString(),
+                      label,
+                    },
+                  ]);
+                }}
+                onLoadSlot={(slot) => {
+                  if (!isPro) return;
+                  setImprintFaders(slot.faders);
+                }}
+                onClearSlot={(slotId) => {
+                  void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
+                }}
+              />
+            </div>
+          ) : null}
+          {pollOpen ? (
+            <PollComposerFields
+              options={pollOptions}
+              onOptionsChange={setPollOptions}
+              resultsVisibility={pollVisibility}
+              onResultsVisibilityChange={setPollVisibility}
+              onRemovePoll={() => {
+                setPollOpen(false);
+                setPollOptions(['', '']);
+                setPollVisibility('after_vote');
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void submitComment();
-                }
-              }}
-              maxLength={500}
-              placeholder={
-                replyTo
-                  ? `Reply to ${replyTo.authorName}…`
-                  : voice || image || clip
-                    ? 'Add a caption (optional)…'
-                    : shareId
-                      ? 'Reply on this drop…'
-                      : 'Say something… or paste a link or photo'
-              }
-              className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
+              disabled={busy}
             />
-            <MentionSuggestions value={draft} onChange={setDraft} excludeUserId={user?.id} />
+          ) : null}
+          <div className="relative flex flex-1 items-center gap-2">
+            <MentionField value={draft} onChange={setDraft} excludeUserId={user?.id} className="flex-1">
+              <Input
+                ref={draftRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onPaste={(e) => {
+                  void attachPastedImage(e, {
+                    disabled: busy,
+                    image,
+                    onImageChange: setImage,
+                    clip,
+                    onClipChange: setClip,
+                    onError: (message) =>
+                      toast({
+                        variant: 'destructive',
+                        title: 'Could not attach photo',
+                        description: message,
+                      }),
+                  });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void submitComment();
+                  }
+                }}
+                maxLength={500}
+                placeholder={
+                  replyTo
+                    ? `Reply to ${replyTo.authorName}…`
+                    : voice || image || clip
+                      ? 'Add a caption (optional)…'
+                      : shareId
+                        ? 'Reply on this drop…'
+                        : 'Say something… or paste a link or photo'
+                }
+                className="h-8 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/30 text-sm"
+              />
+            </MentionField>
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8 shrink-0 text-[var(--ph-accent,#7dd3fc)]"
-              disabled={busy || (!draft.trim() && !voice && !image && !clip)}
+              disabled={busy || !composerReady}
               onClick={() => void submitComment()}
             >
               <Send className="h-3.5 w-3.5" />

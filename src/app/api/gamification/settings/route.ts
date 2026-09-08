@@ -19,6 +19,7 @@ export async function PATCH(req: Request) {
       starMarkSeed,
       starMarkSlots,
       starMarkPinnedSlotId,
+      quotePressSlots,
     } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -45,6 +46,7 @@ export async function PATCH(req: Request) {
       starMarkSeed,
       starMarkSlots,
       starMarkPinnedSlotId,
+      quotePressSlots,
     });
     return NextResponse.json({ summary });
   } catch (err) {

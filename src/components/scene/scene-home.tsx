@@ -8,7 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Check, ChevronDown, Radio, Send, UserPlus, X } from 'lucide-react';
+import { BarChart3, Check, ChevronDown, Radio, Send, Sparkles, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,8 +39,11 @@ import { ScenePortalHub } from '@/components/scene/scene-portal-hub';
 import { SceneImmersiveFeedDialog } from '@/components/scene/scene-immersive-feed-dialog';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
-import { MentionSuggestions } from '@/components/profile/mention-suggestions';
+import { MentionField } from '@/components/profile/mention-suggestions';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { queueAutoImprintSyndication } from '@/lib/profile/imprint-syndicate-client';
+import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
@@ -92,7 +95,15 @@ import {
   COOKIE_CONSENT_CHANGED_EVENT,
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
-import { postGamificationEvent } from '@/lib/gamification-client';
+import {
+  quotePressFadersFromText,
+  quotePressSlotLabel,
+  sanitizeQuotePressSlots,
+  type QuotePressFaders,
+  type QuotePressSlot,
+} from '@/lib/profile/quote-press';
+import { isProOrTrial } from '@/lib/subscription';
+import { patchGamificationSettings, postGamificationEvent } from '@/lib/gamification-client';
 import {
   BLOCK_SECTION_ID,
   DISCOVER_SECTION_ID,
@@ -114,12 +125,19 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { useSceneLayout } from '@/hooks/use-scene-layout';
+import {
+  mergeWallPostFeed,
+  WALL_POST_FEED_EVENT,
+  type WallPostFeedDetail,
+} from '@/lib/scene/wall-post-feed-events';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   clearScenePortalSlide,
   closeScenePortalFeed,
   parseScenePortalFeed,
+  readScenePortalFeedCache,
   readScenePortalSlide,
+  rememberScenePortalFeedCache,
   rememberScenePortalSlide,
   scenePortalHref,
 } from '@/lib/scene/portal-feed';
@@ -170,6 +188,7 @@ function SceneComposer({
   const { user } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
+  const isPro = isProOrTrial(user);
   const [text, setText] = useState('');
   const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
   const [image, setImage] = useState<PendingPostImage | null>(null);
@@ -177,9 +196,41 @@ function SceneComposer({
   const [pollOpen, setPollOpen] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
+  const [imprintOn, setImprintOn] = useState(false);
+  const [imprintFaders, setImprintFaders] = useState<QuotePressFaders>(() =>
+    quotePressFadersFromText('')
+  );
+  const [imprintSlots, setImprintSlots] = useState<QuotePressSlot[]>([]);
+  const [slotBusy, setSlotBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
+  const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
+
+  useEffect(() => {
+    setImprintSlots(sanitizeQuotePressSlots(summary.quotePressSlots));
+  }, [summary.quotePressSlots]);
+
+  const activeImprintConfig = useMemo(() => {
+    const faders = isPro ? imprintFaders : quotePressFadersFromText(text);
+    return { faders };
+  }, [isPro, imprintFaders, text]);
+
+  const persistImprintSlots = async (nextSlots: QuotePressSlot[]) => {
+    setSlotBusy(true);
+    try {
+      await patchGamificationSettings({ quotePressSlots: nextSlots });
+      setImprintSlots(nextSlots);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not save imprint style',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setSlotBusy(false);
+    }
+  };
 
   useEffect(() => {
     const el = textRef.current;
@@ -204,7 +255,12 @@ function SceneComposer({
         ...(image ? { image } : {}),
         ...(clip ? { video: clip } : {}),
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
+        ...(imprintOn && text.trim() ? { quotePress: activeImprintConfig } : {}),
       });
+      const captureRoot = imprintPreviewRef.current;
+      if (post.quotePress && captureRoot) {
+        void queueAutoImprintSyndication({ post, captureRoot });
+      }
       setText('');
       setVoice(null);
       revokePostImagePreview(image);
@@ -214,6 +270,7 @@ function SceneComposer({
       setPollOpen(false);
       setPollOptions(['', '']);
       setPollVisibility('after_vote');
+      setImprintOn(false);
       onPosted(post);
       toast({ title: 'Posted to your wall' });
     } catch (e) {
@@ -225,28 +282,67 @@ function SceneComposer({
 
   return (
     <div data-tour="scene-composer" className="relative">
-      <Textarea
-        ref={textRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onPaste={(e) => {
-          void attachPastedImage(e, {
-            disabled: busy,
-            image,
-            onImageChange: setImage,
-            clip,
-            onClipChange: setClip,
-            onError: (message) =>
-              toast({ variant: 'destructive', title: 'Could not attach photo', description: message }),
-          });
-        }}
-        placeholder="Write a post, or paste a link or photo…"
-        rows={2}
-        maxLength={1000}
-        className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
-      />
-      <MentionSuggestions value={text} onChange={setText} />
+      <MentionField value={text} onChange={setText} excludeUserId={user?.id}>
+        <Textarea
+          ref={textRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => {
+            void attachPastedImage(e, {
+              disabled: busy,
+              image,
+              onImageChange: setImage,
+              clip,
+              onClipChange: setClip,
+              onError: (message) =>
+                toast({ variant: 'destructive', title: 'Could not attach photo', description: message }),
+            });
+          }}
+          placeholder="Write a post, or paste a link or photo…"
+          rows={2}
+          maxLength={1000}
+          className="min-h-[3.5rem] overflow-hidden resize-none border-border/60 bg-background/60 text-sm leading-snug"
+        />
+      </MentionField>
       <ComposerLinkPreview text={text} />
+      {imprintOn && text.trim() ? (
+        <div className="mt-2 space-y-2">
+          <QuotePressCard
+            ref={imprintPreviewRef}
+            text={text}
+            config={activeImprintConfig}
+            creatorSlug={profileSlug}
+          />
+          <QuotePressComposerPanel
+            faders={activeImprintConfig.faders}
+            onFadersChange={(next) => {
+              if (!isPro) return;
+              setImprintFaders(next);
+            }}
+            slots={imprintSlots}
+            isPro={isPro}
+            busy={busy || slotBusy}
+            onLockSlot={() => {
+              if (!isPro) return;
+              const label = quotePressSlotLabel(imprintFaders);
+              const next: QuotePressSlot = {
+                id: `qp-${Date.now()}`,
+                faders: { ...imprintFaders },
+                lockedAt: new Date().toISOString(),
+                label,
+              };
+              void persistImprintSlots([...imprintSlots, next]);
+            }}
+            onLoadSlot={(slot) => {
+              if (!isPro) return;
+              setImprintFaders(slot.faders);
+            }}
+            onClearSlot={(slotId) => {
+              void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
+            }}
+          />
+        </div>
+      ) : null}
       {pollOpen ? (
         <PollComposerFields
           options={pollOptions}
@@ -295,6 +391,30 @@ function SceneComposer({
         >
           <BarChart3 className="h-3.5 w-3.5" /> Poll
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setImprintOn((value) => {
+              const next = !value;
+              if (next && isPro) {
+                setImprintFaders(quotePressFadersFromText(text));
+              }
+              return next;
+            });
+          }}
+          disabled={busy}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+            imprintOn
+              ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+              : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+          )}
+        >
+          <Sparkles
+            className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')}
+          />
+          Imprint
+        </button>
         <Button
           size="sm"
           className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"
@@ -339,6 +459,23 @@ export function SceneHome() {
   const [immersiveFeed, setImmersiveFeed] = useState<'block' | 'discover' | null>(null);
   const [immersiveInitialKey, setImmersiveInitialKey] = useState<string | undefined>(undefined);
   const tourAutoStartRef = useRef(false);
+  const portalCacheHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (!showPortalHub || portalCacheHydratedRef.current) return;
+    portalCacheHydratedRef.current = true;
+    const cached = readScenePortalFeedCache();
+    if (!cached) return;
+    if (cached.posts.length) {
+      setPosts((prev) => mergePosts(prev, cached.posts));
+      setBlockReady(true);
+      setLoaded(true);
+    }
+    if (cached.discover) {
+      setDiscover(cached.discover);
+      setDiscoverReady(true);
+    }
+  }, [showPortalHub]);
 
   useEffect(() => {
     if (!showPortalHub) {
@@ -730,6 +867,16 @@ export function SceneHome() {
   const visibleBlockPosts = blockPosts.slice(0, blockVisible);
   const visibleDiscoverCards = discoverCards.slice(0, discoverVisible);
 
+  const rememberPortalFeed = useCallback(() => {
+    rememberScenePortalFeedCache(posts, discover);
+  }, [discover, posts]);
+
+  useEffect(() => {
+    if (!showPortalHub || !portalFeed) return;
+    if (!blockReady && !discoverReady) return;
+    rememberScenePortalFeedCache(posts, discover);
+  }, [blockReady, discover, discoverReady, portalFeed, posts, showPortalHub]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const target = parseActivityPostHash(window.location.hash);
@@ -816,11 +963,27 @@ export function SceneHome() {
     friendCount + posts.length + discoverCards.length + incomingRequests.length * 2;
 
   const onPosted = useCallback((post: ProfilePost) => {
-    setPosts((prev) => [post, ...prev]);
+    setPosts((prev) => mergeWallPostFeed(prev, post));
   }, []);
 
   const onPostDeleted = useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
+  useEffect(() => {
+    const onFeedChange = (ev: Event) => {
+      const detail = (ev as CustomEvent<WallPostFeedDetail>).detail;
+      if (!detail) return;
+      if (detail.kind === 'deleted') {
+        setPosts((prev) => prev.filter((p) => p.id !== detail.postId));
+        return;
+      }
+      if (detail.kind === 'upsert') {
+        setPosts((prev) => mergeWallPostFeed(prev, detail.post));
+      }
+    };
+    window.addEventListener(WALL_POST_FEED_EVENT, onFeedChange);
+    return () => window.removeEventListener(WALL_POST_FEED_EVENT, onFeedChange);
   }, []);
 
   const openBlockPortal = useCallback(() => {
@@ -1075,7 +1238,11 @@ export function SceneHome() {
                 discoverCards={discoverCards}
                 viewerSlug={viewerSlug}
                 onPostDeleted={onPostDeleted}
+                onPostUpserted={onPosted}
                 onLockRemoved={onDiscoverLockRemoved}
+                blockLoading={!blockReady}
+                discoverLoading={!discoverReady}
+                onRememberFeed={rememberPortalFeed}
               />
             </>
           ) : (
@@ -1139,6 +1306,7 @@ export function SceneHome() {
                         showAuthor
                         viewerSlug={viewerSlug}
                         onDeleted={onPostDeleted}
+                        onReverbed={onPosted}
                       />
                     ))
                   ) : circleLoading ? (

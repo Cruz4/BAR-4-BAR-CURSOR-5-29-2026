@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { PassBarDialog } from '@/components/folds/pass-bar-dialog';
 import { FoldReadToggle } from '@/components/folds/fold-read-toggle';
+import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
+import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
 import {
   acceptFoldClient,
   declineFoldClient,
@@ -60,8 +62,8 @@ function FoldCard({
       className={cn(
         'relative min-w-0 overflow-x-hidden border transition-all',
         wet
-          ? 'border-amber-400/50 bg-amber-500/[0.07] shadow-[0_0_28px_rgba(251,191,36,0.12)]'
-          : 'border-white/10 bg-[#14110d]/80',
+          ? 'border-amber-400/50 bg-amber-500/[0.1] shadow-[0_0_28px_rgba(251,191,36,0.14)] backdrop-blur-sm'
+          : 'border-amber-500/15 bg-[#14110d]/70 backdrop-blur-sm',
         fold.status === 'declined' && 'opacity-50'
       )}
     >
@@ -147,9 +149,10 @@ export function FoldStack() {
   const { user } = useAuth();
   const { summary } = useGamification();
   const { toast } = useToast();
-  const { folds, ready, waiting } = useFoldInbox();
+  const { folds, unread, ready, waiting, markAllFoldsRead, markAllFoldsUnread } = useFoldInbox();
   const [tab, setTab] = useState<'open' | 'waiting'>('open');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [pickOpen, setPickOpen] = useState(false);
   const [friends, setFriends] = useState<Array<{ userId: string; name: string }>>([]);
   const [peer, setPeer] = useState<{ userId: string; name: string } | null>(null);
@@ -219,15 +222,62 @@ export function FoldStack() {
     }
   };
 
+  const handleMarkAllRead = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllFoldsRead();
+      toast({ title: 'All messages read' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not mark all read',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleMarkAllUnread = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await markAllFoldsUnread();
+      toast({ title: 'Marked unread' });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not mark all unread',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   if (!user) return null;
 
   const rows = tab === 'waiting' ? waitingFolds : openFolds;
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col bg-[#0a0c12]/95">
-      <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-1 flex-col overflow-x-hidden px-4 py-4 sm:px-6 sm:py-5 lg:max-w-5xl">
+    <div className="relative flex min-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
+      <InboxPageAtmosphere variant="msgs" />
+      <div className="relative z-10 mx-auto flex w-full min-w-0 max-w-4xl flex-1 flex-col overflow-x-hidden px-4 py-4 sm:px-6 sm:py-5 lg:max-w-5xl">
       <header className="shrink-0 space-y-2">
-        <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Msgs</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Msgs</h1>
+          {tab === 'open' ? (
+            <InboxBulkReadToggle
+              unreadCount={unread}
+              onMarkAllRead={handleMarkAllRead}
+              onMarkAllUnread={handleMarkAllUnread}
+              busy={bulkBusy}
+              variant="amber"
+              className="mt-1"
+            />
+          ) : null}
+        </div>
       </header>
 
       <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2">
@@ -261,7 +311,7 @@ export function FoldStack() {
           <StudioLoader size="md" message="Opening Msgs…" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center border border-dashed border-amber-500/20 bg-black/20 px-6 py-12 text-center sm:py-16">
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-amber-500/30 bg-amber-500/[0.06] px-6 py-12 text-center shadow-[inset_0_0_40px_rgba(251,191,36,0.06)] sm:py-16">
           <div>
           <MessageSquare className="mx-auto mb-3 h-7 w-7 text-amber-400/70" />
           <p className="font-headline text-lg uppercase">

@@ -41,6 +41,7 @@ import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import {
   BarOfWeekModule,
   DropShelfModule,
+  ImprintShelfModule,
   FriendsModule,
   GuestbookModule,
   NowPlayingModule,
@@ -105,6 +106,7 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   theCatch: BarBoardModule,
   openLock: OpenLockModule,
   dropShelf: DropShelfModule,
+  imprintShelf: ImprintShelfModule,
   proofWall: ProofWallModule,
   wall: WallModule,
   friends: FriendsModule,

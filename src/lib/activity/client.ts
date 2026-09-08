@@ -231,6 +231,19 @@ export async function markAllActivityEventsRead(): Promise<void> {
   if (!response.ok) throw new Error('Failed to mark all activity read');
 }
 
+export async function markAllActivityEventsUnread(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+  const headers = await authHeaders();
+  if (!headers) return;
+  const response = await fetch('/api/activity/read', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ userId: user.uid, all: true, unread: true }),
+  });
+  if (!response.ok) throw new Error('Failed to mark all activity unread');
+}
+
 /** Mark unread House Library pings read — all pending, or one share when provided. */
 export async function markUnreadHouseReleasePingsRead(shareId?: string): Promise<void> {
   const user = auth.currentUser;
