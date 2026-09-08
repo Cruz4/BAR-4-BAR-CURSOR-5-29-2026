@@ -67,8 +67,8 @@ export function ExpandableMedia({
               <video
                 src={src}
                 controls
-                autoPlay
                 playsInline
+                preload="metadata"
                 className="max-h-[88vh] w-auto max-w-full rounded-lg bg-black object-contain"
               />
             ) : (

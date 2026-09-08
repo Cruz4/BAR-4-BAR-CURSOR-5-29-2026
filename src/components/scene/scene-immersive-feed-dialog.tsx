@@ -453,14 +453,14 @@ export function SceneImmersiveFeedDialog({
             <section
               key={item.meta.key}
               data-feed-index={index}
-              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-start justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))]"
+              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))]"
               style={{ paddingTop: headerPx }}
               aria-label={`${title}: ${item.meta.name}`}
             >
               {paint ? (
               <>
               <div
-                className="relative z-10 w-full max-w-[44rem] overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                className="relative z-10 h-fit w-full max-w-[44rem] overflow-y-auto overscroll-contain [scrollbar-width:thin]"
                 style={{ maxHeight: `calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))` }}
               >
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">

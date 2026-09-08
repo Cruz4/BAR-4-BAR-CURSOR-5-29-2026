@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Album,
@@ -20,7 +20,6 @@ import {
   ListMusic,
   ListPlus,
   Loader,
-  Lock,
   Pause,
   Pencil,
   Play,
@@ -100,6 +99,11 @@ import {
   listOfflinePressedAudioKeys,
   removePressedAudioOffline,
 } from '@/lib/offline/pressed-audio-cache';
+import {
+  autoDownloadLibraryItems,
+  readAutoDownloadPref,
+  writeAutoDownloadPref,
+} from '@/lib/offline/library-offline';
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
 import { fetchActivityFeed, markActivityEventsRead } from '@/lib/activity/client';
@@ -185,12 +189,10 @@ export function DropDeck({
   userId,
   items,
   pressing,
-  canDownloadOffline,
 }: {
   userId: string;
   items: DropLibraryItem[];
   pressing?: PressingConfig | null;
-  canDownloadOffline: boolean;
 }) {
   const { toast } = useToast();
   const { updateAlbum, updateTrack } = useContext(DataContext);
@@ -232,6 +234,9 @@ export function DropDeck({
   const [expandedAlbums, setExpandedAlbums] = useState<Record<string, boolean>>({});
   const [offlineKeys, setOfflineKeys] = useState<Set<string>>(new Set());
   const [offlineBusyKey, setOfflineBusyKey] = useState<string | null>(null);
+  const [showDownloadsOnly, setShowDownloadsOnly] = useState(false);
+  const [autoDownloadEnabled, setAutoDownloadEnabled] = useState(() => readAutoDownloadPref(userId));
+  const autoDownloadRanRef = useRef('');
   const [unpressBusyKey, setUnpressBusyKey] = useState<string | null>(null);
   const [hiddenReleaseIds, setHiddenReleaseIds] = useState<Set<string>>(new Set());
   const [dismissedHouseNotices, setDismissedHouseNotices] = useState<Set<string>>(new Set());
@@ -290,8 +295,9 @@ export function DropDeck({
       : visibleItems;
     const flat = flattenLibraryItems(scoped);
     const found = searchPlayables(flat, query);
-    return sortPlayables(found, sort, played);
-  }, [items, activeCrate, query, sort, played, hiddenReleaseIds]);
+    const sorted = sortPlayables(found, sort, played);
+    return showDownloadsOnly ? sorted.filter((item) => offlineKeys.has(item.key)) : sorted;
+  }, [items, activeCrate, query, sort, played, hiddenReleaseIds, showDownloadsOnly, offlineKeys]);
 
   const buckets = useMemo(() => groupPlayables(playables, group), [playables, group]);
   const browseArtists: DeckBrowseArtist[] = useMemo(() => buildBrowseArtists(playables), [playables]);
@@ -387,6 +393,23 @@ export function DropDeck({
   }, [userId]);
 
   useEffect(() => {
+    setAutoDownloadEnabled(readAutoDownloadPref(userId));
+  }, [userId]);
+
+  useEffect(() => {
+    if (!readAutoDownloadPref(userId)) return;
+    const flat = flattenLibraryItems(items.filter((item) => !hiddenReleaseIds.has(item.shareId)));
+    const signature = flat.map((item) => item.key).join('|');
+    if (!signature || autoDownloadRanRef.current === signature) return;
+    autoDownloadRanRef.current = signature;
+    void autoDownloadLibraryItems(userId, flat, { silent: true }).then((count) => {
+      if (count > 0) {
+        void listOfflinePressedAudioKeys(userId).then(setOfflineKeys);
+      }
+    });
+  }, [hiddenReleaseIds, items, userId]);
+
+  useEffect(() => {
     if (!currentKey) return;
     setPlayed((prev) => markPlayed(prev, currentKey));
   }, [currentKey]);
@@ -401,10 +424,6 @@ export function DropDeck({
 
   const toggleOffline = useCallback(async (item: DeckPlayable) => {
     if (offlineBusyKey) return;
-    if (!canDownloadOffline && !offlineKeys.has(item.key)) {
-      toast({ title: 'Studio Pro feature', description: 'Upgrade to save owned or purchased songs for offline play.' });
-      return;
-    }
     setOfflineBusyKey(item.key);
     try {
       if (offlineKeys.has(item.key)) {
@@ -432,7 +451,22 @@ export function DropDeck({
     } finally {
       setOfflineBusyKey(null);
     }
-  }, [canDownloadOffline, offlineBusyKey, offlineKeys, toast, userId]);
+  }, [offlineBusyKey, offlineKeys, toast, userId]);
+
+  const toggleAutoDownload = useCallback(() => {
+    const next = !autoDownloadEnabled;
+    setAutoDownloadEnabled(next);
+    writeAutoDownloadPref(userId, next);
+    if (next) {
+      const flat = flattenLibraryItems(items.filter((item) => !hiddenReleaseIds.has(item.shareId)));
+      void autoDownloadLibraryItems(userId, flat, { silent: true }).then((count) => {
+        if (count > 0) void listOfflinePressedAudioKeys(userId).then(setOfflineKeys);
+      });
+      toast({ title: 'Auto-download on', description: 'New unlocks save to this device when you are online.' });
+    } else {
+      toast({ title: 'Auto-download off', description: 'Download songs manually from the track menu.' });
+    }
+  }, [autoDownloadEnabled, hiddenReleaseIds, items, toast, userId]);
 
   const unpressOwnRelease = useCallback(async (item: DeckPlayable) => {
     if (!item.own || !item.albumId || !window.confirm(`Take “${item.title}” offline? Existing buyers keep access, but it leaves public discovery and checkout.`)) return;
@@ -759,6 +793,60 @@ export function DropDeck({
               <Plus className="h-4 w-4" />
             </Button>
           </form>
+          <div className="mt-2 space-y-2 border-t border-white/10 pt-3">
+            <p className="font-headline text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
+              Downloads
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDownloadsOnly((value) => !value)}
+              className={cn(
+                'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                showDownloadsOnly
+                  ? 'border-amber-400/50 bg-amber-500/10 text-amber-100'
+                  : 'border-white/10 bg-black/20 text-muted-foreground hover:border-amber-400/30'
+              )}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Download className="h-4 w-4 shrink-0" />
+                <span>
+                  <span className="block font-headline font-bold uppercase">On this device</span>
+                  <span className="font-code text-[10px]">{offlineKeys.size} saved</span>
+                </span>
+              </span>
+              {showDownloadsOnly ? <Check className="h-4 w-4 shrink-0" /> : null}
+            </button>
+            <button
+              type="button"
+              onClick={toggleAutoDownload}
+              className={cn(
+                'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors',
+                autoDownloadEnabled
+                  ? 'border-fuchsia-400/35 bg-fuchsia-500/10 text-fuchsia-100'
+                  : 'border-white/10 bg-black/20 text-muted-foreground hover:border-fuchsia-400/30'
+              )}
+            >
+              <span>
+                <span className="block font-headline text-xs font-bold uppercase">Auto-download</span>
+                <span className="font-code text-[10px]">
+                  {autoDownloadEnabled ? 'Saves unlocks on this device' : 'Manual download only'}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  'h-5 w-9 shrink-0 rounded-full border transition-colors',
+                  autoDownloadEnabled ? 'border-fuchsia-300/50 bg-fuchsia-400/30' : 'border-white/15 bg-black/40'
+                )}
+              >
+                <span
+                  className={cn(
+                    'mt-0.5 block h-4 w-4 rounded-full bg-white transition-transform',
+                    autoDownloadEnabled ? 'translate-x-4' : 'translate-x-0.5'
+                  )}
+                />
+              </span>
+            </button>
+          </div>
         </aside>
 
         <section className="flex min-w-0 flex-1 flex-col gap-4 lg:min-h-0">
@@ -1037,25 +1125,19 @@ export function DropDeck({
                                                   </>
                                                 )}
                                                 <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
-                                                {!canDownloadOffline && !offlineKeys.has(item.key) ? (
-                                                  <DropdownMenuItem asChild className="text-fuchsia-300 focus:text-fuchsia-200">
-                                                    <Link href="/pricing"><Lock className="h-4 w-4" /> Studio Pro · offline play</Link>
-                                                  </DropdownMenuItem>
-                                                ) : (
-                                                  <DropdownMenuItem
-                                                    disabled={offlineBusyKey === item.key}
-                                                    onClick={() => void toggleOffline(item)}
-                                                  >
-                                                    {offlineBusyKey === item.key ? (
-                                                      <Loader className="h-4 w-4 animate-spin" />
-                                                    ) : offlineKeys.has(item.key) ? (
-                                                      <Trash2 className="h-4 w-4" />
-                                                    ) : (
-                                                      <Download className="h-4 w-4" />
-                                                    )}
-                                                    {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
-                                                  </DropdownMenuItem>
-                                                )}
+                                                <DropdownMenuItem
+                                                  disabled={offlineBusyKey === item.key}
+                                                  onClick={() => void toggleOffline(item)}
+                                                >
+                                                  {offlineBusyKey === item.key ? (
+                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                  ) : offlineKeys.has(item.key) ? (
+                                                    <Trash2 className="h-4 w-4" />
+                                                  ) : (
+                                                    <Download className="h-4 w-4" />
+                                                  )}
+                                                  {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                                </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                                 {crates.length === 0 && (
@@ -1221,25 +1303,19 @@ export function DropDeck({
                                     </>
                                   )}
                                   <DropdownMenuLabel>Offline on this device</DropdownMenuLabel>
-                                  {!canDownloadOffline && !offlineKeys.has(item.key) ? (
-                                    <DropdownMenuItem asChild className="text-fuchsia-300 focus:text-fuchsia-200">
-                                      <Link href="/pricing"><Lock className="h-4 w-4" /> Studio Pro · offline play</Link>
-                                    </DropdownMenuItem>
-                                  ) : (
-                                    <DropdownMenuItem
-                                      disabled={offlineBusyKey === item.key}
-                                      onClick={() => void toggleOffline(item)}
-                                    >
-                                      {offlineBusyKey === item.key ? (
-                                        <Loader className="h-4 w-4 animate-spin" />
-                                      ) : offlineKeys.has(item.key) ? (
-                                        <Trash2 className="h-4 w-4" />
-                                      ) : (
-                                        <Download className="h-4 w-4" />
-                                      )}
-                                      {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
-                                    </DropdownMenuItem>
-                                  )}
+                                  <DropdownMenuItem
+                                    disabled={offlineBusyKey === item.key}
+                                    onClick={() => void toggleOffline(item)}
+                                  >
+                                    {offlineBusyKey === item.key ? (
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                    ) : offlineKeys.has(item.key) ? (
+                                      <Trash2 className="h-4 w-4" />
+                                    ) : (
+                                      <Download className="h-4 w-4" />
+                                    )}
+                                    {offlineKeys.has(item.key) ? 'Remove offline copy' : 'Download for offline'}
+                                  </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuLabel>Add to crate</DropdownMenuLabel>
                                   {crates.length === 0 && (

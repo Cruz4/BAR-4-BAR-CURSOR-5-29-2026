@@ -39,44 +39,42 @@ import {
   type FoldDoc,
   type FoldPresence,
 } from '@/lib/folds/types';
-
-function stampTime(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return '';
-  }
-}
+import { formatFoldMessageTime, outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
+import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
 
 function BarStanza({
   bar,
   mine,
+  peerName,
   onAnswer,
-  seen,
+  readAt,
 }: {
   bar: FoldBar;
   mine: boolean;
+  peerName: string;
   onAnswer: (bar: FoldBar) => void;
-  seen?: boolean;
+  readAt?: string | null;
 }) {
+  const senderLabel = mine ? '[you]' : `[${peerName}]`;
   return (
     <div
       className={cn(
-        'group relative flex animate-in flex-col fade-in slide-in-from-bottom-2 duration-300',
-        mine ? 'ml-8 items-end sm:ml-16' : 'mr-8 items-start sm:mr-16'
+        'group relative flex min-w-0 max-w-full animate-in flex-col fade-in slide-in-from-bottom-2 duration-300',
+        mine ? 'ml-4 items-end sm:ml-10' : 'mr-4 items-start sm:mr-10'
       )}
     >
-      <div className={cn('flex items-baseline gap-2', mine ? 'justify-end' : 'justify-start')}>
-        <span className="font-code text-[9px] font-bold uppercase tracking-[0.22em] text-amber-200/70">
-          {mine ? 'You' : 'Them'}
+      <div className={cn('flex min-w-0 max-w-full items-baseline gap-2', mine ? 'justify-end' : 'justify-start')}>
+        <span className="shrink-0 font-code text-[9px] font-bold uppercase tracking-[0.18em] text-amber-200/70">
+          {senderLabel}
         </span>
-        <span className="font-code text-[9px] text-muted-foreground/80">{stampTime(bar.createdAt)}</span>
+        <span className="shrink-0 font-code text-[9px] text-muted-foreground/80">
+          {formatFoldMessageTime(bar.createdAt)}
+        </span>
       </div>
       {bar.replyTo ? (
         <p
           className={cn(
-            'mt-1 font-serif text-[12px] italic text-amber-100/40',
+            'mt-1 max-w-full break-words font-serif text-[12px] italic text-amber-100/40 [overflow-wrap:anywhere]',
             mine ? 'text-right' : 'text-left'
           )}
         >
@@ -85,11 +83,13 @@ function BarStanza({
       ) : null}
       <div
         className={cn(
-          'mt-1 border-amber-200/25 py-1',
+          'mt-1 max-w-full min-w-0 border-amber-200/25 py-1',
           mine ? 'border-r-2 pr-3 text-right' : 'border-l-2 pl-3 text-left'
         )}
       >
-        <p className="whitespace-pre-wrap font-serif text-[17px] leading-relaxed text-amber-50">{bar.text}</p>
+        <p className="whitespace-pre-wrap break-words font-serif text-[17px] leading-relaxed text-amber-50 [overflow-wrap:anywhere]">
+          {bar.text}
+        </p>
       </div>
       {!mine ? (
         <button
@@ -101,11 +101,7 @@ function BarStanza({
           Reply
         </button>
       ) : null}
-      {seen ? (
-        <p className="mt-0.5 text-right font-code text-[9px] uppercase tracking-[0.2em] text-amber-200/45">
-          Seen
-        </p>
-      ) : null}
+      {readAt ? <FoldReadReceipt readAt={readAt} /> : null}
     </div>
   );
 }
@@ -128,6 +124,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const typingTimer = useRef<number | null>(null);
   const typingRef = useRef(false);
   const lastReadBarRef = useRef<string | null>(null);
+  const markedOpenRef = useRef(false);
 
   const onType = useCallback((value: string) => {
     setText(value.slice(0, FOLD_BAR_MAX_CHARS));
@@ -185,14 +182,27 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   }, [foldId, peerId]);
 
   useEffect(() => {
+    markedOpenRef.current = false;
+    lastReadBarRef.current = null;
+  }, [foldId]);
+
+  useEffect(() => {
     if (!fold || !me) return;
-    if (unreadFor(fold, me) <= 0) return;
-    // Opening the sheet marks it read. Don't undo a Fold back on this same bar
-    // while still sitting here — leaving and coming back still marks it Set.
+    if (markedOpenRef.current) return;
+    if (unreadFor(fold, me) <= 0 && !fold.foldedBack?.[me]) return;
     if (fold.foldedBack?.[me] && lastReadBarRef.current === fold.lastBarId) return;
+    markedOpenRef.current = true;
     lastReadBarRef.current = fold.lastBarId || fold.id;
     void markFoldReadClient(foldId).catch(() => undefined);
-  }, [fold, foldId, me, fold?.lastBarId]);
+  }, [fold, foldId, me]);
+
+  useEffect(() => {
+    if (!fold || !me || !markedOpenRef.current) return;
+    if (fold.lastSenderId === me) return;
+    if (unreadFor(fold, me) <= 0) return;
+    lastReadBarRef.current = fold.lastBarId || fold.id;
+    void markFoldReadClient(foldId).catch(() => undefined);
+  }, [fold?.lastBarId, fold?.lastSenderId, fold, foldId, me]);
 
   const foldStatus = fold?.status;
   useEffect(() => {
@@ -278,9 +288,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   }
 
   const profileUrl = profileHref(peer?.slug);
+  const peerName = peer?.name || 'Artist';
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-2xl flex-col bg-[#0a0c12]/95">
+    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-x-hidden bg-[#0a0c12]/95 lg:max-w-5xl">
       <header className="flex items-center gap-2 border-b border-amber-500/20 bg-[#100c09]/90 px-2 py-2 backdrop-blur-md">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
           <Link href="/msgs" aria-label="Back to Msgs">
@@ -379,7 +390,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
 
       <div
         ref={scrollerRef}
-        className="relative min-h-0 flex-1 overflow-y-auto px-4 py-6"
+        className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6"
         style={{
           backgroundImage:
             'linear-gradient(180deg, rgba(255,236,210,0.05), rgba(8,6,4,0.35)), repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(251,191,36,0.05) 28px)',
@@ -414,18 +425,18 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         ) : null}
 
         <div className="space-y-6">
-          {shownBars.map((bar, index) => {
-            const lastMine =
-              bar.senderId === me &&
-              !shownBars.slice(index + 1).some((next) => next.senderId === me);
-            const peerReadAt = peerId ? fold.lastReadAt?.[peerId] : '';
-            const seen = Boolean(lastMine && peerReadAt && peerReadAt >= bar.createdAt);
+          {shownBars.map((bar) => {
+            const readAt =
+              fold && peerId
+                ? outgoingReadReceiptAt(fold, peerId, shownBars, bar, me)
+                : null;
             return (
               <BarStanza
                 key={bar.id}
                 bar={bar}
                 mine={bar.senderId === me}
-                seen={seen}
+                peerName={peerName}
+                readAt={readAt}
                 onAnswer={(next) =>
                   setReplyTo({ barId: next.id, text: next.text, senderId: next.senderId })
                 }

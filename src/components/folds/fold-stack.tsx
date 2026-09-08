@@ -10,13 +10,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { PassBarDialog } from '@/components/folds/pass-bar-dialog';
+import { FoldReadToggle } from '@/components/folds/fold-read-toggle';
 import {
   acceptFoldClient,
   declineFoldClient,
   deleteFoldFromInboxClient,
-  foldBackClient,
 } from '@/lib/folds/client';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
+import { peerReadLastOutgoing } from '@/lib/folds/read-receipts';
 import { cn } from '@/lib/utils';
 import { fetchFriendships, friendProfilesOf } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
@@ -34,20 +35,22 @@ function FoldCard({
   me,
   onAccept,
   onDecline,
-  onFoldBack,
   onDelete,
   busy,
+  onBusyChange,
 }: {
   fold: FoldDoc;
   me: string;
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
-  onFoldBack: (id: string) => void;
   onDelete: (id: string) => void;
   busy: boolean;
+  onBusyChange: (id: string | null) => void;
 }) {
   const peerId = peerIdOf(fold.memberIds, me);
   const peer = fold.members[peerId];
+  const peerName = peer?.name || 'Artist';
+  const lastFromMe = fold.lastSenderId === me;
   const wet = unreadFor(fold, me) > 0;
   const waiting = fold.status === 'pending' && fold.initiatedBy !== me;
   const sentPending = fold.status === 'pending' && fold.initiatedBy === me;
@@ -55,7 +58,7 @@ function FoldCard({
   return (
     <article
       className={cn(
-        'relative overflow-hidden border transition-all',
+        'relative min-w-0 overflow-x-hidden border transition-all',
         wet
           ? 'border-amber-400/50 bg-amber-500/[0.07] shadow-[0_0_28px_rgba(251,191,36,0.12)]'
           : 'border-white/10 bg-[#14110d]/80',
@@ -79,7 +82,10 @@ function FoldCard({
             {timeLabel(fold.lastAt)}
           </span>
         </div>
-        <p className="mt-2 font-serif text-[15px] leading-relaxed text-amber-50/85">
+        <p className="mt-1 font-code text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/65">
+          {lastFromMe ? '[you]' : `[${peerName}]`}
+        </p>
+        <p className="mt-1 break-words font-serif text-[15px] leading-relaxed text-amber-50/85 [overflow-wrap:anywhere]">
           {fold.lastBar || 'No messages yet'}
         </p>
         <p className="mt-2 font-code text-[9px] font-bold uppercase tracking-[0.22em] text-amber-200/70">
@@ -89,7 +95,9 @@ function FoldCard({
               ? 'Waiting · they haven’t opened it'
               : wet
                 ? `Unread · ${unreadFor(fold, me)}`
-                : 'Read'}
+                : lastFromMe && peerReadLastOutgoing(fold, me)
+                  ? 'Read by them'
+                  : 'Read'}
         </p>
       </Link>
       {waiting ? (
@@ -123,16 +131,12 @@ function FoldCard({
             <Trash2 className="h-3 w-3" />
             Delete
           </button>
-          {!wet ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onFoldBack(fold.id)}
-              className="font-code text-[9px] font-bold uppercase tracking-widest text-amber-200/55 hover:text-amber-100"
-            >
-              Mark unread
-            </button>
-          ) : <span />}
+          <FoldReadToggle
+            foldId={fold.id}
+            wet={wet}
+            busy={busy}
+            onBusyChange={onBusyChange}
+          />
         </div>
       ) : null}
     </article>
@@ -199,22 +203,6 @@ export function FoldStack() {
     }
   };
 
-  const foldBack = async (id: string) => {
-    setBusyId(id);
-    try {
-      await foldBackClient(id);
-      toast({ title: 'Marked unread' });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not mark unread',
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   const deleteFromInbox = async (id: string) => {
     setBusyId(id);
     try {
@@ -237,7 +225,7 @@ export function FoldStack() {
 
   return (
     <div className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-col bg-[#0a0c12]/95">
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-5">
+      <div className="mx-auto flex w-full min-w-0 max-w-4xl flex-1 flex-col overflow-x-hidden px-4 py-4 sm:px-6 sm:py-5 lg:max-w-5xl">
       <header className="shrink-0 space-y-2">
         <h1 className="font-headline text-3xl font-bold uppercase tracking-tight sm:text-4xl">Msgs</h1>
       </header>
@@ -294,9 +282,9 @@ export function FoldStack() {
               fold={fold}
               me={user.id}
               busy={busyId === fold.id}
+              onBusyChange={setBusyId}
               onAccept={(id) => void respond(id, true)}
               onDecline={(id) => void respond(id, false)}
-              onFoldBack={(id) => void foldBack(id)}
               onDelete={(id) => void deleteFromInbox(id)}
             />
           ))}

@@ -7,6 +7,10 @@ function flush() {
   syncAppBadge(activity + folds);
 }
 
+export function getAppBadgeTotal() {
+  return activity + folds;
+}
+
 export function setActivityBadgeCount(n: number) {
   activity = Math.max(0, Math.floor(n) || 0);
   flush();

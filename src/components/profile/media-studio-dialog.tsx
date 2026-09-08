@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Camera, FlipHorizontal, ImagePlus, Maximize2, Music2, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Camera, FlipHorizontal, ImagePlus, Loader, Maximize2, Music2, Pause, Play, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -132,6 +132,8 @@ export function MediaStudioDialog({
   const recordTimerRef = useRef<number | null>(null);
   const reviewVideoRef = useRef<HTMLVideoElement>(null);
   const reviewAudioRef = useRef<HTMLAudioElement>(null);
+  const inlineAudioRef = useRef<HTMLAudioElement>(null);
+  const segmentPreviewEndRef = useRef(0);
 
   const [step, setStep] = useState<'capture' | 'edit'>('capture');
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
@@ -162,6 +164,27 @@ export function MediaStudioDialog({
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [camError, setCamError] = useState<string | null>(null);
+  const [inlinePreviewKey, setInlinePreviewKey] = useState<string | null>(null);
+  const [inlinePreviewPlaying, setInlinePreviewPlaying] = useState(false);
+  const [inlinePreviewLoading, setInlinePreviewLoading] = useState(false);
+  const [segmentPreviewPlaying, setSegmentPreviewPlaying] = useState(false);
+  const [segmentPreviewLoading, setSegmentPreviewLoading] = useState(false);
+
+  const stopInlinePreview = useCallback(() => {
+    const audio = inlineAudioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.onended = null;
+      audio.ontimeupdate = null;
+    }
+    setInlinePreviewKey(null);
+    setInlinePreviewPlaying(false);
+    setInlinePreviewLoading(false);
+    setSegmentPreviewPlaying(false);
+    setSegmentPreviewLoading(false);
+    segmentPreviewEndRef.current = 0;
+  }, []);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -202,6 +225,7 @@ export function MediaStudioDialog({
     setMusicOpen(false);
     setReviewOpen(false);
     setReviewMusicUrl(undefined);
+    stopInlinePreview();
     setExporting(false);
     setProgress(0);
     setCamError(null);
@@ -261,15 +285,17 @@ export function MediaStudioDialog({
   useLayoutEffect(() => {
     if (!open || step !== 'capture') return;
     let cancelled = false;
+    let frames = 0;
     const tryAttach = () => {
-      if (cancelled || !streamRef.current) return;
+      if (cancelled) return;
       const el = liveRef.current;
-      if (!el) {
-        requestAnimationFrame(tryAttach);
+      const stream = streamRef.current;
+      if (!el || !stream) {
+        if (frames++ < 120) requestAnimationFrame(tryAttach);
         return;
       }
-      if (el.srcObject !== streamRef.current) {
-        el.srcObject = streamRef.current;
+      if (el.srcObject !== stream) {
+        el.srcObject = stream;
         el.muted = true;
         el.setAttribute('playsinline', 'true');
         void el.play()
@@ -294,12 +320,12 @@ export function MediaStudioDialog({
     }
     setStep('capture');
     if (mode === 'camera') void startCamera();
+    let libraryTimer: number | null = null;
     if (mode === 'library') {
-      window.setTimeout(() => fileRef.current?.click(), 80);
+      libraryTimer = window.setTimeout(() => fileRef.current?.click(), 80);
     }
     return () => {
-      stopRecorder();
-      stopCamera();
+      if (libraryTimer) window.clearTimeout(libraryTimer);
     };
     // Reset only when the dialog opens or the entry mode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -406,6 +432,7 @@ export function MediaStudioDialog({
   };
 
   const applyMusicPick = (next: MusicPick, previewUrl?: string) => {
+    stopInlinePreview();
     if (music?.kind === 'device') revokeUrl(music.url);
     setMusic(next);
     setMusicStart(0);
@@ -479,6 +506,75 @@ export function MediaStudioDialog({
     : IMAGE_TO_VIDEO_SECONDS;
   const maxMusicStart = Math.max(0, musicDuration - clipDuration);
 
+  const previewPickerTrack = useCallback(async (item: DeckPlayable) => {
+    if (inlinePreviewKey === item.key && inlinePreviewPlaying) {
+      stopInlinePreview();
+      return;
+    }
+    stopInlinePreview();
+    setInlinePreviewLoading(true);
+    setInlinePreviewKey(item.key);
+    try {
+      const url = await resolveStudioTrackUrl(item.shareId, item.trackId);
+      const audio = inlineAudioRef.current;
+      if (!audio) return;
+      audio.src = url;
+      audio.currentTime = 0;
+      audio.volume = 1;
+      audio.onended = () => {
+        setInlinePreviewPlaying(false);
+        setInlinePreviewKey(null);
+      };
+      await audio.play();
+      setInlinePreviewPlaying(true);
+    } catch {
+      onError?.('Could not preview that track.');
+      stopInlinePreview();
+    } finally {
+      setInlinePreviewLoading(false);
+    }
+  }, [inlinePreviewKey, inlinePreviewPlaying, onError, stopInlinePreview]);
+
+  const toggleSegmentPreview = useCallback(async () => {
+    if (!music) return;
+    if (segmentPreviewPlaying) {
+      stopInlinePreview();
+      return;
+    }
+    stopInlinePreview();
+    setSegmentPreviewLoading(true);
+    try {
+      const url =
+        music.kind === 'device'
+          ? music.url
+          : await resolveStudioTrackUrl(music.shareId, music.trackId);
+      const audio = inlineAudioRef.current;
+      if (!audio) return;
+      const end = Math.min(
+        musicDuration > 0 ? musicDuration : musicStart + clipDuration,
+        musicStart + clipDuration
+      );
+      segmentPreviewEndRef.current = end;
+      audio.src = url;
+      audio.currentTime = musicStart;
+      audio.volume = musicMuted ? 0 : musicVol;
+      audio.ontimeupdate = () => {
+        if (audio.currentTime >= segmentPreviewEndRef.current) {
+          audio.pause();
+          setSegmentPreviewPlaying(false);
+        }
+      };
+      audio.onended = () => setSegmentPreviewPlaying(false);
+      await audio.play();
+      setSegmentPreviewPlaying(true);
+    } catch {
+      onError?.('Could not preview that music clip.');
+      stopInlinePreview();
+    } finally {
+      setSegmentPreviewLoading(false);
+    }
+  }, [clipDuration, music, musicDuration, musicMuted, musicStart, musicVol, onError, segmentPreviewPlaying, stopInlinePreview]);
+
   const visibleTracks = (musicTab === 'mine' ? tracks.mine : tracks.library).filter((item) => {
     if (!trackQuery.trim()) return true;
     const q = trackQuery.trim().toLowerCase();
@@ -495,7 +591,7 @@ export function MediaStudioDialog({
     >
       <DialogContent
         hideClose={exporting}
-        className="relative max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
+        className="!fixed z-[60] max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
       >
         <DialogHeader className="min-w-0 space-y-1 pr-8 text-left">
           <DialogTitle className="text-sm font-bold uppercase tracking-widest text-cyan-200">
@@ -508,7 +604,7 @@ export function MediaStudioDialog({
 
         {step === 'capture' ? (
           <div className="space-y-3">
-            <div className="relative mx-auto flex max-h-[min(42dvh,22rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
+            <div className="relative mx-auto flex min-h-[12rem] max-h-[min(42dvh,22rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
               <video
                 ref={liveRef}
                 muted
@@ -519,6 +615,11 @@ export function MediaStudioDialog({
                   !liveReady && 'opacity-40'
                 )}
               />
+              {!liveReady && !camError ? (
+                <p className="pointer-events-none absolute inset-x-3 bottom-3 text-center text-[10px] font-bold uppercase tracking-widest text-white/55">
+                  Opening camera…
+                </p>
+              ) : null}
               {recording ? (
                 <p className="absolute left-2 top-2 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
                   Rec {formatSec(recordSec)}
@@ -748,6 +849,21 @@ export function MediaStudioDialog({
                   <button
                     type="button"
                     className="shrink-0 text-white/70 hover:text-white"
+                    onClick={() => void toggleSegmentPreview()}
+                    title={segmentPreviewPlaying ? 'Stop preview' : 'Preview music clip'}
+                    disabled={segmentPreviewLoading}
+                  >
+                    {segmentPreviewLoading ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : segmentPreviewPlaying ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="shrink-0 text-white/70 hover:text-white"
                     onClick={() => setMusicMuted((value) => !value)}
                     title={musicMuted ? 'Unmute music' : 'Mute music'}
                   >
@@ -850,23 +966,39 @@ export function MediaStudioDialog({
                         </p>
                       ) : (
                         visibleTracks.slice(0, 40).map((item) => (
-                          <button
-                            key={item.key}
-                            type="button"
-                            className="block w-full truncate rounded-md px-2 py-1.5 text-left text-xs text-white/80 hover:bg-white/10"
-                            onClick={() => {
-                              applyMusicPick({
-                                kind: 'library',
-                                label: item.title,
-                                shareId: item.shareId,
-                                trackId: item.trackId,
-                                durationSec: item.durationSec,
-                              });
-                            }}
-                          >
-                            {item.title}
-                            <span className="ml-1 text-white/40">{item.artistName}</span>
-                          </button>
+                          <div key={item.key} className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-white/70 hover:bg-white/10 hover:text-white"
+                              onClick={() => void previewPickerTrack(item)}
+                              title="Preview track"
+                              disabled={inlinePreviewLoading && inlinePreviewKey === item.key}
+                            >
+                              {inlinePreviewLoading && inlinePreviewKey === item.key ? (
+                                <Loader className="h-3.5 w-3.5 animate-spin" />
+                              ) : inlinePreviewKey === item.key && inlinePreviewPlaying ? (
+                                <Pause className="h-3.5 w-3.5" />
+                              ) : (
+                                <Play className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="block min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs text-white/80 hover:bg-white/10"
+                              onClick={() => {
+                                applyMusicPick({
+                                  kind: 'library',
+                                  label: item.title,
+                                  shareId: item.shareId,
+                                  trackId: item.trackId,
+                                  durationSec: item.durationSec,
+                                });
+                              }}
+                            >
+                              {item.title}
+                              <span className="ml-1 text-white/40">{item.artistName}</span>
+                            </button>
+                          </div>
                         ))
                       )}
                     </div>
@@ -941,6 +1073,7 @@ export function MediaStudioDialog({
             pickDeviceMusic(file);
           }}
         />
+        <audio ref={inlineAudioRef} className="sr-only" preload="none" />
         {reviewOpen && source ? (
           <div className="absolute inset-0 z-20 flex flex-col bg-black/95 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">

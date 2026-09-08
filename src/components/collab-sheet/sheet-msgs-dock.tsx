@@ -34,20 +34,14 @@ import {
   type FoldBar,
   type FoldDoc,
 } from '@/lib/folds/types';
+import { formatFoldMessageTime, outgoingReadReceiptAt, peerReadLastOutgoing } from '@/lib/folds/read-receipts';
+import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
 import { friendProfilesOf, type Friendship } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 type View = 'inbox' | 'compose' | 'thread';
-
-function stampTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return '';
-  }
-}
 
 function convoTime(iso: string): string {
   try {
@@ -86,6 +80,7 @@ export function SheetMsgsDock({
   const [busy, setBusy] = useState(false);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLInputElement>(null);
+  const markedThreadRef = useRef<string | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, composeRef);
 
   const me = user?.id || '';
@@ -137,6 +132,10 @@ export function SheetMsgsDock({
   }, [collabSession, openWithPeer]);
 
   const activeFoldId = me && peerId ? foldIdFor(me, peerId) : null;
+  const activeFold = useMemo(
+    () => (activeFoldId ? folds.find((fold) => fold.id === activeFoldId) ?? null : null),
+    [activeFoldId, folds]
+  );
 
   useEffect(() => {
     if (!open || view !== 'thread' || !activeFoldId) {
@@ -148,9 +147,22 @@ export function SheetMsgsDock({
   }, [open, view, activeFoldId]);
 
   useEffect(() => {
-    if (!open || view !== 'thread' || !activeFoldId) return;
+    if (!open || view !== 'thread' || !activeFoldId) {
+      if (!open) markedThreadRef.current = null;
+      return;
+    }
+    if (markedThreadRef.current === activeFoldId) return;
+    markedThreadRef.current = activeFoldId;
     void markFoldReadClient(activeFoldId).catch(() => undefined);
-  }, [open, view, activeFoldId, bars.length]);
+  }, [open, view, activeFoldId]);
+
+  useEffect(() => {
+    if (!open || view !== 'thread' || !activeFoldId || markedThreadRef.current !== activeFoldId) return;
+    const fold = folds.find((f) => f.id === activeFoldId);
+    if (!fold || fold.lastSenderId === me) return;
+    if (unreadFor(fold, me) <= 0) return;
+    void markFoldReadClient(activeFoldId).catch(() => undefined);
+  }, [open, view, activeFoldId, bars.length, folds, me]);
 
   useEffect(() => {
     if (!open || view !== 'thread') return;
@@ -418,10 +430,14 @@ export function SheetMsgsDock({
                 ) : (
                   bars.map((m) => {
                     const mine = m.senderId === me;
+                    const readAt =
+                      mine && activeFold && peerId
+                        ? outgoingReadReceiptAt(activeFold, peerId, bars, m, me)
+                        : null;
                     return (
                       <div key={m.id} className={cn('flex flex-col', mine ? 'items-end' : 'items-start')}>
                         <span className="font-code text-[8px] uppercase tracking-wider text-muted-foreground/80">
-                          {mine ? 'You' : peerName} · {stampTime(m.createdAt)}
+                          {mine ? 'You' : peerName} · {formatFoldMessageTime(m.createdAt)}
                         </span>
                         <p
                           className={cn(
@@ -431,6 +447,7 @@ export function SheetMsgsDock({
                         >
                           {m.text}
                         </p>
+                        {readAt ? <FoldReadReceipt readAt={readAt} compact /> : null}
                       </div>
                     );
                   })
@@ -577,6 +594,9 @@ function ConvoRow({
           </span>
         </div>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          {fold.lastSenderId === me && peerReadLastOutgoing(fold, me)
+            ? 'Read by them · '
+            : ''}
           {foldPreview(fold.lastBar) || 'No messages yet'}
         </p>
       </div>

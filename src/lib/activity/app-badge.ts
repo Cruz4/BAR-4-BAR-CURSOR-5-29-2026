@@ -3,6 +3,16 @@
  * No-ops when unsupported (many desktop browsers / older iOS).
  */
 
+async function syncServiceWorkerBadge(count: number) {
+  try {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const registration = await navigator.serviceWorker.ready;
+    registration.active?.postMessage({ type: 'SET_APP_BADGE', count });
+  } catch {
+    /* SW not ready */
+  }
+}
+
 export function syncAppBadge(count: number) {
   if (typeof navigator === 'undefined') return;
   const n = Math.max(0, Math.floor(count));
@@ -17,6 +27,7 @@ export function syncAppBadge(count: number) {
   } catch {
     /* unsupported / denied */
   }
+  void syncServiceWorkerBadge(n);
   void syncNativeAppBadge(n);
 }
 

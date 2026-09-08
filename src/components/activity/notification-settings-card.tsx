@@ -105,7 +105,7 @@ export function NotificationSettingsCard() {
                 <Label className="text-sm font-bold">Push notifications</Label>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {pushSupported
-                    ? 'Badge on the app icon + alerts for your verse, streak, and echoes.'
+                    ? 'Badge on the app icon + alerts for your verse, streak, and echoes. Install AKAsheet to your home screen and allow notifications in Android settings.'
                     : 'Add NEXT_PUBLIC_FIREBASE_VAPID_KEY to enable push. In-app inbox still works.'}
                 </p>
               </div>

@@ -23,6 +23,7 @@ import { WelcomeInkDialog } from './welcome-ink-dialog';
 import { StudioPrivacyIntroDialog } from './studio-privacy-intro-dialog';
 import { ActivityPushIntroDialog } from './activity/activity-push-intro-dialog';
 import { ActivityPushDeviceSync } from './activity/activity-push-device-sync';
+import { ActivityBadgeSync } from './activity/activity-badge-sync';
 import { FoldInboxProvider } from '@/components/folds/fold-inbox-provider';
 import { CookieConsent } from './cookie-consent';
 import { PwaInstallPrompt } from './pwa-install-prompt';
@@ -172,6 +173,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <StudioPrivacyIntroDialog />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ActivityPushIntroDialog />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ActivityPushDeviceSync />}
+                {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ActivityBadgeSync />}
                 {!isMarketingCapture && <CookieConsent />}
                 {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <PwaInstallPrompt />}
                 <OfflineBanner />

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { setFoldBadgeCount } from '@/lib/app-badge-counts';
-import { subscribeFolds } from '@/lib/folds/client';
+import { foldBackClient, markFoldReadClient, subscribeFolds } from '@/lib/folds/client';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { FoldLiveSlip, type FoldSlip } from '@/components/folds/fold-live-slip';
@@ -14,6 +14,8 @@ type FoldInboxValue = {
   unread: number;
   waiting: number;
   ready: boolean;
+  markFoldRead: (foldId: string) => Promise<void>;
+  markFoldUnread: (foldId: string) => Promise<void>;
 };
 
 const FoldInboxContext = createContext<FoldInboxValue>({
@@ -21,6 +23,8 @@ const FoldInboxContext = createContext<FoldInboxValue>({
   unread: 0,
   waiting: 0,
   ready: false,
+  markFoldRead: async () => undefined,
+  markFoldUnread: async () => undefined,
 });
 
 export function useFoldInbox() {
@@ -99,34 +103,14 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const openId = pathname.startsWith('/msgs/') ? pathname.slice('/msgs/'.length) : '';
+    if (!openId) return;
     setHeldUnread((prev) => {
-      let changed = false;
+      if (!prev[openId]) return prev;
       const next = { ...prev };
-      if (openId && next[openId]) {
-        delete next[openId];
-        changed = true;
-      }
-      if (user?.id) {
-        const byId = new Map(folds.map((fold) => [fold.id, fold]));
-        for (const id of Object.keys(next)) {
-          const fold = byId.get(id);
-          if (!fold) continue;
-          if (fold.deletedFor?.[user.id]) {
-            delete next[id];
-            changed = true;
-            continue;
-          }
-          const lastRead = Date.parse(fold.lastReadAt?.[user.id] || '');
-          const lastAt = Date.parse(fold.lastAt || '');
-          if (Number.isFinite(lastRead) && lastRead > 0 && Number.isFinite(lastAt) && lastRead >= lastAt) {
-            delete next[id];
-            changed = true;
-          }
-        }
-      }
-      return changed ? next : prev;
+      delete next[openId];
+      return next;
     });
-  }, [folds, pathname, user?.id]);
+  }, [pathname]);
 
   const foldsForUi = useMemo(() => {
     if (!user?.id) return folds;
@@ -160,9 +144,28 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
     setFoldBadgeCount(unread);
   }, [unread]);
 
+  const markFoldRead = useCallback(async (foldId: string) => {
+    await markFoldReadClient(foldId);
+    setHeldUnread((prev) => {
+      if (!prev[foldId]) return prev;
+      const next = { ...prev };
+      delete next[foldId];
+      return next;
+    });
+  }, []);
+
+  const markFoldUnread = useCallback(async (foldId: string) => {
+    await foldBackClient(foldId);
+    setHeldUnread((prev) => {
+      const fold = folds.find((item) => item.id === foldId);
+      if (!fold?.lastBarId) return prev;
+      return { ...prev, [foldId]: fold.lastBarId };
+    });
+  }, [folds]);
+
   const value = useMemo(
-    () => ({ folds: foldsForUi, unread, waiting, ready }),
-    [foldsForUi, unread, waiting, ready]
+    () => ({ folds: foldsForUi, unread, waiting, ready, markFoldRead, markFoldUnread }),
+    [foldsForUi, unread, waiting, ready, markFoldRead, markFoldUnread]
   );
 
   return (

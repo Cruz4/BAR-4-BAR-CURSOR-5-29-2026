@@ -341,7 +341,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
       {
         id: 'pricing',
         title: 'Open Pricing',
-        body: 'Ink packs and Studio Pro. Pro unlocks unlimited catalog, DNA Drop, Collab Sheet, Freestyle, and offline Library.',
+        body: 'Ink packs and Studio Pro. Pro unlocks unlimited catalog, DNA Drop, Collab Sheet, and Freestyle.',
         href: '/pricing',
         isDone: (p) => normalizePath(p) === '/pricing',
       },

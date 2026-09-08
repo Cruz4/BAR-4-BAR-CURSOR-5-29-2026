@@ -58,10 +58,35 @@ async function storeRequest<T>(mode: IDBTransactionMode, run: (store: IDBObjectS
   }
 }
 
+export type OfflinePressedAudioRecord = {
+  key: string;
+  itemKey: string;
+  shareId: string;
+  trackId?: string;
+  title: string;
+  artistName: string;
+  byteSize: number;
+  savedAt: string;
+};
+
 export async function listOfflinePressedAudioKeys(userId: string): Promise<Set<string>> {
-  if (!userId) return new Set();
-  const rows = await storeRequest('readonly', (store) => store.index('userId').getAll(userId)) as OfflinePressedAudio[];
+  const rows = await listOfflinePressedAudioRecords(userId);
   return new Set(rows.map((row) => row.itemKey));
+}
+
+export async function listOfflinePressedAudioRecords(userId: string): Promise<OfflinePressedAudioRecord[]> {
+  if (!userId) return [];
+  const rows = await storeRequest('readonly', (store) => store.index('userId').getAll(userId)) as OfflinePressedAudio[];
+  return rows.map((row) => ({
+    key: row.key,
+    itemKey: row.itemKey,
+    shareId: row.shareId,
+    ...(row.trackId ? { trackId: row.trackId } : {}),
+    title: row.title,
+    artistName: row.artistName,
+    byteSize: row.byteSize,
+    savedAt: row.savedAt,
+  }));
 }
 
 export async function getOfflinePressedAudioBlob(userId: string, item: Pick<DeckPlayable, 'shareId' | 'trackId'>): Promise<Blob | null> {

@@ -14,6 +14,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getCountFromServer,
   getDoc,
@@ -493,6 +494,91 @@ export async function fetchReverbsByOwner(ownerId: string, max = 40): Promise<Pr
   return posts.filter((p) => p.isReverb && p.reverbPostId).slice(0, max);
 }
 
+export type ReverbComposerOptions = {
+  quote?: string;
+  voice?: RecordedVoiceClip;
+  image?: PendingPostImage;
+  video?: PendingWallClip;
+  poll?: CreatePostPoll;
+  /** Strip an existing quote poll when editing a Reverb. */
+  clearPoll?: boolean;
+};
+
+function reverbComposerHasContent(options?: ReverbComposerOptions): boolean {
+  if (!options) return false;
+  if (options.quote?.trim()) return true;
+  if (options.voice || options.image || options.video) return true;
+  if (buildPostPoll(options.poll)) return true;
+  return false;
+}
+
+async function uploadReverbQuoteAttachments(
+  userId: string,
+  postId: string,
+  input: Pick<ReverbComposerOptions, 'voice' | 'image' | 'video'>
+): Promise<{
+  voice?: VoiceNote;
+  video?: WallClip;
+  imageUrl?: string;
+  imageStoragePath?: string;
+}> {
+  let voice: VoiceNote | undefined;
+  let video: WallClip | undefined;
+  let imageUrl: string | undefined;
+  let imageStoragePath: string | undefined;
+
+  if (input.voice) {
+    try {
+      voice = await uploadVoiceClip({
+        storagePath: voicePostStoragePath(userId, postId, input.voice.contentType),
+        clip: input.voice,
+      });
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Could not upload voice note.');
+    }
+  }
+  if (input.video) {
+    try {
+      video = await uploadWallClip({
+        storagePath: wallClipPostPath(userId, postId, clipExtFromType(input.video.contentType)),
+        clip: input.video,
+      });
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload clip.');
+    }
+  }
+  if (input.image) {
+    try {
+      const uploaded = await uploadPostImage({
+        storagePath: wallImagePostPath(userId, postId),
+        image: input.image,
+      });
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch (err) {
+      if (voice) await deleteVoiceStorage(voice.storagePath);
+      if (video) await deleteWallClipStorage(video.storagePath);
+      throw err instanceof Error ? err : new Error('Could not upload image.');
+    }
+  } else if (input.video?.posterBlob) {
+    try {
+      const poster = await processPostImageFile(input.video.posterBlob);
+      const uploaded = await uploadPostImage({
+        storagePath: wallImagePostPath(userId, postId),
+        image: poster,
+      });
+      revokePostImagePreview(poster);
+      imageUrl = uploaded.url;
+      imageStoragePath = uploaded.storagePath;
+    } catch {
+      /* poster is optional — clip still posts */
+    }
+  }
+
+  return { voice, video, imageUrl, imageStoragePath };
+}
+
 /**
  * Reverb (repost) another artist's post onto your wall.
  * Snapshots the original content so the Reverb stays readable if the source is deleted.
@@ -501,7 +587,7 @@ export async function fetchReverbsByOwner(ownerId: string, max = 40): Promise<Pr
 export async function toggleReverb(
   source: ProfilePost,
   me: { name: string; slug?: string },
-  options?: { quote?: string }
+  options?: ReverbComposerOptions
 ): Promise<{ status: 'created' | 'updated' | 'removed'; post?: ProfilePost }> {
   const user = requireUser();
   if (source.ownerId === user.uid) {
@@ -543,18 +629,47 @@ export async function toggleReverb(
   if (existing.exists()) {
     const wallPostId =
       typeof existing.data()?.wallPostId === 'string' ? existing.data()!.wallPostId : '';
-    if (wallPostId && typeof options?.quote === 'string') {
+    if (wallPostId && options && reverbComposerHasContent(options)) {
       await requireLiveProfileForPosting(user.uid);
       const wallRef = doc(db, 'posts', wallPostId);
       const wall = await getDoc(wallRef);
       if (wall.exists()) {
-        const quote = options.quote.trim().slice(0, MAX_POST_TEXT);
-        await updateDoc(wallRef, { text: quote });
-        if (quote) {
+        const wallData = wall.data() as Record<string, unknown>;
+        const quote = options.quote?.trim().slice(0, MAX_POST_TEXT) ?? '';
+        const poll = buildPostPoll(options.poll);
+        if (poll && !quote) throw new Error('Write the poll question in your quote.');
+        const existingVoice = parseVoiceNote(wallData.voice);
+        const existingVideo = parseWallClip(wallData.video);
+        const existingImagePath = parseImageStoragePath(wallData.imageStoragePath);
+        const media = await uploadReverbQuoteAttachments(user.uid, wallPostId, options);
+        if (media.voice && existingVoice?.storagePath) {
+          await deleteVoiceStorage(existingVoice.storagePath);
+        }
+        if (media.video && existingVideo?.storagePath) {
+          await deleteWallClipStorage(existingVideo.storagePath);
+        }
+        if ((media.imageUrl || media.video) && existingImagePath) {
+          await deletePostImageStorage(existingImagePath);
+        }
+        const patch = {
+          text: quote,
+          ...(media.voice ? { voice: voiceNoteToFirestore(media.voice) } : {}),
+          ...(media.video ? { video: media.video } : {}),
+          ...(media.imageUrl
+            ? { imageUrl: media.imageUrl, imageStoragePath: media.imageStoragePath }
+            : {}),
+          ...(poll ? { poll } : options.clearPoll ? { poll: deleteField() } : {}),
+        };
+        await updateDoc(wallRef, patch);
+        if (reverbComposerHasContent({ ...options, quote })) {
           const { postVerifiedQuoteReverb } = await import('@/lib/gamification-client');
           void postVerifiedQuoteReverb(wallPostId);
         }
-        return { status: 'updated', post: { ...postFromDoc(wall.id, wall.data()), text: quote } };
+        const refreshed = await getDoc(wallRef);
+        return {
+          status: 'updated',
+          post: refreshed.exists() ? postFromDoc(refreshed.id, refreshed.data()) : undefined,
+        };
       }
     }
     if (wallPostId) {
@@ -570,9 +685,17 @@ export async function toggleReverb(
 
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const quote = options?.quote?.trim().slice(0, MAX_POST_TEXT) || '';
+  const poll = buildPostPoll(options?.poll);
+  if (poll && !quote) throw new Error('Write the poll question in your quote.');
+
+  const id = newestFirstId();
+  const media =
+    options && (options.voice || options.image || options.video)
+      ? await uploadReverbQuoteAttachments(user.uid, id, options)
+      : {};
 
   const post: ProfilePost = {
-    id: newestFirstId(),
+    id,
     ownerId: user.uid,
     ownerName: me.name || user.displayName || 'Artist',
     ownerSlug: liveProfile.slug,
@@ -593,23 +716,29 @@ export async function toggleReverb(
     ...(rootLyricClip ? { reverbLyricClip: rootLyricClip } : {}),
     ...(rootPoll ? { reverbPoll: rootPoll } : {}),
     ...(rootVideo ? { reverbVideo: rootVideo } : {}),
+    ...(media.imageUrl ? { imageUrl: media.imageUrl } : {}),
+    ...(media.imageStoragePath ? { imageStoragePath: media.imageStoragePath } : {}),
+    ...(media.video ? { video: media.video } : {}),
+    ...(media.voice ? { voice: media.voice } : {}),
+    ...(poll ? { poll } : {}),
   };
 
-  const { id, ...data } = post;
-  await setDoc(doc(db, 'posts', id), data);
-  await setDoc(pointerRef, { wallPostId: id, createdAt: post.createdAt });
+  const { id: postId, ...data } = post;
+  await setDoc(doc(db, 'posts', postId), data);
+  await setDoc(pointerRef, { wallPostId: postId, createdAt: post.createdAt });
 
+  const quoted = reverbComposerHasContent({ ...options, quote });
   try {
     const { postGamificationEvent, postVerifiedQuoteReverb } = await import('@/lib/gamification-client');
-    void postGamificationEvent('wall_post_created', { postId: id });
-    if (quote) void postVerifiedQuoteReverb(id);
+    void postGamificationEvent('wall_post_created', { postId });
+    if (quoted) void postVerifiedQuoteReverb(postId);
   } catch {
     /* social proof is best-effort; the verified post remains intact */
   }
 
   trackSocialEvent('profile_reverb', {
     originalOwnerId: rootOwnerId,
-    quoted: Boolean(quote),
+    quoted,
   });
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({

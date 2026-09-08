@@ -24,6 +24,7 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { recordDropListenProgressClient, recordDropSpinClient } from '@/lib/drop-pulse-client';
+import { autoDownloadLibraryItem } from '@/lib/offline/library-offline';
 import {
   DROP_LISTEN_MILESTONES,
   type DropListenMilestone,
@@ -250,12 +251,33 @@ export function DropListenPanel({
           body: JSON.stringify({ sessionId, userId: user.id }),
         });
         await loadStream();
-        toast({ title: 'Added to Library', description: 'Full stream is ready to play.' });
+        if (user?.id) {
+          void autoDownloadLibraryItem(
+            user.id,
+            {
+              key: effectiveTrackId ? `${shareId}:${effectiveTrackId}` : shareId,
+              shareId,
+              trackId: effectiveTrackId,
+              title,
+              artistName: artistName || 'Artist',
+              scope: effectiveTrackId ? 'track' : 'album',
+              detailsHref: detailsHref ?? pressedSongHref(shareId, { trackId: effectiveTrackId }),
+              purchasedAt: new Date().toISOString(),
+              amountCents: 0,
+              ownerId,
+            },
+            { silent: true }
+          ).catch(() => undefined);
+        }
+        toast({
+          title: 'Added to Library',
+          description: 'Full stream is ready—and saving to this device for offline play.',
+        });
       } catch {
         /* webhook may already have fulfilled */
       }
     })();
-  }, [searchParams, user?.id, loadStream, showPurchase, toast]);
+  }, [searchParams, user?.id, loadStream, showPurchase, toast, shareId, effectiveTrackId, title, artistName, detailsHref, ownerId]);
 
   const startCheckout = useCallback(async (amountCents?: number) => {
     if (!user) {

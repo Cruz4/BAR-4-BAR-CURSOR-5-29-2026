@@ -840,7 +840,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                       House releases are included free with every member account. Open <strong>Library</strong> from The Scene and spin <strong>Mirror by Neomaiya Sol</strong> when it is featured there to test playback, search, queues, and crates before buying anything.
                     </p>
                     <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-fuchsia-200">
-                      Streaming is included with access. Saving a device copy for offline play requires Studio Pro.
+                      Streaming is included with access. Save a device copy for offline play from Library—included for music you own or purchased.
                     </p>
                   </div>
                   <div className="rounded-xl border border-fuchsia-400/25 bg-fuchsia-400/5 p-4 text-xs">

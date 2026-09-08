@@ -123,7 +123,7 @@ export function getFirstDropsWhatFaqAnswer(): string {
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return `Free on every signed-in account. On The Scene, tap New release. Choose a Vault song or album, upload the music, set a price or pay-what-you-want, then Publish release. Visitor catalog is ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks; Pro adds unlimited slots and offline Library downloads. DNA Drop is the separate Pro lyrics-only page. Visitors see Listen / buy on your Artist Home, The Scene, and the release link. To get paid, open Earnings and connect Stripe payouts.`;
+  return `Free on every signed-in account. On The Scene, tap New release. Choose a Vault song or album, upload the music, set a price or pay-what-you-want, then Publish release. Visitor catalog is ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks; Pro adds unlimited slots. Offline downloads are included for music you own or purchased. DNA Drop is the separate Pro lyrics-only page. Visitors see Listen / buy on your Artist Home, The Scene, and the release link. To get paid, open Earnings and connect Stripe payouts.`;
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {

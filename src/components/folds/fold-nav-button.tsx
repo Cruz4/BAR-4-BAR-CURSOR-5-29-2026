@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { StudioLoader } from '@/components/studio-loader';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
+import { FoldReadToggle } from '@/components/folds/fold-read-toggle';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { useAuth } from '@/hooks/use-auth';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
+import { peerReadLastOutgoing } from '@/lib/folds/read-receipts';
 import { cn } from '@/lib/utils';
 
 const PREVIEW_LIMIT = 6;
@@ -36,6 +38,7 @@ export function FoldNavButton() {
   const { folds, unread, waiting, ready } = useFoldInbox();
   const { enabled } = useFoldsFeature();
   const [open, setOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const me = user?.id || '';
   const previewFolds = useMemo(() => getRecentFolds(folds, me, PREVIEW_LIMIT), [folds, me]);
@@ -105,11 +108,11 @@ export function FoldNavButton() {
                 const wet = unreadFor(fold, me) > 0;
                 const isRequest = fold.status === 'pending' && fold.initiatedBy !== me;
                 return (
-                  <li key={fold.id}>
+                  <li key={fold.id} className="group relative">
                     <button
                       type="button"
                       className={cn(
-                        'flex w-full gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-amber-500/10',
+                        'flex w-full gap-2.5 px-3 py-2.5 pr-10 text-left transition-colors hover:bg-amber-500/10',
                         wet && 'bg-amber-500/[0.06]'
                       )}
                       onClick={() => openThread(fold.id)}
@@ -126,7 +129,10 @@ export function FoldNavButton() {
                             {timeAgo(fold.lastAt)}
                           </span>
                         </span>
-                        <span className="mt-0.5 line-clamp-2 block font-serif text-[12px] leading-snug text-amber-50/80">
+                        <span className="mt-0.5 block font-code text-[9px] font-bold uppercase tracking-[0.16em] text-amber-200/60">
+                          {fold.lastSenderId === me ? '[you]' : `[${peer?.name || 'Artist'}]`}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 block break-words font-serif text-[12px] leading-snug text-amber-50/80 [overflow-wrap:anywhere]">
                           {fold.lastBar || 'No messages yet'}
                         </span>
                         {isRequest ? (
@@ -137,9 +143,22 @@ export function FoldNavButton() {
                           <span className="mt-1 inline-block text-[9px] font-bold uppercase tracking-wider text-amber-300">
                             Unread · {unreadFor(fold, me)}
                           </span>
+                        ) : fold.lastSenderId === me && peerReadLastOutgoing(fold, me) ? (
+                          <span className="mt-1 inline-block text-[9px] font-bold uppercase tracking-wider text-amber-200/55">
+                            Read by them
+                          </span>
                         ) : null}
                       </span>
                     </button>
+                    {!isRequest ? (
+                      <FoldReadToggle
+                        foldId={fold.id}
+                        wet={wet}
+                        busy={busyId === fold.id}
+                        onBusyChange={setBusyId}
+                        compact
+                      />
+                    ) : null}
                   </li>
                 );
               })}

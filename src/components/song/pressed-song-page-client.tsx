@@ -258,10 +258,10 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Purchase date</dt><dd className="mt-1 font-code">{new Date(viewer.purchase.purchasedAt).toLocaleString()}</dd></div>
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Amount paid</dt><dd className="mt-1 font-headline text-xl font-black text-amber-100">{centsToUsdLabel(viewer.purchase.amountCents)}</dd></div>
                   <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Item type</dt><dd className="mt-1 capitalize">{viewer.purchase.scope}</dd></div>
-                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Access</dt><dd className="mt-1">Full stream · offline device copy with Studio Pro</dd></div>
+                  <div><dt className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Access</dt><dd className="mt-1">Full stream · offline device copy from Library</dd></div>
                 </dl>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200/15 bg-black/20 px-5 py-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-2"><Download className="h-4 w-4 text-amber-300" /> Studio Pro can save it for offline play from the Library song menu.</span>
+                  <span className="flex items-center gap-2"><Download className="h-4 w-4 text-amber-300" /> Save it for offline play from the Library song menu.</span>
                   <Button asChild size="sm" variant="outline" className="border-amber-300/35 text-amber-100"><Link href="/library">Open Library</Link></Button>
                 </div>
               </section>

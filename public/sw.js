@@ -15,7 +15,26 @@ try {
     messagingSenderId: '603155091344',
     appId: '1:603155091344:web:3662234090b291129aad15',
   });
-  firebase.messaging();
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    const title = payload.notification?.title || payload.data?.title || 'AKAsheet';
+    const body = payload.notification?.body || payload.data?.body || 'You have new activity';
+    const href = payload.data?.href || '/activity';
+    const unread = Math.max(1, Number(payload.data?.unread) || 1);
+    return Promise.all([
+      self.registration.showNotification(title, {
+        body,
+        icon: '/Logo.png',
+        badge: '/Logo.png',
+        data: { href },
+        tag: payload.data?.type || 'akasheet-activity',
+        renotify: true,
+      }),
+      typeof self.navigator?.setAppBadge === 'function'
+        ? self.navigator.setAppBadge(unread).catch(() => undefined)
+        : Promise.resolve(),
+    ]);
+  });
 } catch (e) {
   console.warn('[sw] firebase messaging init', e);
 }
@@ -41,8 +60,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  // FCM background handler usually paints the notification; this is a fallback
-  // when a raw push payload arrives without the messaging SDK handling it.
+  // FCM background pushes are handled in messaging.onBackgroundMessage above.
   if (!event.data) return;
   let payload = {};
   try {
@@ -50,6 +68,7 @@ self.addEventListener('push', (event) => {
   } catch {
     payload = { notification: { title: 'AKAsheet', body: event.data.text() } };
   }
+  if (payload.messageId || payload.from) return;
   const title = payload.notification?.title || payload.data?.title || 'AKAsheet';
   const body = payload.notification?.body || payload.data?.body || 'You have new activity';
   const href = payload.data?.href || '/activity';
@@ -94,6 +113,15 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data?.type === 'SET_APP_BADGE') {
+    const count = Math.max(0, Math.floor(Number(event.data.count) || 0));
+    if (typeof self.navigator?.setAppBadge !== 'function') return;
+    if (count <= 0) {
+      void self.navigator.clearAppBadge?.().catch(() => undefined);
+    } else {
+      void self.navigator.setAppBadge(count).catch(() => undefined);
+    }
+  }
 });
 
 function isStaticAsset(pathname) {
@@ -103,6 +131,7 @@ function isStaticAsset(pathname) {
 function isStudioRoute(pathname) {
   return (
     pathname === '/' ||
+    pathname === '/library' ||
     pathname.startsWith('/albums/') ||
     pathname.startsWith('/usage') ||
     pathname.startsWith('/activity')

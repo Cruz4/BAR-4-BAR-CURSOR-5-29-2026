@@ -9,7 +9,7 @@ type WallClipPlayerProps = {
   poster?: string;
   compact?: boolean;
   className?: string;
-  /** When set, play the visible slide and pause the rest. */
+  /** When set, pause this clip while it is not the focused slide. */
   active?: boolean;
 };
 
@@ -27,16 +27,7 @@ export function WallClipPlayer({
     if (!video || active === undefined) return;
     if (!active) {
       video.pause();
-      return;
     }
-    video.currentTime = 0;
-    video.muted = false;
-    const tryPlay = () =>
-      video.play().catch(() => {
-        video.muted = true;
-        return video.play().catch(() => undefined);
-      });
-    void tryPlay();
   }, [active, clip.url]);
 
   return (
@@ -46,8 +37,7 @@ export function WallClipPlayer({
       poster={poster}
       controls
       playsInline
-      loop
-      preload={active === false ? 'metadata' : 'auto'}
+      preload="metadata"
       className={cn(
         'block w-full rounded-xl bg-black object-contain shadow-[0_8px_28px_rgba(0,0,0,0.45)]',
         compact ? 'max-h-56' : 'max-h-[min(68dvh,46rem)]',

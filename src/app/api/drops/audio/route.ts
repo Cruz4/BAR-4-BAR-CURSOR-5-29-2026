@@ -6,7 +6,6 @@ import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-s
 import { DROP_PREVIEW_SECONDS } from '@/lib/drop-commerce';
 import { resolveDropListenerIdentity } from '@/lib/server/drop-listener-identity';
 import { mintDropListenProof } from '@/lib/server/drop-listen-proof';
-import { isProOrTrial } from '@/lib/subscription';
 
 export const runtime = 'nodejs';
 
@@ -44,14 +43,16 @@ export async function GET(req: Request) {
     }
 
     const userId = await optionalUid(req);
-    if (offlineDownload) {
-      if (!userId) return NextResponse.json({ error: 'Sign in with Studio Pro to download for offline play.' }, { status: 401 });
-      const userSnap = await db.doc(`users/${userId}`).get();
-      if (!isProOrTrial(userSnap.data())) {
-        return NextResponse.json({ error: 'Offline Library downloads require Studio Pro.' }, { status: 403 });
-      }
+    if (offlineDownload && !userId) {
+      return NextResponse.json({ error: 'Sign in to save songs for offline play.' }, { status: 401 });
     }
     const full = await userCanStreamFull({ db, share, userId, trackId });
+    if (offlineDownload && !full) {
+      return NextResponse.json(
+        { error: 'Only songs you own or purchased can be saved offline.' },
+        { status: 403 }
+      );
+    }
     if (!isReleaseShareLive(share) && !full) {
       return NextResponse.json({ error: 'This release is no longer public.' }, { status: 404 });
     }
