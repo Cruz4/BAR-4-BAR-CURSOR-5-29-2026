@@ -221,6 +221,7 @@ export function SceneImmersiveFeedDialog({
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRowRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const scrollFrameRef = useRef<number | null>(null);
   const bubbleSettleRef = useRef<number | null>(null);
@@ -228,6 +229,7 @@ export function SceneImmersiveFeedDialog({
   const activeIndexRef = useRef(0);
   const itemsLengthRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [headerPx, setHeaderPx] = useState(118);
 
   const items = useMemo(() => {
     if (mode === 'block') {
@@ -335,6 +337,17 @@ export function SceneImmersiveFeedDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialItemKey, items, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => setHeaderPx(Math.ceil(el.getBoundingClientRect().height));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [open, items.length]);
+
   const current = items[activeIndex]?.meta;
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
   const paintedSlides = useMemo(() => {
@@ -366,7 +379,10 @@ export function SceneImmersiveFeedDialog({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.28)_100%)]" />
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-6 pt-[max(0.65rem,env(safe-area-inset-top))]">
+        <div
+          ref={headerRef}
+          className="pointer-events-none absolute inset-x-0 top-0 z-40 bg-gradient-to-b from-black via-black/85 to-transparent pb-4 pt-[max(0.65rem,env(safe-area-inset-top))]"
+        >
           <div className="pointer-events-auto flex items-center gap-1 px-2 sm:gap-2 sm:px-5">
             <button type="button" onClick={closeToScene} className="flex h-9 w-9 shrink-0 items-center justify-center" aria-label="AKAsheet home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -437,12 +453,16 @@ export function SceneImmersiveFeedDialog({
             <section
               key={item.meta.key}
               data-feed-index={index}
-              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 pt-[7.4rem] sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))] sm:pt-[8.25rem]"
+              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-start justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))]"
+              style={{ paddingTop: headerPx }}
               aria-label={`${title}: ${item.meta.name}`}
             >
               {paint ? (
               <>
-              <div className="relative z-10 w-full max-w-[44rem]">
+              <div
+                className="relative z-10 w-full max-w-[44rem] overflow-y-auto overscroll-contain [scrollbar-width:thin]"
+                style={{ maxHeight: `calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))` }}
+              >
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
                     <Link href={item.meta.href} onClick={leaveForNavigation} className="contents">

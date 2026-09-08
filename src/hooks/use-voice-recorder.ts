@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  getBrowserSpeechRecognition,
   getFreestyleAudioConstraints,
   pickMediaRecorderMimeType,
-  speechRecognitionErrorMessage,
   type BrowserSpeechRecognitionCtor,
 } from '@/lib/speech-recognition';
 import { normalizeAudioContentType } from '@/lib/audio-mime';
@@ -21,86 +19,6 @@ import {
 type RecInstance = InstanceType<BrowserSpeechRecognitionCtor>;
 
 export type VoiceRecorderStatus = 'idle' | 'recording' | 'transcribing' | 'recorded';
-
-function liveCaption(
-  event: {
-    resultIndex: number;
-    results: { length: number; [index: number]: { isFinal: boolean; 0?: { transcript: string } } };
-  },
-  priorFinals: string
-): { appendedFinal: string; liveText: string } {
-  let appendedFinal = '';
-  let interim = '';
-  for (let i = event.resultIndex; i < event.results.length; i++) {
-    const piece = event.results[i]?.[0]?.transcript || '';
-    if (event.results[i]?.isFinal) appendedFinal += `${piece} `;
-    else interim += piece;
-  }
-  appendedFinal = appendedFinal.replace(/\s+/g, ' ').trim();
-  const finals = [priorFinals, appendedFinal].filter(Boolean).join(' ').trim();
-  return {
-    appendedFinal,
-    liveText: `${finals} ${interim}`.replace(/\s+/g, ' ').trim(),
-  };
-}
-
-function startBrowserTranscription(opts: {
-  recorderRef: { current: MediaRecorder | null };
-  recognitionRef: { current: RecInstance | null };
-  finalTranscriptRef: { current: string };
-  liveTranscriptRef: { current: string };
-  setLiveTranscript: (text: string) => void;
-  setError: (text: string | null) => void;
-}): void {
-  const SpeechRec = getBrowserSpeechRecognition() as BrowserSpeechRecognitionCtor | null;
-  if (!SpeechRec) return;
-  try {
-    const rec = new SpeechRec();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = typeof navigator !== 'undefined' ? navigator.language || 'en-US' : 'en-US';
-    rec.onresult = (event) => {
-      const assembled = liveCaption(event, opts.finalTranscriptRef.current);
-      if (assembled.appendedFinal) {
-        opts.finalTranscriptRef.current = [opts.finalTranscriptRef.current, assembled.appendedFinal]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-      }
-      opts.setLiveTranscript(assembled.liveText || opts.finalTranscriptRef.current);
-      opts.liveTranscriptRef.current = assembled.liveText || opts.finalTranscriptRef.current;
-    };
-    rec.onerror = (event) => {
-      if (event.error === 'no-speech' || event.error === 'aborted') {
-        if (opts.recorderRef.current?.state === 'recording' || !opts.recorderRef.current) {
-          try {
-            rec.start();
-          } catch {
-            /* ignore */
-          }
-        }
-        return;
-      }
-      const message = speechRecognitionErrorMessage(event.error);
-      if (message && (event.error === 'not-allowed' || event.error === 'audio-capture')) {
-        opts.setError(message);
-      }
-    };
-    rec.onend = () => {
-      if (opts.recorderRef.current?.state === 'recording') {
-        try {
-          rec.start();
-        } catch {
-          /* some browsers refuse restart */
-        }
-      }
-    };
-    opts.recognitionRef.current = rec;
-    rec.start();
-  } catch {
-    opts.recognitionRef.current = null;
-  }
-}
 
 export function useVoiceRecorder(opts?: { maxSeconds?: number; transcribe?: boolean }) {
   const maxSeconds = opts?.maxSeconds ?? VOICE_MAX_SECONDS;
@@ -208,17 +126,6 @@ export function useVoiceRecorder(opts?: { maxSeconds?: number; transcribe?: bool
     } catch {
       setError('Microphone access was blocked. Allow the mic and try again.');
       return;
-    }
-
-    if (transcribeRef.current) {
-      startBrowserTranscription({
-        recorderRef,
-        recognitionRef,
-        finalTranscriptRef,
-        liveTranscriptRef,
-        setLiveTranscript,
-        setError,
-      });
     }
 
     let capture: Awaited<ReturnType<typeof dualMonoCaptureStream>>;

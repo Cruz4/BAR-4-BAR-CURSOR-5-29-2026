@@ -1,13 +1,14 @@
 import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
 import { getDb } from '@/lib/firebase/server';
-import { getPublicAppUrl } from '@/lib/app-url';
 import { emitActivityEvent } from '@/lib/server/activity';
 import { DEFAULT_ACTIVITY_PREFS } from '@/lib/activity/types';
+import { listPushTokensFromDoc, sendWebPushToTokens } from '@/lib/server/push-devices';
 import {
   FOLD_BAR_MAX_CHARS,
+  asUnreadCount,
+  asUnreadMap,
   foldIdFor,
   foldPreview,
   peerIdOf,
@@ -36,7 +37,7 @@ function asFold(id: string, data: FirebaseFirestore.DocumentData | undefined): F
     lastAt: String(data.lastAt || ''),
     lastSenderId: String(data.lastSenderId || ''),
     lastBarId: String(data.lastBarId || ''),
-    unread: (data.unread && typeof data.unread === 'object' ? data.unread : {}) as Record<string, number>,
+    unread: asUnreadMap(data.unread),
     deletedFor:
       data.deletedFor && typeof data.deletedFor === 'object'
         ? data.deletedFor
@@ -123,7 +124,7 @@ export async function foldBackUnread(opts: { foldId: string; userId: string }): 
   const fold = asFold(snap.id, snap.data());
   if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
-  const current = Math.max(0, Number(fold.unread[opts.userId] || 0));
+  const current = asUnreadCount(fold.unread[opts.userId]);
   await ref.set(
     {
       [`unread.${opts.userId}`]: Math.max(1, current),
@@ -254,6 +255,7 @@ export async function passBar(opts: {
   let status: FoldStatus = 'open';
   let firstPass = false;
   let opened = false;
+  const newOrReopened = !existing || existing.status === 'declined';
 
   if (!existing) {
     status = friends ? 'open' : 'pending';
@@ -273,6 +275,7 @@ export async function passBar(opts: {
   }
 
   const memberIds: [string, string] = [opts.senderId, opts.peerId].sort() as [string, string];
+  const peerUnread = asUnreadCount(existing?.unread?.[opts.peerId]) + 1;
   const payload: Record<string, unknown> = {
     memberIds,
     members: {
@@ -286,7 +289,7 @@ export async function passBar(opts: {
     lastAt: now,
     lastSenderId: opts.senderId,
     lastBarId: barId,
-    [`unread.${opts.peerId}`]: FieldValue.increment(1),
+    [`unread.${opts.peerId}`]: peerUnread,
     [`unread.${opts.senderId}`]: 0,
     [`deletedFor.${opts.senderId}`]: false,
     [`deletedFor.${opts.peerId}`]: false,
@@ -315,6 +318,7 @@ export async function passBar(opts: {
     bar,
     senderName: senderMember.name,
     firstPass,
+    announceActivity: newOrReopened || firstPass,
   }).catch((err) => console.warn('[folds/notify]', err));
 
   return { fold, bar, opened, firstPass };
@@ -333,11 +337,17 @@ async function recentlyViewing(foldId: string, uid: string): Promise<boolean> {
   }
 }
 
-async function notifyPeer(opts: { fold: FoldDoc; bar: FoldBar; senderName: string; firstPass: boolean }) {
+async function notifyPeer(opts: {
+  fold: FoldDoc;
+  bar: FoldBar;
+  senderName: string;
+  firstPass: boolean;
+  announceActivity: boolean;
+}) {
   const peerId = peerIdOf(opts.fold.memberIds, opts.bar.senderId);
   if (!peerId) return;
 
-  if (opts.firstPass) {
+  if (opts.announceActivity || opts.firstPass) {
     await emitActivityEvent({
       type: 'fold_pass',
       actorId: opts.bar.senderId,
@@ -359,28 +369,16 @@ async function notifyPeer(opts: { fold: FoldDoc; bar: FoldBar; senderName: strin
   if (prefs.foldBars === false) return;
 
   const pushSnap = await db.doc(`users/${peerId}/activityMeta/push`).get();
-  const token = typeof pushSnap.data()?.fcmToken === 'string' ? pushSnap.data()!.fcmToken : null;
-  if (!token) return;
+  const tokens = listPushTokensFromDoc(pushSnap.data() as Record<string, unknown> | undefined);
+  if (!tokens.length) return;
 
-  const origin = getPublicAppUrl();
-  const href = `${origin}/msgs/${opts.fold.id}`;
+  const href = `/msgs/${opts.fold.id}`;
   const title = opts.firstPass ? `${opts.senderName} sent you a message` : opts.senderName;
-  await getMessaging().send({
-    token,
-    notification: {
-      title,
-      body: foldPreview(opts.bar.text),
-    },
-    webpush: {
-      fcmOptions: { link: href },
-      notification: {
-        icon: `${origin}/Logo.png`,
-        badge: `${origin}/Logo.png`,
-      },
-    },
-    data: {
-      href,
-      type: opts.firstPass ? 'fold_pass' : 'fold_bar',
-    },
+  await sendWebPushToTokens({
+    tokens,
+    title,
+    body: foldPreview(opts.bar.text),
+    href,
+    type: opts.firstPass ? 'fold_pass' : 'fold_bar',
   });
 }

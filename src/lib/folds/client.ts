@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/client/firebase';
 import {
+  asUnreadMap,
   type FoldBar,
   type FoldBarReply,
   type FoldDoc,
@@ -37,7 +38,7 @@ function foldFromData(id: string, data: Record<string, unknown>): FoldDoc {
     lastAt: String(data.lastAt || ''),
     lastSenderId: String(data.lastSenderId || ''),
     lastBarId: String(data.lastBarId || ''),
-    unread: (data.unread && typeof data.unread === 'object' ? data.unread : {}) as Record<string, number>,
+    unread: asUnreadMap(data.unread),
     deletedFor:
       data.deletedFor && typeof data.deletedFor === 'object'
         ? (data.deletedFor as Record<string, boolean>)

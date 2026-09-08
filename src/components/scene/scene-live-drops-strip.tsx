@@ -117,7 +117,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
     <>
       <div
         className={cn(
-          'grid w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-3 rounded-xl border px-3.5 py-3 text-left sm:flex sm:flex-wrap sm:gap-3',
+          'grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 rounded-xl border px-2.5 py-2 text-left sm:flex sm:flex-wrap sm:gap-3 sm:px-3.5 sm:py-3',
           saleCount > 0
             ? 'border-amber-400/45 bg-amber-500/10'
             : 'border-border/60 bg-card/40',
@@ -127,7 +127,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
       >
         <span
           className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border sm:h-9 sm:w-9',
             saleCount > 0
               ? 'border-amber-400/40 bg-amber-500/20 text-amber-200'
               : 'border-primary/25 bg-primary/10'
@@ -136,20 +136,20 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           {saleCount > 0 ? <Music className="h-4 w-4" /> : <Dna className="h-3.5 w-3.5 text-primary" />}
         </span>
         <span className="min-w-0 sm:flex-1">
-          <span className="block font-code text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
+          <span className="block font-code text-[8px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70 sm:text-[9px]">
             Release Catalog
           </span>
-          <span className="block text-xs leading-relaxed text-foreground/90">
+          <span className="block truncate text-[11px] leading-tight text-foreground/90 sm:text-xs sm:leading-relaxed">
             {total === 0
               ? 'No releases yet — create your first release or publish a lyric preview'
               : `${saleCount} release${saleCount === 1 ? '' : 's'} for sale · ${lyricPreviewCount} lyric preview${lyricPreviewCount === 1 ? '' : 's'}`}
           </span>
         </span>
-        <span className="col-span-2 grid w-full grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:ml-auto sm:flex sm:w-auto sm:shrink-0 sm:flex-wrap sm:items-center sm:justify-end">
+        <span className="flex shrink-0 items-center justify-end gap-1.5 sm:ml-auto sm:w-auto sm:flex-wrap">
           <Button
             type="button"
             size="sm"
-            className="h-9 w-full whitespace-nowrap bg-fuchsia-400 px-3 text-[10px] font-bold uppercase text-black hover:bg-fuchsia-300 sm:w-auto"
+            className="h-8 whitespace-nowrap bg-fuchsia-400 px-2.5 text-[9px] font-bold uppercase text-black hover:bg-fuchsia-300 sm:h-9 sm:px-3 sm:text-[10px] sm:w-auto"
             onClick={() => openFirstDropLathe()}
           >
             New release
@@ -158,10 +158,10 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
             type="button"
             size="sm"
             variant="outline"
-            className="h-9 w-full whitespace-nowrap px-3 text-[10px] font-bold uppercase sm:w-auto"
+            className="h-8 whitespace-nowrap px-2.5 text-[9px] font-bold uppercase sm:h-9 sm:px-3 sm:text-[10px] sm:w-auto"
             onClick={() => setOpen(true)}
           >
-            Release Catalog
+            Catalog
           </Button>
         </span>
       </div>

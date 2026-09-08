@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { StudioLoader } from '@/components/studio-loader';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
 import { updateSupportRelationship } from '@/lib/relationships-client';
 import {
@@ -562,13 +563,13 @@ export function ArtistIntelligenceShell({
                           ) : null}
                         </div>
                         <p className="truncate font-headline text-xl font-bold uppercase">
-                          {href ? (
-                            <Link href={href} className="hover:text-primary">
-                              {person.displayName}
-                            </Link>
-                          ) : (
-                            person.displayName
-                          )}
+                          <ArtistHomeLink
+                            userId={person.peerId}
+                            slug={person.profileSlug}
+                            className="hover:text-primary"
+                          >
+                            {person.displayName}
+                          </ArtistHomeLink>
                         </p>
                         <p className="text-[11px] text-muted-foreground">
                           {person.lastActivityLabel}: {ago(person.lastActivityAt)}
@@ -833,9 +834,6 @@ export function ArtistIntelligenceShell({
                             : 'Connect Stripe'}
                       </Button>
                     </div>
-                    <p className="text-[11px]">
-                      Deep link <code className="text-foreground">/earnings?connect=…</code> still works here.
-                    </p>
                   </CardContent>
                 </Card>
               </>

@@ -314,12 +314,27 @@ export async function saveActivityPrefs(prefs: Partial<ActivityPrefs>): Promise<
 export async function savePushToken(fcmToken: string | null): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
+  const ref = doc(db, 'users', user.uid, 'activityMeta', 'push');
+  const snap = await getDoc(ref);
+  const existing = snap.data()?.devices;
+  type Device = { token: string; updatedAt: string; userAgent: string };
+  const devices: Device[] = Array.isArray(existing)
+    ? existing.filter((row): row is Device =>
+        Boolean(row && typeof row === 'object' && typeof (row as Device).token === 'string')
+      )
+    : [];
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 180) : '';
+  const now = new Date().toISOString();
+  const nextDevices = fcmToken
+    ? [...devices.filter((row) => row.token !== fcmToken), { token: fcmToken, updatedAt: now, userAgent }].slice(-8)
+    : devices;
   await setDoc(
-    doc(db, 'users', user.uid, 'activityMeta', 'push'),
+    ref,
     {
-      fcmToken: fcmToken || null,
-      updatedAt: new Date().toISOString(),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 180) : '',
+      fcmToken: fcmToken || devices[devices.length - 1]?.token || null,
+      devices: nextDevices,
+      updatedAt: now,
+      userAgent,
     },
     { merge: true }
   );

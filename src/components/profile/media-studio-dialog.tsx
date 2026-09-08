@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Camera, FlipHorizontal, ImagePlus, Maximize2, Music2, Square, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,12 +74,12 @@ async function openCamera(facing: 'user' | 'environment'): Promise<MediaStream> 
   const attempts: MediaStreamConstraints[] = [
     {
       video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: true,
+      audio: false,
     },
-    { video: { facingMode: { ideal: facing } }, audio: true },
     { video: { facingMode: { ideal: facing } }, audio: false },
-    { video: true, audio: true },
     { video: true, audio: false },
+    { video: { facingMode: { ideal: facing } }, audio: true },
+    { video: true, audio: true },
   ];
   let last: unknown;
   for (const constraints of attempts) {
@@ -90,6 +90,23 @@ async function openCamera(facing: 'user' | 'environment'): Promise<MediaStream> 
     }
   }
   throw last instanceof Error ? last : new Error('Could not open the camera.');
+}
+
+let primedCamera: Promise<MediaStream> | null = null;
+
+/** Start getUserMedia in the same user-gesture turn as the Camera button. */
+export function primePostCamera(facing: 'user' | 'environment' = 'user') {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+  primedCamera = openCamera(facing).catch((err) => {
+    primedCamera = null;
+    throw err;
+  });
+}
+
+function takePrimedCamera(): Promise<MediaStream> | null {
+  const next = primedCamera;
+  primedCamera = null;
+  return next;
 }
 
 function formatSec(value: number): string {
@@ -107,6 +124,7 @@ export function MediaStudioDialog({
 }: MediaStudioDialogProps) {
   const liveRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const captureRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -217,24 +235,57 @@ export function MediaStudioDialog({
 
   const startCamera = async (nextFacing = facing) => {
     setCamError(null);
+    setLiveReady(false);
     stopCamera();
     if (!navigator.mediaDevices?.getUserMedia) {
       setCamError('This browser cannot open a camera.');
       return;
     }
     try {
-      const stream = await openCamera(nextFacing);
+      const primed = nextFacing === facing ? takePrimedCamera() : null;
+      const stream = primed ? await primed : await openCamera(nextFacing);
       streamRef.current = stream;
       const el = liveRef.current;
       if (el) {
         el.srcObject = stream;
-        await el.play().catch(() => undefined);
+        el.muted = true;
+        el.setAttribute('playsinline', 'true');
+        await el.play();
+        setLiveReady(true);
       }
-      setLiveReady(true);
     } catch (err) {
       setCamError(cameraErrorMessage(err));
     }
   };
+
+  useLayoutEffect(() => {
+    if (!open || step !== 'capture') return;
+    let cancelled = false;
+    const tryAttach = () => {
+      if (cancelled || !streamRef.current) return;
+      const el = liveRef.current;
+      if (!el) {
+        requestAnimationFrame(tryAttach);
+        return;
+      }
+      if (el.srcObject !== streamRef.current) {
+        el.srcObject = streamRef.current;
+        el.muted = true;
+        el.setAttribute('playsinline', 'true');
+        void el.play()
+          .then(() => {
+            if (!cancelled) setLiveReady(true);
+          })
+          .catch((err) => {
+            if (!cancelled) setCamError(cameraErrorMessage(err));
+          });
+      }
+    };
+    tryAttach();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, step]);
 
   useEffect(() => {
     if (!open) {
@@ -474,7 +525,20 @@ export function MediaStudioDialog({
                 </p>
               ) : null}
             </div>
-            {camError ? <p className="text-xs text-rose-300">{camError}</p> : null}
+            {camError ? (
+              <div className="space-y-2">
+                <p className="text-xs text-rose-300">{camError}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5 text-[10px] font-bold uppercase tracking-widest"
+                  onClick={() => captureRef.current?.click()}
+                >
+                  <Camera className="h-3.5 w-3.5" /> Take photo with device camera
+                </Button>
+              </div>
+            ) : null}
             <div className="flex items-center justify-center gap-2">
               <Button
                 type="button"
@@ -844,6 +908,19 @@ export function MediaStudioDialog({
           ref={fileRef}
           type="file"
           accept="image/*,video/*"
+          className="sr-only"
+          tabIndex={-1}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            void pickFile(file);
+          }}
+        />
+        <input
+          ref={captureRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           className="sr-only"
           tabIndex={-1}
           onChange={(e) => {

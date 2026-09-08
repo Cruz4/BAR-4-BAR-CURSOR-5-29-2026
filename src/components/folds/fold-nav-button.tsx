@@ -53,12 +53,15 @@ export function FoldNavButton() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-8 w-8 shrink-0 text-amber-300 hover:bg-amber-500/10 md:h-9 md:w-9"
+          className={cn(
+            'relative h-8 w-8 shrink-0 overflow-visible text-amber-300 hover:bg-amber-500/10 md:h-9 md:w-9',
+            unread > 0 && 'z-20'
+          )}
           aria-label={unread > 0 ? `Msgs, ${unread} unread` : 'Msgs'}
         >
           <MessageSquare className="h-4 w-4 md:h-5 md:w-5" />
           {unread > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold leading-none text-black">
+            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold leading-none text-black shadow ring-2 ring-background">
               {unread > 99 ? '99+' : unread}
             </span>
           )}

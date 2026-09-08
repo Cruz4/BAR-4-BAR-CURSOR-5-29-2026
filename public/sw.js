@@ -53,13 +53,19 @@ self.addEventListener('push', (event) => {
   const title = payload.notification?.title || payload.data?.title || 'AKAsheet';
   const body = payload.notification?.body || payload.data?.body || 'You have new activity';
   const href = payload.data?.href || '/activity';
+  const unread = Math.max(1, Number(payload.data?.unread) || 1);
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/Logo.png',
-      badge: '/Logo.png',
-      data: { href },
-    })
+    Promise.all([
+      self.registration.showNotification(title, {
+        body,
+        icon: '/Logo.png',
+        badge: '/Logo.png',
+        data: { href },
+      }),
+      typeof self.navigator?.setAppBadge === 'function'
+        ? self.navigator.setAppBadge(unread).catch(() => undefined)
+        : Promise.resolve(),
+    ])
   );
 });
 

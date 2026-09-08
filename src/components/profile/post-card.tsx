@@ -75,6 +75,41 @@ function timeAgo(iso: string): string {
   }
 }
 
+function ImmersiveClampedText({
+  text,
+  immersive,
+  className,
+  children,
+}: {
+  text: string;
+  immersive?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const long =
+    text.trim().split(/\s+/).length > 40 ||
+    text.length > 220 ||
+    text.split('\n').length > 6;
+  if (!immersive) {
+    return <p className={className}>{children}</p>;
+  }
+  return (
+    <div>
+      <p className={cn(className, !expanded && 'line-clamp-6')}>{children}</p>
+      {long ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-1 text-[10px] font-bold uppercase tracking-widest text-sky-300 hover:text-sky-200"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 /** Goal foil posts predate typed media, so recognize their stable generated caption. */
 function isStudioGoalShare(text?: string): boolean {
   return Boolean(text && /\b(?:weekly|monthly|lifetime)\s+goal complete:/i.test(text));
@@ -179,18 +214,6 @@ function ReverbSourceBody({
           >
             {name}
           </ArtistHomeLink>
-          {post.reverbPostId ? (
-            <>
-              {' · '}
-              <Link
-                href={publicScenePostHref(post.reverbPostId)}
-                prefetch={false}
-                className="text-[var(--ph-muted,rgba(255,255,255,0.55))] transition-colors hover:text-[var(--ph-text,#fff)] hover:underline"
-              >
-                Permalink
-              </Link>
-            </>
-          ) : null}
         </p>
       </div>
       {post.reverbLyricClip ? (
@@ -198,9 +221,13 @@ function ReverbSourceBody({
           <LyricClipCard clip={post.reverbLyricClip} />
         </div>
       ) : post.reverbText ? (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90">
+        <ImmersiveClampedText
+          text={post.reverbText}
+          immersive={immersive}
+          className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]/90"
+        >
           {post.reverbText}
-        </p>
+        </ImmersiveClampedText>
       ) : null}
       {post.reverbVideo && !post.reverbLyricClip ? (
         <div className="mt-2 flex justify-center">
@@ -632,9 +659,13 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
           <LyricClipCard clip={post.lyricClip} />
         </div>
       ) : post.text ? (
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]">
+        <ImmersiveClampedText
+          text={post.text}
+          immersive={immersive}
+          className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]"
+        >
           <MentionText text={post.text} />
-        </p>
+        </ImmersiveClampedText>
       ) : null}
 
       {!post.isReverb && post.poll ? <PostPollCard postId={post.id} poll={post.poll} /> : null}

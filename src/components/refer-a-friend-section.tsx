@@ -9,8 +9,8 @@ import { Gift, Copy, Check, Sparkles } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase/client/firebase';
-import { REFERRAL_INK_REWARD, MAX_REFERRAL_REWARDS } from '@/lib/referrals';
+import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
+import { REFERRAL_INK_REWARD, MAX_REFERRAL_REWARDS, buildReferralLink } from '@/lib/referrals';
 import { REFERRAL_INK_SPEND_THRESHOLD, SIGNUP_INK } from '@/lib/subscription';
 import { cn } from '@/lib/utils';
 
@@ -23,27 +23,72 @@ type ReferralInfo = {
   remaining: number;
 };
 
+async function copyText(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const area = document.createElement('textarea');
+    area.value = value;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(area);
+    if (ok) return true;
+  } catch {
+    /* fall through */
+  }
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ url: value, text: value });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export function ReferAFriendSection({ className }: { className?: string }) {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [info, setInfo] = useState<ReferralInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadReferral = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
+      const firebaseUser = await waitForAuthUser();
+      const token = await firebaseUser?.getIdToken();
+      if (!token) throw new Error('Sign in again to load your referral link.');
       const res = await fetch(`/api/referrals/me?userId=${encodeURIComponent(user.id)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const data = (await res.json().catch(() => ({}))) as ReferralInfo & { error?: string };
       if (!res.ok) throw new Error(data.error || 'Could not load referral link');
-      setInfo(data);
+      const fallbackLink =
+        typeof window !== 'undefined' && data.referralCode
+          ? buildReferralLink(window.location.origin, data.referralCode)
+          : '';
+      setInfo({
+        ...data,
+        referralLink: data.referralLink || fallbackLink,
+      });
     } catch (e) {
-      console.warn('Referral load failed', e);
+      setInfo(null);
+      setError(e instanceof Error ? e.message : 'Could not load referral link');
     } finally {
       setLoading(false);
     }
@@ -54,18 +99,30 @@ export function ReferAFriendSection({ className }: { className?: string }) {
   }, [loadReferral]);
 
   const copyLink = async () => {
-    if (!info?.referralLink) return;
-    try {
-      await navigator.clipboard.writeText(info.referralLink);
-      setCopied(true);
+    const link = info?.referralLink;
+    if (!link) {
       toast({
-        title: 'Referral link copied',
-        description: `Your friend gets ${SIGNUP_INK} welcome Ink plus up to ${REFERRAL_INK_REWARD} extra referral Ink. You can earn up to ${REFERRAL_INK_REWARD} Ink after they legitimately spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink.`,
+        variant: 'destructive',
+        title: 'No referral link yet',
+        description: error || 'Load your link first, then copy.',
       });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast({ variant: 'destructive', title: 'Copy failed', description: 'Select the link and copy manually.' });
+      return;
     }
+    const ok = await copyText(link);
+    if (!ok) {
+      toast({
+        variant: 'destructive',
+        title: 'Copy failed',
+        description: 'Select the link and copy it manually.',
+      });
+      return;
+    }
+    setCopied(true);
+    toast({
+      title: 'Referral link copied',
+      description: `Your friend gets ${SIGNUP_INK} welcome Ink plus up to ${REFERRAL_INK_REWARD} extra referral Ink. You can earn up to ${REFERRAL_INK_REWARD} Ink after they legitimately spend ${REFERRAL_INK_SPEND_THRESHOLD} Ink.`,
+    });
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!user || authLoading || loading) {
@@ -130,6 +187,13 @@ export function ReferAFriendSection({ className }: { className?: string }) {
           <p className="text-xs text-muted-foreground font-code">
             You&apos;ve earned the maximum referral bonus. Thanks for spreading the studio!
           </p>
+        ) : error && !info?.referralLink ? (
+          <div className="space-y-2">
+            <p className="text-xs text-destructive font-code">{error}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => void loadReferral()}>
+              Retry
+            </Button>
+          </div>
         ) : (
           <>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -152,7 +216,12 @@ export function ReferAFriendSection({ className }: { className?: string }) {
                 value={info?.referralLink || ''}
                 className="h-10 bg-black/40 border-white/10 font-code text-[11px]"
               />
-              <Button type="button" onClick={copyLink} className="shrink-0 gap-2 font-bold uppercase text-[10px] tracking-wider h-10">
+              <Button
+                type="button"
+                onClick={() => void copyLink()}
+                disabled={!info?.referralLink}
+                className="shrink-0 gap-2 font-bold uppercase text-[10px] tracking-wider h-10"
+              >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied' : 'Copy'}
               </Button>
@@ -169,7 +238,8 @@ export function ReferAFriendSection({ className }: { className?: string }) {
 }
 
 export async function claimPendingReferral(userId: string, referralCode: string): Promise<boolean> {
-  const token = await auth.currentUser?.getIdToken();
+  const firebaseUser = await waitForAuthUser();
+  const token = await firebaseUser?.getIdToken();
   if (!token) return false;
   const res = await fetch('/api/referrals/claim', {
     method: 'POST',

@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
+import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
+import { isFirestoreInternalAssertion } from '@/lib/firebase/client/firestore-dev-recovery';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -61,26 +63,32 @@ export function DoorKnockHomeListener({
       collection(db, `users/${ownerUserId}/doorKnockLive`),
       orderBy('createdAt', 'desc')
     );
-    return onSnapshot(q, (snap) => {
-      for (const doc of snap.docs) {
-        const data = doc.data();
-        const knockId = typeof data.knockId === 'string' ? data.knockId : doc.id;
-        if (handledRef.current.has(knockId)) continue;
-        const knockerId = typeof data.knockerId === 'string' ? data.knockerId : '';
-        if (!knockerId || knockerId === user.id) continue;
-        handledRef.current.add(knockId);
-        setLiveKnock({
-          knockId,
-          knockerId,
-          knockerName: typeof data.knockerName === 'string' ? data.knockerName : 'Artist',
-          knockerSlug: typeof data.knockerSlug === 'string' ? data.knockerSlug : undefined,
-          activityId: typeof data.activityId === 'string' ? data.activityId : undefined,
-          createdAt: typeof data.createdAt === 'string' ? data.createdAt : '',
-        });
-        void refreshActivityAlerts();
-        break;
+    return subscribeQuery(
+      q,
+      (rows) => {
+        for (const row of rows) {
+          const knockId = typeof row.knockId === 'string' ? row.knockId : row.id;
+          if (handledRef.current.has(knockId)) continue;
+          const knockerId = typeof row.knockerId === 'string' ? row.knockerId : '';
+          if (!knockerId || knockerId === user.id) continue;
+          handledRef.current.add(knockId);
+          setLiveKnock({
+            knockId,
+            knockerId,
+            knockerName: typeof row.knockerName === 'string' ? row.knockerName : 'Artist',
+            knockerSlug: typeof row.knockerSlug === 'string' ? row.knockerSlug : undefined,
+            activityId: typeof row.activityId === 'string' ? row.activityId : undefined,
+            createdAt: typeof row.createdAt === 'string' ? row.createdAt : '',
+          });
+          void refreshActivityAlerts();
+          break;
+        }
+      },
+      (err) => {
+        if (!isFirestoreInternalAssertion(err)) return;
+        window.dispatchEvent(new ErrorEvent('error', { error: err instanceof Error ? err : new Error(String(err)) }));
       }
-    });
+    );
   }, [enabled, user?.id, ownerUserId]);
 
   if (!liveKnock || !user?.id) return null;

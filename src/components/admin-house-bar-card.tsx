@@ -78,8 +78,8 @@ export function AdminHouseBarCard() {
               House bar of the day
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              One shared unfinished bar pinned on The Scene. Artists continue it in a Scene popup
-              (not their last track). Toggle live and rewrite anytime — updates the house cast seed.
+              One shared unfinished bar pinned on The Scene — not the House album catalog.
+              Artists continue it in a Scene popup (not their last track). Toggle live and rewrite anytime.
             </CardDescription>
           </div>
           <Badge

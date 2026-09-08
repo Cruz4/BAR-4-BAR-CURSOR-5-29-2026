@@ -873,11 +873,11 @@ export function DropDeck({
                 No drops match this crate or search.
               </p>
             ) : viewMode === 'browse' ? (
-              <div className="p-2 sm:p-3">
+              <div className="p-2 pr-3 sm:p-3 sm:pr-4">
                 {browseArtists.map((artist) => {
                   const artistOpen = expandedArtists[artist.id] ?? true;
                   return (
-                    <div key={artist.id} className="mb-3 overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                    <div key={artist.id} className="mb-3 overflow-x-clip rounded-xl border border-white/10 bg-black/20">
                       <button
                         type="button"
                         onClick={() =>
@@ -900,7 +900,7 @@ export function DropDeck({
                         </span>
                       </button>
                       {artistOpen ? (
-                        <div className="border-t border-white/10 bg-black/20 px-2 py-2">
+                        <div className="border-t border-white/10 bg-black/20 px-2 py-2 pr-3">
                           {artist.albums.map((album) => {
                             const albumKey = `${artist.id}:${album.id}`;
                             const albumOpen = expandedAlbums[albumKey] ?? true;
@@ -928,14 +928,14 @@ export function DropDeck({
                                   </span>
                                 </button>
                                 {albumOpen ? (
-                                  <ul className="border-t border-white/10 px-1 py-1">
+                                  <ul className="border-t border-white/10 px-2 py-1 pr-2.5">
                                     {album.items.map((item) => {
                                       const active = item.key === currentKey;
                                       return (
                                         <li key={item.key}>
                                           <div
                                             className={cn(
-                                              'group flex items-center gap-2 rounded-xl px-2 py-2 transition-colors',
+                                              'group flex items-center gap-2 rounded-xl py-2 pl-2 pr-1 transition-colors',
                                               active
                                                 ? 'bg-fuchsia-500/15 ring-1 ring-fuchsia-400/35'
                                                 : 'hover:bg-white/5'
@@ -956,7 +956,7 @@ export function DropDeck({
                                               ) : null}
                                               <span
                                                 className={cn(
-                                                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border',
+                                                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border sm:h-9 sm:w-9',
                                                   active
                                                     ? 'border-fuchsia-300/60 bg-fuchsia-500/20 text-fuchsia-100'
                                                     : 'border-white/10 bg-black/40 text-muted-foreground'
@@ -1101,7 +1101,7 @@ export function DropDeck({
                 })}
               </div>
             ) : (
-              <div className="p-2 sm:p-3">
+              <div className="p-2 pr-3 sm:p-3 sm:pr-4">
                 {buckets.map((bucket) => (
                   <div key={bucket.id} className="mb-3">
                     {group !== 'none' && (

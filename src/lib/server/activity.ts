@@ -1,9 +1,7 @@
 import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
 import { getDb } from '@/lib/firebase/server';
-import { getPublicAppUrl } from '@/lib/app-url';
 import {
   DEFAULT_ACTIVITY_PREFS,
   SYSTEM_ACTOR_ID,
@@ -24,6 +22,7 @@ import { activityPostHash } from '@/lib/activity/post-deep-link';
 import { shareDocCommerceFlags } from '@/lib/drop-commerce';
 import { emergingEntryPath } from '@/lib/emerging-ranking';
 import { isLiveMusicFanOnly } from '@/lib/server/music-fan-eligibility';
+import { listPushTokensFromDoc, sendWebPushToTokens } from '@/lib/server/push-devices';
 
 export type EmitActivityInput = {
   type: ActivityType;
@@ -159,27 +158,20 @@ export async function maybePush(
     if (!prefsAllowsPush(prefs, type)) return;
 
     const db = await getDb();
-    const pushSnap = await db.doc(`users/${recipientId}/activityMeta/push`).get();
-    const token = typeof pushSnap.data()?.fcmToken === 'string' ? pushSnap.data()!.fcmToken : null;
-    if (!token) return;
+    const [pushSnap, summary] = await Promise.all([
+      db.doc(`users/${recipientId}/activityMeta/push`).get(),
+      getActivitySummary(recipientId).catch(() => ({ unreadReceived: 1 } as ActivitySummary)),
+    ]);
+    const tokens = listPushTokensFromDoc(pushSnap.data() as Record<string, unknown> | undefined);
+    if (!tokens.length) return;
 
-    const origin = getPublicAppUrl();
-    const absoluteLink = href.startsWith('http') ? href : `${origin}${href.startsWith('/') ? '' : '/'}${href}`;
-
-    await getMessaging().send({
-      token,
-      notification: { title, body },
-      webpush: {
-        fcmOptions: { link: absoluteLink },
-        notification: {
-          icon: `${origin}/Logo.png`,
-          badge: `${origin}/Logo.png`,
-        },
-      },
-      data: {
-        href: absoluteLink,
-        type,
-      },
+    await sendWebPushToTokens({
+      tokens,
+      title,
+      body,
+      href,
+      type,
+      unread: summary.unreadReceived,
     });
   } catch (err) {
     console.warn('[activity/push]', err);

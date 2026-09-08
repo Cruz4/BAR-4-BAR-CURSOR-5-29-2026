@@ -253,12 +253,15 @@ export function ActivityNavDropdown({
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-8 w-8 md:h-9 md:w-9 text-emerald-400 hover:bg-emerald-500/10 shrink-0"
+          className={cn(
+            'relative h-8 w-8 shrink-0 overflow-visible text-emerald-400 hover:bg-emerald-500/10 md:h-9 md:w-9',
+            unreadCount > 0 && 'z-20'
+          )}
           aria-label={unreadCount > 0 ? `Activity, ${unreadCount} unread` : 'Activity'}
         >
           <Bell className="h-4 w-4 md:h-5 md:w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-black">
+            <span className="pointer-events-none absolute right-0 top-0 z-30 flex h-4 min-w-4 translate-x-[30%] -translate-y-[30%] items-center justify-center rounded-full bg-emerald-500 px-1 text-[9px] font-bold leading-none text-black shadow ring-2 ring-background">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

@@ -61,7 +61,6 @@ const STUDIO_SEGMENT_MS = 2800;
 const STUDIO_RECORDER_RESTART_MS = 120;
 const STUDIO_AUDIO_BITS_PER_SECOND = 96_000;
 const MIN_CHUNK_BYTES = 1000;
-const MAX_BROWSER_SPEECH_RESTARTS = 4;
 
 export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, trackVibe, albumTheme, styleProfileSummary, isPro }: FreestylePadProps) {
   const { toast } = useToast();
@@ -92,7 +91,6 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const networkRetryRef = useRef(false);
   const studioFailNotifiedRef = useRef(false);
   const silentChunkStreakRef = useRef(0);
-  const browserSpeechRestartRef = useRef(0);
   const [pickupMode, setPickupMode] = useState<'studio' | 'browser'>('studio');
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const { refundInk } = useUsage();
@@ -507,27 +505,14 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
 
     recognition.onend = () => {
       if (manualStopRef.current || !listeningRef.current) return;
-      browserSpeechRestartRef.current += 1;
-      if (browserSpeechRestartRef.current > MAX_BROWSER_SPEECH_RESTARTS) {
-        try {
-          recognition.stop();
-        } catch {
-          /* ignore */
-        }
-        recognitionRef.current = null;
-        setInterimTranscript('Switching to studio pickup…');
-        void startStudioListening();
-        return;
+      try {
+        recognition.stop();
+      } catch {
+        /* ignore */
       }
-      setTimeout(() => {
-        if (manualStopRef.current || !listeningRef.current) return;
-        try {
-          recognition.start();
-        } catch {
-          recognitionRef.current = null;
-          void startStudioListening();
-        }
-      }, 250);
+      recognitionRef.current = null;
+      setInterimTranscript('Switching to studio pickup…');
+      void startStudioListening();
     };
 
     try {
@@ -547,7 +532,6 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       networkRetryRef.current = false;
       studioFailNotifiedRef.current = false;
       silentChunkStreakRef.current = 0;
-      browserSpeechRestartRef.current = 0;
       manualStopRef.current = false;
       discardStaleStudioWork();
 

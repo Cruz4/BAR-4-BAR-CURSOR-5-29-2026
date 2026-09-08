@@ -36,6 +36,7 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
   const [folds, setFolds] = useState<FoldDoc[]>([]);
   const [ready, setReady] = useState(false);
   const [slip, setSlip] = useState<FoldSlip | null>(null);
+  const [heldUnread, setHeldUnread] = useState<Record<string, string>>({});
   const seenBarRef = useRef<Map<string, string>>(new Map());
   const primedRef = useRef(false);
   const slipTimer = useRef<number | null>(null);
@@ -47,6 +48,7 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
       setFoldBadgeCount(0);
       primedRef.current = false;
       seenBarRef.current = new Map();
+      setHeldUnread({});
       setSlip(null);
       return;
     }
@@ -62,12 +64,14 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
           primedRef.current = true;
           return;
         }
+        const arrived: Record<string, string> = {};
         for (const fold of next) {
           const prev = seenBarRef.current.get(fold.id);
           seenBarRef.current.set(fold.id, fold.lastBarId);
           if (!fold.lastBarId || fold.lastBarId === prev) continue;
           if (fold.lastSenderId === uid) continue;
           if (pathnameRef.current === `/msgs/${fold.id}`) continue;
+          arrived[fold.id] = fold.lastBarId;
           const peer = fold.members[peerIdOf(fold.memberIds, uid)];
           setSlip({
             id: fold.lastBarId,
@@ -77,6 +81,9 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
           });
           if (slipTimer.current) window.clearTimeout(slipTimer.current);
           slipTimer.current = window.setTimeout(() => setSlip(null), 8000);
+        }
+        if (Object.keys(arrived).length) {
+          setHeldUnread((prev) => ({ ...prev, ...arrived }));
         }
       },
       (err) => {
@@ -90,10 +97,57 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id, foldsOn]);
 
-  const unread = useMemo(
-    () => (user?.id ? folds.reduce((sum, fold) => sum + unreadFor(fold, user.id), 0) : 0),
-    [folds, user?.id]
-  );
+  useEffect(() => {
+    const openId = pathname.startsWith('/msgs/') ? pathname.slice('/msgs/'.length) : '';
+    setHeldUnread((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      if (openId && next[openId]) {
+        delete next[openId];
+        changed = true;
+      }
+      if (user?.id) {
+        const byId = new Map(folds.map((fold) => [fold.id, fold]));
+        for (const id of Object.keys(next)) {
+          const fold = byId.get(id);
+          if (!fold) continue;
+          if (fold.deletedFor?.[user.id]) {
+            delete next[id];
+            changed = true;
+            continue;
+          }
+          const lastRead = Date.parse(fold.lastReadAt?.[user.id] || '');
+          const lastAt = Date.parse(fold.lastAt || '');
+          if (Number.isFinite(lastRead) && lastRead > 0 && Number.isFinite(lastAt) && lastRead >= lastAt) {
+            delete next[id];
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [folds, pathname, user?.id]);
+
+  const foldsForUi = useMemo(() => {
+    if (!user?.id) return folds;
+    return folds.map((fold) => {
+      if (fold.deletedFor?.[user.id]) return fold;
+      if (!(heldUnread[fold.id] && heldUnread[fold.id] === fold.lastBarId)) return fold;
+      if (unreadFor(fold, user.id) > 0) return fold;
+      return {
+        ...fold,
+        unread: { ...fold.unread, [user.id]: 1 },
+      };
+    });
+  }, [folds, heldUnread, user?.id]);
+
+  const unread = useMemo(() => {
+    if (!user?.id) return 0;
+    return foldsForUi.reduce((sum, fold) => {
+      if (fold.deletedFor?.[user.id]) return sum;
+      return sum + unreadFor(fold, user.id);
+    }, 0);
+  }, [foldsForUi, user?.id]);
   const waiting = useMemo(
     () =>
       user?.id
@@ -107,8 +161,8 @@ export function FoldInboxProvider({ children }: { children: React.ReactNode }) {
   }, [unread]);
 
   const value = useMemo(
-    () => ({ folds, unread, waiting, ready }),
-    [folds, unread, waiting, ready]
+    () => ({ folds: foldsForUi, unread, waiting, ready }),
+    [foldsForUi, unread, waiting, ready]
   );
 
   return (

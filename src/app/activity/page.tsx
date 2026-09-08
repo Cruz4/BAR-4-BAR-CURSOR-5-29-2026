@@ -15,6 +15,7 @@ import {
   Import,
   Lock,
   Mail,
+  MailOpen,
   MessageCircle,
   Banknote,
   Repeat2,
@@ -34,6 +35,7 @@ import {
   FRIENDSHIP_CHANGED_EVENT,
   clearFriendRequestActivityFromPeer,
   markActivityEventsRead,
+  markActivityEventsUnread,
   markAllActivityEventsRead,
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
@@ -146,12 +148,14 @@ function ActivityRow({
   event,
   onRespondRequest,
   onOpen,
+  onMarkUnread,
   busyId,
   requestResolved,
 }: {
   event: ActivityEvent;
   onRespondRequest?: (event: ActivityEvent, accept: boolean) => void;
   onOpen?: (event: ActivityEvent) => void;
+  onMarkUnread?: (event: ActivityEvent) => void;
   busyId?: string | null;
   /** Friend request already accepted/declined — hide Accept/Decline. */
   requestResolved?: boolean;
@@ -243,6 +247,19 @@ function ActivityRow({
               className="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
             >
               Open
+            </button>
+          ) : null}
+          {event.direction === 'received' && event.readAt && onMarkUnread ? (
+            <button
+              type="button"
+              title="Mark as unread"
+              aria-label="Mark as unread"
+              disabled={busyId === event.id}
+              onClick={() => onMarkUnread(event)}
+              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-emerald-400"
+            >
+              <MailOpen className="h-3 w-3" />
+              Mark unread
             </button>
           ) : null}
         </div>
@@ -590,6 +607,23 @@ function ActivityPageInner() {
     toast({ title: 'All caught up' });
   };
 
+  const handleMarkUnread = async (event: ActivityEvent) => {
+    if (busyId || !event.readAt) return;
+    setBusyId(event.id);
+    try {
+      await markActivityEventsUnread([event.id]);
+      if (!sessionUnreadIdsRef.current) sessionUnreadIdsRef.current = new Set();
+      sessionUnreadIdsRef.current.add(event.id);
+      serverMarkedIdsRef.current.delete(event.id);
+      setInbox((prev) =>
+        prev.map((item) => (item.id === event.id ? { ...item, readAt: null } : item))
+      );
+      refreshActivityAlerts();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleOpen = async (event: ActivityEvent) => {
     const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
     navigateActivityHref((h) => router.push(h), href);
@@ -729,6 +763,7 @@ function ActivityPageInner() {
                       event={event}
                       onRespondRequest={handleRespond}
                       onOpen={handleOpen}
+                      onMarkUnread={handleMarkUnread}
                       busyId={busyId}
                       requestResolved={!isRequestActionable(event)}
                     />
@@ -761,6 +796,7 @@ function ActivityPageInner() {
                         event={event}
                         onRespondRequest={handleRespond}
                         onOpen={handleOpen}
+                        onMarkUnread={handleMarkUnread}
                         busyId={busyId}
                         requestResolved={!isRequestActionable(event)}
                       />

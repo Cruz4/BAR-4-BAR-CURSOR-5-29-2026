@@ -60,9 +60,7 @@ export function NotificationSettingsCard() {
             title: result.reason === 'permission' ? 'Permission needed' : 'Push not available yet',
             description,
           });
-          const disabled = { ...next, pushEnabled: false };
-          setPrefs(disabled);
-          await saveActivityPrefs(disabled);
+          // Keep the account pref on so other devices (and later retries) still receive.
         }
       } else {
         // Keep the browser push subscription; only stop sending to this account.

@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react';
 import { Camera, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExpandableMedia } from '@/components/profile/expandable-image';
-import { MediaStudioDialog, type MediaStudioMode } from '@/components/profile/media-studio-dialog';
+import { MediaStudioDialog, primePostCamera, type MediaStudioMode } from '@/components/profile/media-studio-dialog';
 import { cn } from '@/lib/utils';
 import {
   imageFileFromClipboard,
@@ -67,6 +67,7 @@ export function ImageAttachComposer({
 
   const openStudio = (nextMode: MediaStudioMode) => {
     if (disabled || busy) return;
+    if (nextMode === 'camera') primePostCamera();
     setStudioMode(nextMode);
     setStudioOpen(true);
   };
