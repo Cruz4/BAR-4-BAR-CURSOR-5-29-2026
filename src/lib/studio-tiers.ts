@@ -15,6 +15,7 @@ import {
 } from '@/lib/subscription';
 import type { User } from '@/lib/types';
 import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
+import { QUOTE_PRESS_SLOT_LIMIT } from '@/lib/profile/quote-press';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
 
@@ -182,29 +183,22 @@ export const DNA_DROP_PRO_LINE =
 export const PRESSING_FREE_LINE =
   'The Pressing — your Artist Home living skin — is Free with your public page.';
 export const MUSIC_RELEASE_PRO_PERKS_LINE =
-  'Pro perks around music: unlimited catalog so you can release more songs. Offline downloads are included for music you own or purchased. Pressing a release live does not require Pro.';
+  `Pro perks around music: unlimited catalog (${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} track cap on Visitor). Song & album releases stay Free. Library offline saves work for music you own or purchased on any tier.`;
 export const MUSIC_VS_DNA_GLOSSARY = `${MUSIC_RELEASE_FREE_LINE} ${DNA_DROP_PRO_LINE} ${MUSIC_RELEASE_PRO_PERKS_LINE}`;
 
-export const PRO_FULL_UNLOCK_LINE = 'Full app unlocked — unlimited albums & tracks';
+export const PRO_FULL_UNLOCK_LINE = 'Full studio workflow — Pro-only unlocks in the list below';
 
 export const PRO_YEARLY_INCLUDES_LINE = 'Everything in Pro Monthly included';
 
-/** Short perk lines shown directly under tier price (also kept in full feature lists below) */
+/** Short positioning under tier price — no Ink/pricing repeats (those live in Studio Capacity + feature list). */
 export function getProMonthlyHeadlinePerks(): readonly string[] {
-  return [
-    PRO_FULL_UNLOCK_LINE,
-    'Custom DNA vault saves, Performance Mode, Freestyle, Collab Sheet & DNA Drop lyric links',
-    `${PRO_MONTHLY_INK.toLocaleString()} residency Ink every month`,
-  ];
+  return [PRO_FULL_UNLOCK_LINE];
 }
 
 export function getProYearlyHeadlinePerks(): readonly string[] {
   return [
-    PRO_FULL_UNLOCK_LINE,
-    'Custom DNA vault saves, Performance Mode, Freestyle, Collab Sheet & DNA Drop lyric links',
-    `${PRO_YEARLY_INK.toLocaleString()} residency Ink every month`,
-    INK_PACK_YEARLY_DISCOUNT_SHORT,
-    `Best price — ${PRO_YEARLY_PRICE}/mo effective (${PRO_YEARLY_BILLED}/year · save ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% vs ${PRO_MONTHLY_PRICE}/mo)`,
+    PRO_YEARLY_INCLUDES_LINE,
+    'Plus more residency Ink, Permanent Ink savings & Studio Roadmap Input',
   ];
 }
 
@@ -320,7 +314,7 @@ export function getReferralFaqAnswer(): string {
 
 /** Pricing FAQ — is Artist Home / The Scene free */
 export function getArtistHomeFaqAnswer(): string {
-  return `Yes — every artist gets a free Artist Home: a shareable /profile page with skin, Album Rooms, wall posts, and embeds from TikTok, Instagram, Facebook, and YouTube. It is private by default; flip it live whenever you want eyes on it. Signing in lands you on The Scene — your friends feed, Discover, and Your Booth — with the Vault one click away. ${PRESSING_FREE_LINE} ${MUSIC_RELEASE_FREE_LINE} Pro does not gate Artist Home or music releases; it unlocks the catalog workflow (unlimited albums/tracks, custom DNA vault saves, Performance Mode, Freestyle, Collab Sheet live editing, and DNA Drop lyric links). Offline Library downloads work for music you own or purchased.`;
+  return `Yes — every artist gets a free Artist Home: a shareable /profile page with skin, Album Rooms, wall posts, and embeds from TikTok, Instagram, Facebook, and YouTube. It is private by default; flip it live whenever you want eyes on it. Signing in lands you on The Scene — your friends feed, Discover, and Your Booth — with the Vault one click away. ${PRESSING_FREE_LINE} ${MUSIC_RELEASE_FREE_LINE} Pro does not gate Artist Home or music releases; it unlocks the full studio workflow (unlimited catalog, custom vault saves, Imprint mix controls, DNA Strain Mixer, Pro AI studio tools, Performance Mode, Freestyle, Collab Sheet, and DNA Drop lyric links). Offline Library downloads work for music you own or purchased on any tier.`;
 }
 
 /** Pricing FAQ — do I need Pro to publish a song/album */
@@ -336,7 +330,7 @@ export function getPostSharingFaqAnswer(): string {
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
   headline: 'Visitor — AI lyric tools on Ink',
-  body: `Every Ink-priced AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Artist Home, The Pressing, The Block, and song/album music releases are included on Free. Custom DNA/Vibe/Style vault saves, Performance Mode, Freestyle, Collab Sheet, vault import/export, and DNA Drop lyric links are Pro — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro. Offline Library downloads are included for music you own or purchased.`,
+  body: `Every Ink-priced bar-by-bar AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Artist Home, The Pressing, The Block, and song/album music releases are included on Free. Pro unlocks custom vault saves, Imprint mix controls, DNA Strain Mixer, Pro-only AI studio tools, Performance Mode, Freestyle, Collab Sheet, vault import/export, and DNA Drop lyric links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro. Offline Library downloads work for music you own or purchased on any tier.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
@@ -348,28 +342,30 @@ export const VISITOR_FEATURES = [
   'Artist Home — shareable public page, The Pressing skin, Edit Public Page, The Block friends feed',
   'Song & album music releases — New release on The Scene (Free; demo catalog slots)',
   'System presets only — custom DNA/Vibe/Style vault saves are Pro',
-  'Locked: PDF/TXT/JSON export, Performance Mode, Freestyle, Collab Sheet, vault import/export & DNA Drop lyric links',
+  'Locked on Visitor: Imprint faders, custom vault saves, DNA Strain Mixer, Pro AI studio tools, lyric export, Performance Mode, Freestyle (30s demo), Collab Sheet, vault JSON import/export & DNA Drop lyric links',
 ] as const;
 
-/** Everything Pro unlocks + why it matters vs Visitor */
+/** Studio Pro-only workflow (paid Pro for catalog + some album tools; Pro or active preview for most workflow — see subscription.ts). */
 export const PRO_UNLOCKS = [
-  `UNLOCK: Unlimited albums & tracks — no ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} track edit cap (more slots to release)`,
-  'UNLOCK: Custom DNA / Vibe / Style vault saves — save your strains, not just load system presets',
-  'UNLOCK: Performance Mode — teleprompter + rhyme-focus for rehearsal & stage',
-  'UNLOCK: Freestyle capture — record flows straight into your rhyme book',
-  'UNLOCK: Full-studio vault import / export — merge JSON blueprints across devices',
-  'UNLOCK: Offline Library downloads — save owned and purchased songs on this device',
-  'UNLOCK: Shareable lyric links — DNA Drop snapshots & Collab Sheet live editing (not required to press a music release)',
-  `${PRO_MONTHLY_INK.toLocaleString()} monthly residency Ink — refreshes each billing cycle`,
+  `Unlimited albums & tracks — paid Pro only (Visitor: ${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks)`,
+  'Custom DNA, Vibe & Style vault saves — store your strains (Visitor: system presets only)',
+  'DNA Strain Mixer — blend saved strains into album direction (paid Pro)',
+  'Pro AI studio — Extract Album DNA, Train AI on Style & Scene Gen prompts (Ink-priced; blocked on Visitor)',
+  `Imprint mix on posts & comments — Color/Texture/Rhythm/Depth faders, shuffle & ${QUOTE_PRESS_SLOT_LIMIT} lockable style slots (Visitor: auto look from text)`,
+  'Lyric export — PDF, TXT & JSON downloads (Visitor: preview layout only)',
+  'Performance Mode — full-screen teleprompter with rhyme focus',
+  'Freestyle capture — full sessions (Visitor: 30-second demo)',
+  'Collab Sheet — live co-editing with collaborators on a track',
+  'DNA Drop lyric links — publish, view, download & import lyric snapshots',
+  'Vault JSON import & export — merge blueprints across devices',
 ] as const;
 
-/** Yearly Pro-only perks on top of full Pro unlocks */
+/** Yearly Pro billing perks on top of Pro Monthly unlocks (Ink totals live in Studio Capacity / plan description). */
 export const PRO_YEARLY_EXCLUSIVES = [
-  `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo — upgraded from ${PRO_MONTHLY_INK.toLocaleString()} on monthly Pro`,
-  `${INK_PACK_YEARLY_DISCOUNT_SHORT} — forever, not a limited promo`,
-  'Bulk Ink packs (Artist Bundle & Studio Vault) — Visitor artists are limited to Studio Pack',
-  'Studio Roadmap Input — direct feature feedback & vote on what we ship next (yearly only)',
-  `Best price: ${PRO_YEARLY_BILLED}/yr (${PRO_YEARLY_PRICE}/mo effective · save $${PRO_YEARLY_ANNUAL_SAVINGS_DOLLARS.toFixed(2)}/yr vs monthly · ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% off)`,
+  `${INK_PACK_YEARLY_DISCOUNT_SHORT} on Permanent Ink packs`,
+  'Artist Bundle & Studio Vault bulk packs (Visitor: Studio Pack only)',
+  'Studio Roadmap Input — yearly feedback & feature votes',
+  `${PRO_YEARLY_BILLED}/yr billed annually (${PRO_YEARLY_PRICE}/mo effective · save ${PRO_YEARLY_SUBSCRIPTION_SAVINGS_PERCENT}% vs monthly)`,
 ] as const;
 
 /** @deprecated Use PRO_UNLOCKS — kept for imports */
@@ -380,7 +376,7 @@ export const PRO_YEARLY_FEATURES = PRO_YEARLY_EXCLUSIVES;
 
 export function getProTierFeatures(billing: 'monthly' | 'yearly'): readonly string[] {
   if (billing === 'monthly') return PRO_UNLOCKS;
-  return [PRO_YEARLY_INCLUDES_LINE, ...PRO_YEARLY_EXCLUSIVES];
+  return [...PRO_UNLOCKS, ...PRO_YEARLY_EXCLUSIVES];
 }
 
 /** Visual emphasis for tier comparison lists */
@@ -391,7 +387,7 @@ export function getTierFeatureHighlight(
   tierName: string
 ): TierFeatureHighlight {
   if (tierName === 'Visitor') return 'none';
-  if (/50%|BYO|Best price|Roadmap|roadmap|yearly only|upgraded from|save \$|vs monthly/i.test(feature)) return 'yearly';
+  if (/50%|Roadmap|roadmap|billed annually|vs monthly|Artist Bundle|Studio Vault bulk/i.test(feature)) return 'yearly';
   if (/Everything in Pro Monthly/i.test(feature)) return 'pro';
   if (tierName === 'Pro Yearly' && PRO_YEARLY_EXCLUSIVES.some((e) => e === feature)) return 'yearly';
   return 'pro';
@@ -456,7 +452,7 @@ export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?
       billedText: `${PRO_YEARLY_BILLED}/year · one charge annually`,
       isCurrent: isCloudSyncActive && subscriptionTier === 'yearly',
       priceKey: 'PRO_YEARLY' as const,
-      features: [PRO_YEARLY_INCLUDES_LINE, ...PRO_YEARLY_EXCLUSIVES],
+      features: [...PRO_UNLOCKS, ...PRO_YEARLY_EXCLUSIVES],
       cta: 'Upgrade to Yearly',
     },
   ];

@@ -1078,7 +1078,7 @@ export function FirstDropLatheHost() {
                         {houseRelease ? (
                           <HouseLibraryNoticePing
                             sent={houseLibraryNotice}
-                            disabled={!selectedAlbumIsLive || !releaseShareIdOf(selectedAlbum)}
+                            disabled={!releaseShareIdOf(selectedAlbum)}
                             pinging={pingingHouseNotice}
                             onPing={() => void sendHouseLibraryPing('album')}
                           />
@@ -1231,7 +1231,7 @@ export function FirstDropLatheHost() {
                   {houseRelease ? (
                     <HouseLibraryNoticePing
                       sent={houseLibraryNotice}
-                      disabled={!selectedAlbumIsLive || !releaseShareIdOf(selectedAlbum)}
+                      disabled={!releaseShareIdOf(selectedAlbum)}
                       pinging={pingingHouseNotice}
                       onPing={() => void sendHouseLibraryPing('album')}
                     />

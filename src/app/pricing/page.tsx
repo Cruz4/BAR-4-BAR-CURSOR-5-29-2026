@@ -152,8 +152,8 @@ export default function PricingPage() {
       period: '/mo',
       billedText: isYearly ? `Billed annually (${PRO_YEARLY_BILLED})` : 'Billed monthly',
       description: isYearly
-        ? 'Unlimited catalog, vault saves, Performance & DNA Drop — plus yearly fuel, savings & roadmap input.'
-        : 'Unlimited catalog, vault saves, Performance & DNA Drop — your studio, not just more tokens.',
+        ? 'All Pro Monthly workflow unlocks — plus yearly Ink, pack discounts & roadmap input below.'
+        : 'Pro-only studio workflow below — catalog, vault, Imprint mix, Pro AI tools, export, Performance, Freestyle, Collab & DNA Drop.',
       membership: 'Professional Member',
       ink: isYearly
         ? `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo included`

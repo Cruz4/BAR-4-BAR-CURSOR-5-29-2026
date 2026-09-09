@@ -25,14 +25,9 @@ export async function POST(req: Request) {
     const shareRef = db.doc(`shares/${shareId}`);
     const shareSnap = await shareRef.get();
     const share = shareSnap.data() || {};
-    if (
-      !shareSnap.exists
-      || share.houseRelease !== true
-      || share.releaseStatus !== 'live'
-      || share.releaseRemovedAt
-    ) {
+    if (!shareSnap.exists || share.houseRelease !== true || share.releaseRemovedAt) {
       return NextResponse.json(
-        { error: 'Publish this as a live House release before sending the Library ping.' },
+        { error: 'This House release is not in member Libraries anymore. Re-publish as House or pick another share.' },
         { status: 409 }
       );
     }

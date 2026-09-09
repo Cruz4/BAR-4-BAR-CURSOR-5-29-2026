@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /albums/
+Disallow: /activity
+Disallow: /earnings
+Disallow: /feed
+Disallow: /friends
+Disallow: /insights
+Disallow: /library
+Disallow: /maintenance
+Disallow: /marketing/capture
+Disallow: /msgs
+Disallow: /profile/customize
+Disallow: /studio-progress
+Disallow: /supporters
+Disallow: /usage
+Disallow: /vault
+
+Sitemap: https://akasheet.com/sitemap.xml

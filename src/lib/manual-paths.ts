@@ -307,7 +307,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
   {
     id: 'play-buy',
     title: 'Play or buy music',
-    blurb: 'Library: your releases, unlocked purchases, or House. Offline download is Pro.',
+    blurb: 'Library: your releases, unlocked purchases, or House. Save owned & purchased tracks offline on any tier.',
     tier: 'free',
     group: 'then',
     steps: [

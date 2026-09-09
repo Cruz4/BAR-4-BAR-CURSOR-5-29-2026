@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { absoluteUrl, PUBLIC_SITEMAP_PATHS } from '@/lib/seo';
 import { getDb } from '@/lib/firebase/server';
-import { isValidProfileSlug } from '@/lib/profile/profile-slug';
+import { isIndexablePublicProfileSlug } from '@/lib/profile/profile-slug';
 import { publicScenePostHref } from '@/lib/activity/href';
 
 export const revalidate = 3600;
@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       collectOrderedDocs(db, 'posts', 'createdAt', MAX_POST_DOCS),
     ]);
     const profileEntries: MetadataRoute.Sitemap = profiles
-      .filter((doc) => isValidProfileSlug(doc.id))
+      .filter((doc) => isIndexablePublicProfileSlug(doc.id))
       .map((doc) => {
         const updated = toLastModified(doc.data().updatedAt, lastModified);
         return {

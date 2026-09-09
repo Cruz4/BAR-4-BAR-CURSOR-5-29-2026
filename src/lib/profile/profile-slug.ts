@@ -123,6 +123,12 @@ export function isValidProfileSlug(slug: string): boolean {
   return true;
 }
 
+/** Live publicProfiles doc id OK for sitemap/SEO (includes founder reserved slugs already claimed). */
+export function isIndexablePublicProfileSlug(slug: string): boolean {
+  if (!slug || slug.length < 2 || slug.length > 32) return false;
+  return SLUG_BODY_RE.test(slug);
+}
+
 /** True for legacy auto slugs like `mike_hills_a1b2c3` or `mike-hills-a1b2c3` (uid prefix). */
 export function looksLikeLegacyUidSlug(slug: string, _uid?: string): boolean {
   const s = (slug || '').trim().toLowerCase();

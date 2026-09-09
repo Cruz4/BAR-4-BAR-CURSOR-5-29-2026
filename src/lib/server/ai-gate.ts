@@ -6,11 +6,6 @@ import { resolveFixedActionCost } from '@/lib/studio-costs';
 import { getStudioCosts } from '@/lib/server/studio-costs';
 import { isMasterAdminEmail } from '@/lib/server/master-admin';
 import { checkRateLimit } from '@/lib/server/rate-limit';
-import {
-  applyByoInkDiscount,
-  isValidGoogleApiKey,
-  isYearlyProFromData,
-} from '@/lib/byo-api';
 import { runWithGenkitContext } from '@/lib/server/genkit-request';
 import {
   computeInkSpendBreakdown,
@@ -220,33 +215,6 @@ export async function refundInkTransaction(uid: string, amount: number): Promise
   ]);
 }
 
-async function resolveByoApiKey(
-  uid: string,
-  customApiKey?: string
-): Promise<string | undefined> {
-  const trimmed = customApiKey?.trim();
-  if (!trimmed) return undefined;
-  if (!isValidGoogleApiKey(trimmed)) {
-    throw new AiGateError('Invalid Google AI API key format.', 'AUTH');
-  }
-
-  if (!hasAdminFirestoreCredentials()) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[BYO] dev mode: Yearly Pro verification skipped');
-      return trimmed;
-    }
-    throw new AiGateError('Studio billing is not configured. BYO-API is unavailable.', 'AUTH');
-  }
-
-  const db = await getDb();
-  const userSnap = await db.doc(`users/${uid}`).get();
-  if (!isYearlyProFromData(userSnap.data())) {
-    throw new AiGateError('BYO API key requires an active Yearly Pro membership.', 'AUTH');
-  }
-
-  return trimmed;
-}
-
 export async function runSecuredAiAction<T>(
   ctx: SecuredAiContext,
   fn: () => Promise<T>,
@@ -255,14 +223,11 @@ export async function runSecuredAiAction<T>(
   const uid = await verifyAiToken(ctx.idToken, ctx.userId);
   await enforceAiRateLimit(uid);
   await enforceProOnlyAiAction(uid, ctx.actionName);
-  const byoApiKey = await resolveByoApiKey(uid, ctx.customApiKey);
-
   const studioCosts = await getStudioCosts();
-  const baseCost =
+  const chargedCost =
     ctx.actionName === 'generateSongDraft' || ctx.actionName === 'generateRelayDraft'
       ? ctx.inkCost
       : resolveFixedActionCost(ctx.actionName, studioCosts, ctx.inkCost);
-  const chargedCost = byoApiKey ? applyByoInkDiscount(baseCost) : baseCost;
 
   if (process.env.NODE_ENV === 'production' && !hasAdminFirestoreCredentials()) {
     throw new AiGateError(
@@ -291,7 +256,7 @@ export async function runSecuredAiAction<T>(
   }
 
   try {
-    return await runWithGenkitContext(byoApiKey, fn);
+    return await runWithGenkitContext(undefined, fn);
   } catch (error) {
     if (serverInkEnabled && finalAmount > 0) {
       await refundInkTransaction(uid, finalAmount).catch(() => undefined);

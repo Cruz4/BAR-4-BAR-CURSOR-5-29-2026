@@ -584,29 +584,12 @@ function DNAStrainMixerDialog({ open, onOpenChange, album, onApply }: { open: bo
 }
 
 function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChange: (open: boolean) => void }) {
-    const { user } = useAuth();
     const { updateAlbum } = useContext(DataContext);
     const { toast } = useToast();
     const [isSaving, startSavingTransition] = useTransition();
     const [imagePreview, setImagePreview] = useState<string | null>(album.coverArtUrl || null);
     const [processingCover, setProcessingCover] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-    if (user?.subscriptionStatus !== 'active') {
-        return (
-            <Dialog open={true} onOpenChange={onOpenChange}>
-                <DialogContent className="bg-card border-2 text-center p-12">
-                    <DialogHeader>
-                        <DialogTitle className="font-headline text-bold uppercase">Pro Feature Locked</DialogTitle>
-                        <DialogDescription className="text-xs uppercase tracking-tight font-code mt-2">Upgrade required to use custom cover art.</DialogDescription>
-                    </DialogHeader>
-                    <Lock className="mx-auto h-12 w-12 text-primary mb-6" />
-                    <p className="text-muted-foreground font-code mb-8">Custom cover art is restricted to Studio Residents. Upgrade to personalize your project.</p>
-                    <Button onClick={() => window.location.href = '/pricing'}>View Studio Tiers</Button>
-                </DialogContent>
-            </Dialog>
-        );
-    }
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];

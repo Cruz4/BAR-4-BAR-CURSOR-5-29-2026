@@ -14,7 +14,6 @@ import type { ActiveRules } from '@/components/dna-synthesis-loader';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { trackLowInkHit } from '@/lib/conversion-analytics';
 import { totalInkBalance } from '@/lib/ink-balance';
-import { API_KEY_STORAGE_KEY, isValidGoogleApiKey } from '@/lib/byo-api';
 import { ZeroInkDialog } from '@/components/zero-ink-dialog';
 
 export type AiSpendContext = {
@@ -30,7 +29,6 @@ interface UsageContextType {
   trialInkBalance: number;
   purchasedBalance: number;
   loading: boolean;
-  customApiKey: string | null;
   lastSpent: { amount: number; pressX: number; pressY: number; currentX: number; currentY: number; activeRules?: ActiveRules; actionName?: string } | null;
   mousePos: { x: number; y: number };
   addUsageLog: (log: Omit<AIUsageLog, 'id' | 'timestamp'>) => void;
@@ -47,7 +45,6 @@ interface UsageContextType {
   refundInk: (amount: number, reason?: string) => void;
   /** No-op stub — Ink grants are fulfilled server-side (Stripe / residency). */
   addInk: (amount: number) => void;
-  saveCustomApiKey: (key: string | null) => void;
   registerAiContext: (ctx: AiSpendContext | null) => void;
 }
 
@@ -69,7 +66,6 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
   const [residencyBalance, setResidencyBalance] = useState<number>(0);
   const [trialInkBalance, setTrialInkBalance] = useState<number>(0);
   const [purchasedBalance, setPurchasedBalance] = useState<number>(0);
-  const [customApiKey, setCustomApiKey] = useState<string | null>(null);
   const [lastSpent, setLastSpent] = useState<{ amount: number; pressX: number; pressY: number; currentX: number; currentY: number; activeRules?: ActiveRules; actionName?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -112,13 +108,6 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     hasInitializedRef.current = false;
     const balanceRef = doc(db, 'users', user.id, 'usage', 'balance');
     
-    try {
-      const savedKey = localStorage.getItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
-      setCustomApiKey(savedKey);
-    } catch {
-      console.warn("Local usage load failed");
-    }
-
     const setupListeners = async () => {
       const firebaseUser = await waitForAuthUser();
       if (cancelled || !firebaseUser || firebaseUser.uid !== user.id) return;
@@ -229,28 +218,6 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
     // Ink purchases / grants are fulfilled server-side (Stripe webhook, residency, milestones).
   }, []);
 
-  const saveCustomApiKey = useCallback((key: string | null) => {
-    if (!user) return;
-    const trimmed = key?.trim() || null;
-    const isYearly = user.subscriptionTier === 'yearly';
-    if (!isYearly && trimmed) {
-        toast({ variant: 'destructive', title: "Yearly Pro Required", description: "BYO API key is an exclusive benefit for Yearly Pro members." });
-        return;
-    }
-    if (trimmed && !isValidGoogleApiKey(trimmed)) {
-        toast({ variant: 'destructive', title: 'Invalid API Key', description: 'Enter a valid Google AI key (starts with AIza…).' });
-        return;
-    }
-    setCustomApiKey(trimmed);
-    if (trimmed) {
-        localStorage.setItem(`${API_KEY_STORAGE_KEY}-${user.id}`, trimmed);
-        toast({ title: "BYO-API Active", description: "Your Google key runs model calls. Ink is charged at 50% off for all AI actions — workstation orchestration only." });
-    } else {
-        localStorage.removeItem(`${API_KEY_STORAGE_KEY}-${user.id}`);
-        toast({ title: 'BYO-API Cleared', description: 'Studio will use AKAsheet model access again. Standard Ink rates apply.' });
-    }
-  }, [user, toast]);
-
   useEffect(() => {
     if (inkBalance > 0) {
       zeroInkShownRef.current = false;
@@ -273,8 +240,8 @@ export const UsageProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UsageContext.Provider value={{
-      usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, customApiKey, lastSpent, mousePos,
-      addUsageLog, deductInk, refundInk, addInk, saveCustomApiKey, registerAiContext,
+      usageHistory, inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading, lastSpent, mousePos,
+      addUsageLog, deductInk, refundInk, addInk, registerAiContext,
     }}>
       {children}
       <ZeroInkDialog

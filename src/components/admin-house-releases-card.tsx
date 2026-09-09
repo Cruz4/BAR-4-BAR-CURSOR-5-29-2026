@@ -162,7 +162,7 @@ export function AdminHouseReleasesCard() {
                     size="sm"
                     variant="outline"
                     className="h-8 gap-1 text-[10px] font-bold uppercase"
-                    disabled={busyId === `ping:${item.shareId}` || !item.live}
+                    disabled={busyId === `ping:${item.shareId}`}
                     onClick={() => void ping(item.shareId)}
                   >
                     {busyId === `ping:${item.shareId}` ? <Loader className="h-3 w-3 animate-spin" /> : <Radio className="h-3 w-3" />}
