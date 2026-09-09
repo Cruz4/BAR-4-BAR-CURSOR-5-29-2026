@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 
-type InboxAtmosphereVariant = 'activity' | 'msgs' | 'msgs-thread';
+type InboxAtmosphereVariant = 'activity' | 'msgs' | 'msgs-thread' | 'public-post';
 
 const VARIANT: Record<
   InboxAtmosphereVariant,
@@ -31,6 +31,14 @@ const VARIANT: Record<
     glowC: 'bg-sky-500/6',
     grid: 'from-amber-200/[0.06] via-transparent to-amber-500/[0.04]',
     grain: 'opacity-[0.32]',
+  },
+  'public-post': {
+    base: 'bg-[#060a14]',
+    glowA: 'bg-fuchsia-500/16',
+    glowB: 'bg-cyan-400/12',
+    glowC: 'bg-violet-600/10',
+    grid: 'from-fuchsia-400/[0.08] via-transparent to-cyan-400/[0.05]',
+    grain: 'opacity-[0.38]',
   },
 };
 

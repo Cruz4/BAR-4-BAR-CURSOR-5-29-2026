@@ -25,6 +25,7 @@ import { ActivityPushIntroDialog } from './activity/activity-push-intro-dialog';
 import { ActivityPushDeviceSync } from './activity/activity-push-device-sync';
 import { ActivityBadgeSync } from './activity/activity-badge-sync';
 import { FoldInboxProvider } from '@/components/folds/fold-inbox-provider';
+import { ActivityAlertsProvider } from '@/context/activity-alerts-context';
 import { CookieConsent } from './cookie-consent';
 import { PwaInstallPrompt } from './pwa-install-prompt';
 import { OfflineBanner } from './offline-banner';
@@ -99,6 +100,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isMarketingShell = isLoginPage || isPublicHome || isWelcomePage;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/') || pathname.startsWith('/song/');
+  const isPublicPostPage = pathname.startsWith('/p/');
   const isLibraryPage = pathname === '/library';
   const isEarningsPage = pathname === '/earnings';
   const isInsightsPage = pathname === '/insights';
@@ -119,7 +121,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   // Public home / login / profile / share need document scroll — overflow-hidden
   // traps the Pressing landing and makes the brand mark feel dead.
   const allowPageScroll =
-    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || isMsgsPage;
+    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isPublicPostPage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || isMsgsPage;
 
   return (
     <InviteGateGuard>
@@ -127,6 +129,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <UsageProvider>
           <GamificationProvider>
             <UIStateProvider>
+              <ActivityAlertsProvider>
               <FoldInboxProvider>
               <AdSenseRouteLoader />
               <FirebaseErrorListener />
@@ -135,7 +138,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <DropSaleAlertListener />
               <ProductAnalytics />
               <TikTokPixel />
-              {isMarketingCapture || isMarketingShell || isPublicProfilePage ? null : isSettingsRoute ? (
+              {isMarketingCapture || isMarketingShell || isPublicProfilePage || isPublicPostPage ? null : isSettingsRoute ? (
                 <SettingsControlAtmosphere />
               ) : (
                 <StudioPageBackground />
@@ -188,6 +191,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <AchievementUnlockCelebration />
               <ProgressCelebration />
               </FoldInboxProvider>
+              </ActivityAlertsProvider>
             </UIStateProvider>
           </GamificationProvider>
         </UsageProvider>

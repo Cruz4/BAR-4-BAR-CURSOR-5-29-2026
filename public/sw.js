@@ -43,7 +43,7 @@ importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-comp
 try {
   firebase.initializeApp({
     apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',
-    authDomain: 'bar4bar.ink',
+    authDomain: 'akasheet.com',
     projectId: 'lyricai-studio-otgxn',
     storageBucket: 'lyricai-studio-otgxn.firebasestorage.app',
     messagingSenderId: '603155091344',

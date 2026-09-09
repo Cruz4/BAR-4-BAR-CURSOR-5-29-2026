@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Bell,
+  Bookmark,
   Check,
   CheckCheck,
   Droplets,
@@ -112,6 +113,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <MessageCircle className={cn(className, 'text-sky-400')} />;
     case 'post_reverb':
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
+    case 'post_imprint_saved':
+      return <Bookmark className={cn(className, 'text-fuchsia-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
     case 'drop_loved':
@@ -350,13 +353,14 @@ function ActivityPageInner() {
     setLoading(true);
     setLoadError('');
     try {
-      const [receivedPage, givenPage, pendingFriends, acceptedFriends, pendingContactIds] = await Promise.all([
+      const [receivedPage, givenPage, friendships, pendingContactIds] = await Promise.all([
         fetchActivityFeedPage('received'),
         fetchActivityFeedPage('given'),
-        fetchFriendships(user.id, 'pending').catch(() => []),
-        fetchFriendships(user.id, 'accepted').catch(() => []),
+        fetchFriendships(user.id).catch(() => []),
         fetchPendingContactRequesterIds().catch(() => []),
       ]);
+      const pendingFriends = friendships.filter((f) => f.status === 'pending');
+      const acceptedFriends = friendships.filter((f) => f.status === 'accepted');
       const [inboxResolved, sentResolved] = await Promise.all([
         withResolvedProfileLinks(receivedPage.events),
         withResolvedProfileLinks(givenPage.events),

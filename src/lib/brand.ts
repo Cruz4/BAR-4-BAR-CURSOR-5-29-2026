@@ -10,6 +10,8 @@ export const BRAND_ARIA_LABEL = APP_SLOGAN;
 export const APP_DOMAIN = 'akasheet.com';
 export const APP_ORIGIN = `https://${APP_DOMAIN}`;
 export const APP_WWW_ORIGIN = `https://www.${APP_DOMAIN}`;
+/** Firebase Auth custom domain — Google sign-in shows “Continue to akasheet.com”. */
+export const FIREBASE_AUTH_DOMAIN = APP_DOMAIN;
 
 /** Previous public domain — keep recognized for old share links during the cutover. */
 export const LEGACY_APP_DOMAIN = 'bar4bar.ink';
@@ -29,6 +31,8 @@ export const ANDROID_ICON_PATH = '/android-icon.png';
 export const ANDROID_ICON_192_PATH = '/android-icon-192.png';
 /** Simplified mark for browser tabs — the full logo turns into a blob at 16px. */
 export const FAVICON_PATH = '/favicon.svg';
+/** Login / marketing studio sky (legacy filename on disk). */
+export const LOGIN_STUDIO_BACKGROUND_PATH = '/Bar 4 Bar background.png';
 export const SHARE_HASHTAG = '#akasheet';
 
 export const SUPPORT_EMAIL = 'akasheet.support@gmail.com';

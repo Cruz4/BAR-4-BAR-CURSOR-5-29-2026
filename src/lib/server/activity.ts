@@ -199,7 +199,13 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   const postId = input.postId?.trim() || undefined;
   const commentId = input.commentId?.trim() || undefined;
 
-  if ((input.type === 'post_love' || input.type === 'post_reply' || input.type === 'post_reverb') && postId) {
+  if (
+    (input.type === 'post_love' ||
+      input.type === 'post_reply' ||
+      input.type === 'post_reverb' ||
+      input.type === 'post_imprint_saved') &&
+    postId
+  ) {
     if (input.type === 'post_love' && commentId) {
       const commentSnap = await db.collection('posts').doc(postId).collection('comments').doc(commentId).get();
       if (!commentSnap.exists) return { ok: false };

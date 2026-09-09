@@ -8,7 +8,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: data: https://firebasestorage.googleapis.com https://*.firebasestorage.app https://*.googleapis.com",
   "connect-src 'self' https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://analytics.tiktok.com https://analytics-ipv6.tiktok.com https://business-api.tiktok.com https://*.tiktok.com https://*.tiktokw.us https://*.tiktokv.com https://*.pangle-ads.com",
-  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://akasheet.com https://bar4bar.ink https://*.firebaseapp.com https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com https://w.soundcloud.com https://*.soundcloud.com https://open.spotify.com https://*.spotify.com https://suno.com https://*.suno.com https://app.suno.ai https://www.tiktok.com https://*.tiktok.com https://www.instagram.com https://*.instagram.com https://www.facebook.com https://*.facebook.com https://facebook.com",
+  "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://akasheet.com https://www.akasheet.com https://bar4bar.ink https://*.firebaseapp.com https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com https://w.soundcloud.com https://*.soundcloud.com https://open.spotify.com https://*.spotify.com https://suno.com https://*.suno.com https://app.suno.ai https://www.tiktok.com https://*.tiktok.com https://www.instagram.com https://*.instagram.com https://www.facebook.com https://*.facebook.com https://facebook.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -26,6 +26,9 @@ const nextConfig = {
   // Force public env into the Next runtime (server + client compile).
   env: {
     NEXT_PUBLIC_LOCK: process.env.NEXT_PUBLIC_LOCK ?? '',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? 'https://akasheet.com',
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:
+      process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'akasheet.com',
   },
   typescript: {
     // Keep false — project typechecks clean; do not hide regressions again.

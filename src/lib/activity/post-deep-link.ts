@@ -48,6 +48,8 @@ export function activityCommentElementId(commentId: string): string {
   return `comment-${commentId}`;
 }
 
+export const ACTIVITY_POST_SCROLL_RETRIES_MS = [60, 180, 420, 900, 1400];
+
 export function scrollActivityPostTarget(target: ActivityPostTarget): boolean {
   if (typeof document === 'undefined') return false;
   const commentEl = target.commentId
@@ -60,4 +62,14 @@ export function scrollActivityPostTarget(target: ActivityPostTarget): boolean {
   el.setAttribute('data-activity-focus', '1');
   window.setTimeout(() => el.removeAttribute('data-activity-focus'), 2600);
   return true;
+}
+
+export function scheduleScrollActivityPostTarget(
+  target: ActivityPostTarget,
+  delaysMs: readonly number[] = ACTIVITY_POST_SCROLL_RETRIES_MS
+): void {
+  if (typeof window === 'undefined') return;
+  for (const delay of delaysMs) {
+    window.setTimeout(() => scrollActivityPostTarget(target), delay);
+  }
 }

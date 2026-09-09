@@ -1964,6 +1964,54 @@ export async function getPublicArtistAvatar(slug: string): Promise<string | unde
   return resolvePublicAvatar(clean, snap.data() as Record<string, unknown>);
 }
 
+export type PublicArtistAvatarChip = {
+  avatarUrl: string | null;
+  starMarkUseStar: boolean;
+  starMarkSeed: number | null;
+  slug: string;
+  studioBadge: 'pro' | 'free';
+};
+
+/** Lightweight feed chip payload — avoids full getPublicProfile on every avatar hit. */
+export async function getPublicArtistAvatarChip(
+  rawSlug: string
+): Promise<PublicArtistAvatarChip | null> {
+  const clean = rawSlug.trim();
+  if (!clean) return null;
+  const db = await getDb();
+  const { resolvePublicProfileSlugDoc } = await import('@/lib/server/profile-slug');
+  const resolved = await resolvePublicProfileSlugDoc(db, clean);
+  if (!resolved) return null;
+
+  const { slug, data, userId } = resolved;
+  const starMarkUseStar = data.starMarkUseStar === true;
+  const starMarkSeed = starMarkUseStar
+    ? normalizeVesperfoldSeed(typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0)
+    : null;
+  const cachedBadge = parseStudioBadge(data.studioBadge);
+
+  const [avatarUrl, userSnap] = await Promise.all([
+    resolvePublicAvatar(slug, data),
+    userId ? db.doc(`users/${userId}`).get() : Promise.resolve(null),
+  ]);
+
+  const liveBadge = userSnap?.exists
+    ? studioChromeFromSubscriptionStatus(
+        typeof userSnap.data()?.subscriptionStatus === 'string'
+          ? String(userSnap.data()?.subscriptionStatus)
+          : null
+      )
+    : undefined;
+
+  return {
+    avatarUrl: avatarUrl ?? null,
+    starMarkUseStar,
+    starMarkSeed,
+    slug,
+    studioBadge: liveBadge || cachedBadge || 'free',
+  };
+}
+
 /** Live Pro/Visitor chrome from user docs — not the denormalized publicProfiles field. */
 async function liveStudioBadgesByUserIds(
   db: Awaited<ReturnType<typeof getDb>>,

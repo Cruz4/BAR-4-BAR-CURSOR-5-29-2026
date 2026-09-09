@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPublicArtistAvatar, getPublicProfile } from '@/lib/server/gamification';
-import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
+import { getPublicArtistAvatarChip } from '@/lib/server/gamification';
 
 export const runtime = 'nodejs';
 
@@ -8,25 +7,16 @@ export const runtime = 'nodejs';
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    const profile = await getPublicProfile(slug);
-    if (!profile) {
+    const chip = await getPublicArtistAvatarChip(slug);
+    if (!chip) {
       return NextResponse.json({ avatarUrl: null }, { status: 404 });
     }
-    const data = profile as Record<string, unknown>;
-    const liveSlug =
-      typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
-    const starMarkUseStar = data.starMarkUseStar === true;
-    const starMarkSeed = normalizeVesperfoldSeed(
-      typeof data.starMarkSeed === 'number' ? data.starMarkSeed : 0
-    );
-    const avatarUrl = await getPublicArtistAvatar(liveSlug);
     return NextResponse.json({
-      avatarUrl: avatarUrl ?? null,
-      starMarkUseStar,
-      starMarkSeed: starMarkUseStar ? starMarkSeed : null,
-      slug: liveSlug,
-      studioBadge:
-        data.studioBadge === 'pro' || data.studioBadge === 'free' ? data.studioBadge : 'free',
+      avatarUrl: chip.avatarUrl,
+      starMarkUseStar: chip.starMarkUseStar,
+      starMarkSeed: chip.starMarkSeed,
+      slug: chip.slug,
+      studioBadge: chip.studioBadge,
     });
   } catch (err) {
     console.error('[profile/slug/avatar]', err);

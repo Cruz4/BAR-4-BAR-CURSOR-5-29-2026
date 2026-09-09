@@ -37,6 +37,11 @@ import {
   writeDiscoverySearchFilters,
   type DiscoverySearchFilters,
 } from '@/lib/discovery-search';
+import { useFeedScrollRestore } from '@/hooks/use-feed-scroll-restore';
+import {
+  captureFeedScrollOnLinkClick,
+  currentFeedScrollRouteKey,
+} from '@/lib/feed-scroll-restore';
 
 const LIST_SECTION_ID = 'discover-list';
 
@@ -52,6 +57,7 @@ export default function DiscoverPage() {
   const [searchFilters, setSearchFilters] = useState<DiscoverySearchFilters>({ ...EMPTY_DISCOVERY_SEARCH_FILTERS });
   const [guestFeedOpen, setGuestFeedOpen] = useState(false);
   const profileEntryTopRef = useRef(false);
+  const [skipScrollRestore, setSkipScrollRestore] = useState(false);
   const isMobile = useIsMobile();
   const { portalHubEnabled } = useSceneLayout();
 
@@ -62,6 +68,7 @@ export default function DiscoverPage() {
     setSearchFilters(discoverySearchFiltersFromParams(url.searchParams));
     profileEntryTopRef.current = url.searchParams.get('entry') === 'profile';
     if (profileEntryTopRef.current) {
+      setSkipScrollRestore(true);
       url.searchParams.delete('entry');
       window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -165,6 +172,22 @@ export default function DiscoverPage() {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
 
+  const applyDiscoverScrollExtras = useCallback((extras?: Record<string, unknown>) => {
+    if (!extras || typeof extras.page !== 'number') return;
+    setPage(Math.max(0, extras.page));
+  }, []);
+
+  const discoverScrollExtras = useCallback(() => ({ page: safePage }), [safePage]);
+
+  const handleDiscoverLinkCapture = useCallback(
+    (event: React.MouseEvent) => {
+      captureFeedScrollOnLinkClick(event, currentFeedScrollRouteKey(), discoverScrollExtras());
+    },
+    [discoverScrollExtras]
+  );
+
+  useFeedScrollRestore(loaded && !skipScrollRestore, applyDiscoverScrollExtras);
+
   const goPage = useCallback((next: number) => {
     setPage(next);
     if (typeof document === 'undefined') return;
@@ -191,7 +214,11 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-clip bg-background" style={guestPressingStyle as React.CSSProperties}>
+    <div
+      className="relative min-h-screen w-full overflow-x-clip bg-background"
+      style={guestPressingStyle as React.CSSProperties}
+      onClickCapture={handleDiscoverLinkCapture}
+    >
       {!user && guestPressing ? <LivingPressField config={guestPressing} /> : null}
       <div className={cn('relative z-10 mx-auto w-full min-w-0 px-3 py-6 sm:px-4 sm:py-8', user ? 'max-w-2xl' : 'grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]')}>
       <main className="min-w-0 space-y-6">

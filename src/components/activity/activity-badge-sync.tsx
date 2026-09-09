@@ -15,11 +15,13 @@ function pushBadgeToLauncher() {
 }
 
 export function ActivityBadgeSync() {
-  useActivityAlerts();
+  const { total } = useActivityAlerts();
 
   useEffect(() => {
     pushBadgeToLauncher();
+  }, [total]);
 
+  useEffect(() => {
     const onHide = () => {
       if (document.visibilityState === 'hidden') pushBadgeToLauncher();
     };

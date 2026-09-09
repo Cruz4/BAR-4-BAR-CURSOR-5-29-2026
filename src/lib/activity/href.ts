@@ -29,6 +29,26 @@ export function publicScenePostHref(postId: string): string {
   return `/p/${encodeURIComponent(postId.trim())}`;
 }
 
+/** Append `?from=` for smart back on public post pages. */
+export function appendActivityFromHref(href: string, from?: string | null): string {
+  const fromPath = from?.trim();
+  if (!fromPath) return href;
+  try {
+    const url = new URL(href, 'https://akasheet.local');
+    if (!url.pathname.startsWith('/p/')) return href;
+    url.searchParams.set('from', fromPath);
+    const query = url.searchParams.toString();
+    return `${url.pathname}${query ? `?${query}` : ''}${url.hash}`;
+  } catch {
+    return href;
+  }
+}
+
+export function currentActivityFromPath(): string {
+  if (typeof window === 'undefined') return '/activity';
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 /** Next.js Link-safe href so `#post-…` never gets folded into the `[slug]` param. */
 export function activityOpenLinkHref(
   href: string
@@ -143,14 +163,19 @@ export async function resolveActivityOpenHref(
 }
 
 /** Hash links need a full assign so `#post-…` survives Next.js routing. */
-export function navigateActivityHref(push: (href: string) => void, href: string) {
+export function navigateActivityHref(
+  push: (href: string) => void,
+  href: string,
+  opts?: { from?: string | null }
+) {
+  const target = appendActivityFromHref(href, opts?.from ?? currentActivityFromPath());
   if (typeof window === 'undefined') {
-    push(href);
+    push(target);
     return;
   }
-  if (href.includes('#')) {
+  if (target.includes('#')) {
     try {
-      const next = new URL(href, window.location.origin);
+      const next = new URL(target, window.location.origin);
       if (next.pathname === window.location.pathname) {
         if (window.location.hash === next.hash) {
           window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -162,8 +187,8 @@ export function navigateActivityHref(push: (href: string) => void, href: string)
     } catch {
       /* fall through */
     }
-    window.location.assign(href);
+    window.location.assign(target);
     return;
   }
-  push(href);
+  push(target);
 }

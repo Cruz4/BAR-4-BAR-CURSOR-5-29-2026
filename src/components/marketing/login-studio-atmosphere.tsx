@@ -3,13 +3,14 @@
 import React from 'react';
 import Image from 'next/image';
 import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
+import { LOGIN_STUDIO_BACKGROUND_PATH } from '@/lib/brand';
 
 /** One continuous studio sky + vault chamber — same layers in light & dark (colors via CSS). */
 export function LoginStudioAtmosphere() {
   return (
     <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
       <Image
-        src="/AKAsheet background.png"
+        src={LOGIN_STUDIO_BACKGROUND_PATH}
         alt=""
         fill
         priority

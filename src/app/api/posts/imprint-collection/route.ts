@@ -6,9 +6,27 @@ import {
   saveImprintToCollection,
   unsaveImprintFromCollection,
 } from '@/lib/server/imprint-collection';
+import { emitActivityEvent } from '@/lib/server/activity';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
+
+async function actorProfile(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string
+): Promise<{ actorName: string; actorSlug?: string }> {
+  const snap = await db.doc(`users/${userId}/gamification/summary`).get();
+  const data = snap.data() || {};
+  const actorName =
+    (typeof data.displayName === 'string' && data.displayName.trim()) ||
+    (typeof data.artistName === 'string' && data.artistName.trim()) ||
+    'Artist';
+  const actorSlug =
+    typeof data.profileSlug === 'string' && data.profileSlug.trim()
+      ? data.profileSlug.trim()
+      : undefined;
+  return { actorName, ...(actorSlug ? { actorSlug } : {}) };
+}
 
 /** Save / unsave / list personal imprint collection entries. */
 export async function GET(req: Request) {
@@ -63,6 +81,28 @@ export async function POST(req: Request) {
     const db = await getDb();
     if (action === 'save') {
       const result = await saveImprintToCollection(db, userId, postId);
+      if (result.isNew) {
+        const postSnap = await db.doc(`posts/${postId}`).get();
+        const post = postSnap.data() || {};
+        const ownerId = String(post.ownerId || '');
+        if (ownerId && ownerId !== userId) {
+          const { actorName, actorSlug } = await actorProfile(db, userId);
+          const preview =
+            (typeof post.text === 'string' && post.text.trim()) ||
+            (typeof post.quoteText === 'string' && post.quoteText.trim()) ||
+            undefined;
+          await emitActivityEvent({
+            type: 'post_imprint_saved',
+            actorId: userId,
+            actorName,
+            ...(actorSlug ? { actorSlug } : {}),
+            postId,
+            ...(preview ? { preview: preview.slice(0, 120) } : {}),
+          }).catch((error) => {
+            console.warn('[posts/imprint-collection activity]', error);
+          });
+        }
+      }
       return NextResponse.json({ ok: true, ...result });
     }
     if (action === 'unsave') {

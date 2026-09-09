@@ -94,6 +94,8 @@ export function Header() {
   const isLyricSheet = isTrackLyricSheetPath(pathname);
   const isGuestTry =
     !user && isGuestTrySheetEnabled() && isGuestTryAlbumId(albumId);
+  const isPublicBrowse =
+    pathname.startsWith('/p/') || pathname === '/discover' || pathname.startsWith('/discover/');
   const backHref = isGuestTry ? '/welcome' : albumId ? `/albums/${albumId}` : '/';
   const signupHref = getGuestSignupHref({
     marketingRef: getStoredMarketingRef(),
@@ -192,16 +194,18 @@ export function Header() {
 
           <nav className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 min-w-0 flex-1 basis-0 max-w-[48%] sm:max-w-[42%] md:max-w-none shrink-0 overflow-visible pointer-events-none [&>*]:pointer-events-auto">
             <TooltipProvider>
-            {!loading && !user && isGuestTry && (
+            {!loading && !user && (isGuestTry || isPublicBrowse) && (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground hidden sm:inline-flex"
-                  onClick={() => router.push('/welcome')}
-                >
-                  About
-                </Button>
+                {isGuestTry ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground hidden sm:inline-flex"
+                    onClick={() => router.push('/welcome')}
+                  >
+                    About
+                  </Button>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="sm"

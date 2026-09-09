@@ -396,10 +396,16 @@ export function SceneImmersiveFeedDialog({
 
   useEffect(() => {
     if (!open || !initialItemKey || !items.length) return;
-    const index = items.findIndex((item) => item.meta.key === initialItemKey);
-    if (index < 0) return;
-    const timer = window.setTimeout(() => scrollTo(index), 60);
-    return () => window.clearTimeout(timer);
+    const delays = [60, 180, 420, 900];
+    const timers = delays.map((delay) =>
+      window.setTimeout(() => {
+        const index = items.findIndex((item) => item.meta.key === initialItemKey);
+        if (index >= 0) scrollTo(index);
+      }, delay)
+    );
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+    };
     // `scrollTo` is intentionally derived from the current item list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialItemKey, items, open]);

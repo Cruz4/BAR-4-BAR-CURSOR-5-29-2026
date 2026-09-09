@@ -32,6 +32,8 @@ import {
 } from '@/lib/scene/booth-memory';
 import { clearLastWorkedTrack, isTrackEditorPath } from '@/lib/studio-tips-session';
 import type { Track } from '@/lib/types';
+import { RequestCache } from '@/lib/client/request-cache';
+import { ACTIVITY_ALERTS_REFRESH_EVENT } from '@/lib/activity/alerts-events';
 
 export type EmitActivityClientInput = {
   type: ActivityType;
@@ -165,28 +167,47 @@ export async function fetchActivityUnreadCount(): Promise<number> {
   return (await fetchActivitySummary()).unreadReceived;
 }
 
-export async function fetchActivitySummary(): Promise<ActivitySummary> {
+const activitySummaryCache = new RequestCache<ActivitySummary>(30_000);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(ACTIVITY_ALERTS_REFRESH_EVENT, () => {
+    activitySummaryCache.bust();
+  });
+}
+
+async function loadActivitySummary(): Promise<ActivitySummary> {
   await auth.authStateReady();
   const user = auth.currentUser;
   if (!user) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
+  const headers = await authHeaders();
+  if (!headers) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
+  const response = await fetch(
+    `/api/activity/feed?userId=${encodeURIComponent(user.uid)}&summary=1`,
+    { headers, cache: 'no-store' }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Could not load activity summary.');
+  return {
+    unreadReceived:
+      typeof data.unreadReceived === 'number' ? Math.max(0, Math.floor(data.unreadReceived)) : 0,
+    unreadHouseReleases:
+      typeof data.unreadHouseReleases === 'number'
+        ? Math.max(0, Math.floor(data.unreadHouseReleases))
+        : 0,
+    updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : '',
+  };
+}
+
+export function bustActivitySummaryCache() {
+  activitySummaryCache.bust();
+}
+
+export async function fetchActivitySummary(): Promise<ActivitySummary> {
   try {
-    const headers = await authHeaders();
-    if (!headers) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
-    const response = await fetch(
-      `/api/activity/feed?userId=${encodeURIComponent(user.uid)}&summary=1`,
-      { headers, cache: 'no-store' }
-    );
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'Could not load activity summary.');
-    return {
-      unreadReceived:
-        typeof data.unreadReceived === 'number' ? Math.max(0, Math.floor(data.unreadReceived)) : 0,
-      unreadHouseReleases:
-        typeof data.unreadHouseReleases === 'number'
-          ? Math.max(0, Math.floor(data.unreadHouseReleases))
-          : 0,
-      updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : '',
-    };
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    if (!user) return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
+    return await activitySummaryCache.get(`summary:${user.uid}`, loadActivitySummary);
   } catch {
     return { unreadReceived: 0, unreadHouseReleases: 0, updatedAt: '' };
   }

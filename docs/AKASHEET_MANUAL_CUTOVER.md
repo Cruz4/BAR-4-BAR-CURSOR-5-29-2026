@@ -2,7 +2,7 @@
 
 The **app code** already uses these names. This file is everything **you still have to change by hand** in dashboards, DNS, email, ads, and bios. Until you finish a row, that surface can still say Bar 4 Bar / bar4bar.ink.
 
-**Until `akasheet.com` is purchased and Connected in Firebase Hosting, leave Google login on `bar4bar.ink` / `lyricai-studio-otgxn.firebaseapp.com`.** Pointing `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` at akasheet.com too early sends sign-in to a handler that does not exist yet. Switch that env (section 5) only after Hosting SSL is Connected.
+**Status (code + deploy):** `akasheet.com` is live. Root `.env`, `.firebase/lyricai-studio-otgxn/functions/.env`, Firebase auth domain, SEO canonicals, service worker, and `public/googleee78a6a31a51e0e8.html` (Search Console) are updated. **Redeploy** after any further `.env` change: `npm run deploy:live`.
 
 | Use this | Value |
 |----------|--------|
@@ -22,11 +22,11 @@ Email DNS: [TRANSACTIONAL_EMAIL.md](./TRANSACTIONAL_EMAIL.md)
 
 ## 1. Domain + DNS
 
-- [ ] Buy **akasheet.com** (and keep **bar4bar.ink** for redirects).
-- [ ] Add **akasheet.com** in [Firebase Hosting → Domains](https://console.firebase.google.com/project/lyricai-studio-otgxn/hosting/sites).
+- [x] Buy **akasheet.com** (and keep **bar4bar.ink** for redirects).
+- [x] Add **akasheet.com** in [Firebase Hosting → Domains](https://console.firebase.google.com/project/lyricai-studio-otgxn/hosting/sites).
 - [ ] Add **www.akasheet.com** → redirect to apex `akasheet.com`.
-- [ ] Put the DNS records Firebase shows (A / AAAA / TXT / CNAME) at your registrar.
-- [ ] Wait until status is **Connected** with a valid SSL cert (can take hours).
+- [x] Put the DNS records Firebase shows (A / AAAA / TXT / CNAME) at your registrar.
+- [x] Wait until status is **Connected** with a valid SSL cert (can take hours).
 - [ ] Optional: redirect `lyricai-studio-otgxn.web.app` → `https://akasheet.com`.
 
 ---
@@ -101,12 +101,12 @@ RESEND_FROM_EMAIL=AKAsheet <noreply@akasheet.com>
 CAPACITOR_SERVER_URL=https://akasheet.com
 ```
 
-- [ ] Root `.env` (do not commit secrets)
-- [ ] Functions `.env` if used
-- [ ] Redeploy: `npm run deploy:live` (or your usual hosting + functions deploy)
-- [ ] Confirm live HTML / emails / Stripe returns use **akasheet.com**, not bar4bar.ink
+- [x] Root `.env` (do not commit secrets)
+- [x] Functions `.env` if used
+- [x] Redeploy: `npm run deploy:live` (or your usual hosting + functions deploy)
+- [x] Confirm live HTML / emails / Stripe returns use **akasheet.com**, not bar4bar.ink
 
-Local `.env` may already be pointed at akasheet.com. **Production / Cloud Run is a separate copy** until you redeploy.
+Re-run deploy after any `.env` edit — Cloud Run does not pick up local changes until then.
 
 ---
 
@@ -169,11 +169,22 @@ Checkout success/cancel URLs come from `NEXT_PUBLIC_APP_URL` after redeploy — 
 
 **Search Console** — [search.google.com/search-console](https://search.google.com/search-console)
 
-- [ ] Add URL-prefix property `https://akasheet.com`
-- [ ] Verify (DNS TXT or HTML)
-- [ ] Submit sitemap: `https://akasheet.com/sitemap.xml`
-- [ ] Request indexing for `/`, `/login`, `/pricing`
+- [x] Add URL-prefix property `https://akasheet.com`
+- [x] Verify (DNS TXT or HTML — file: `public/googleee78a6a31a51e0e8.html`)
+- [ ] Submit sitemap: `https://akasheet.com/sitemap.xml` (Search Console → **Sitemaps** → paste URL → Submit)
+- [ ] Request indexing for `/`, `/login`, `/pricing` (see **Request indexing** below)
 - [ ] Keep `https://bar4bar.ink` as a property until redirects are in place; use Change of Address if Google offers it
+
+### Request indexing (`/`, `/login`, `/pricing`)
+
+In [Search Console](https://search.google.com/search-console) → select property **`https://akasheet.com`**:
+
+1. Open **URL inspection** (top search bar).
+2. Enter the full URL, e.g. `https://akasheet.com/` (repeat for `/login` and `/pricing`).
+3. Wait for “URL is on Google” or “URL is not on Google” — then click **Request indexing**.
+4. Google queues a crawl (not instant; can take days). Submit all three URLs separately.
+
+**Sitemap (do once):** left menu **Sitemaps** → add `https://akasheet.com/sitemap.xml` → **Submit**. That helps Google discover pages; URL inspection is still worth doing for home, login, and pricing.
 
 **AdSense** (client in the app: `ca-pub-1403404509068347`)
 

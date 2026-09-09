@@ -96,6 +96,25 @@ type LivingPressFieldProps = {
   onTokensChange?: (tokens: PressingTokens) => void;
 };
 
+function useTouchScrollPause(): boolean {
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches) return;
+    let timer: number | null = null;
+    const onMove = () => {
+      setPaused(true);
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => setPaused(false), 140);
+    };
+    window.addEventListener('touchmove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('touchmove', onMove);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, []);
+  return paused;
+}
+
 function useSmoothScroll(enabled: boolean): number {
   const [scroll, setScroll] = useState(0);
   const target = useRef(0);
@@ -872,10 +891,13 @@ export function LivingPressField({
     return () => mq.removeEventListener('change', onChange);
   }, [staticField]);
 
+  const touchScrolling = useTouchScrollPause();
   const motionOk = !staticField && tokens.alive && !reducedMotion;
   const showLayers = !staticField;
   const restless = tokens.autoDrift && motionOk;
-  const scroll = useSmoothScroll(showLayers && !compact && !reducedMotion && followWindowScroll);
+  const scroll = useSmoothScroll(
+    showLayers && !compact && !reducedMotion && followWindowScroll && !touchScrolling
+  );
   const pos = compact ? 'absolute' : 'fixed';
   const vignette = apertureMask(tokens.aperture, tokens.hue);
 

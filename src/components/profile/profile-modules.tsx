@@ -598,7 +598,7 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 const IMPRINT_SHELF_LAYOUT: Record<ModuleSize, string> = {
-  S: 'flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [&>*]:w-[min(88%,18rem)] [&>*]:shrink-0 [&>*]:snap-center',
+  S: 'flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch] [&>*]:w-[min(88%,18rem)] [&>*]:shrink-0 [&>*]:snap-center [&>*]:[content-visibility:auto] [&>*]:[contain:paint]',
   M: 'grid grid-cols-1 gap-4 sm:grid-cols-2',
   L: 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3',
 };

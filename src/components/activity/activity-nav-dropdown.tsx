@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Bell,
+  Bookmark,
   ChevronRight,
   Droplets,
   FilePenLine,
@@ -74,6 +75,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <MessageCircle className={cn(className, 'text-sky-400')} />;
     case 'post_reverb':
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
+    case 'post_imprint_saved':
+      return <Bookmark className={cn(className, 'text-fuchsia-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;
     case 'drop_loved':
@@ -123,6 +126,14 @@ export function ActivityNavDropdown({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [hiddenNewCount, setHiddenNewCount] = useState(0);
+  const sessionUnreadIdsRef = useRef<Set<string>>(new Set());
+
+  const withSessionUnreadHighlight = useCallback((events: ActivityEvent[]) => {
+    const sessionUnreadIds = sessionUnreadIdsRef.current;
+    return events.map((event) =>
+      sessionUnreadIds.has(event.id) ? { ...event, readAt: null } : event
+    );
+  }, []);
 
   const loadRecent = useCallback(async () => {
     if (!user?.id) {
@@ -154,6 +165,10 @@ export function ActivityNavDropdown({
           return true;
         });
       const recent = visibleActivity.slice(0, PREVIEW_LIMIT);
+      for (const event of recent) {
+        if (!event.readAt) sessionUnreadIdsRef.current.add(event.id);
+      }
+      setHiddenNewCount(Math.max(0, unreadCount - recent.filter((event) => !event.readAt).length));
       const lookups = recent
         .filter((e) => !e.actorSlug && e.actorId)
         .map((e) => ({ userId: e.actorId }));
@@ -165,37 +180,16 @@ export function ActivityNavDropdown({
             const slug = metas.get(e.actorId)?.slug;
             return slug ? { ...e, actorSlug: slug } : e;
           });
-        setItems(resolved);
+        setItems(withSessionUnreadHighlight(resolved));
       } else {
-        setItems(recent);
-      }
-
-      // Opening the dropdown auto-reads most preview rows, but House Library pings
-      // stay unread until the member taps through to Library.
-      const autoReadUnreadIds = recent
-        .filter((event) => !event.readAt && event.type !== 'house_release')
-        .map((event) => event.id);
-      setHiddenNewCount(Math.max(0, unreadCount - autoReadUnreadIds.length));
-      if (autoReadUnreadIds.length) {
-        try {
-          const readAt = new Date().toISOString();
-          await markActivityEventsRead(autoReadUnreadIds);
-          setItems((prev) =>
-            prev.map((event) =>
-              autoReadUnreadIds.includes(event.id) ? { ...event, readAt } : event
-            )
-          );
-          refreshActivityAlerts();
-        } catch {
-          // Keep the visible rows unread when the receipt cannot be saved.
-        }
+        setItems(withSessionUnreadHighlight(recent));
       }
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [unreadCount, user?.id]);
+  }, [unreadCount, user?.id, withSessionUnreadHighlight]);
 
   useEffect(() => {
     const onFriendshipChanged = (ev: Event) => {
@@ -269,11 +263,23 @@ export function ActivityNavDropdown({
 
   const openEvent = async (event: ActivityEvent) => {
     setOpen(false);
-    try {
-      await markActivityEventsRead([event.id]);
-      refreshActivityAlerts();
-    } catch {
-      /* still navigate */
+    sessionUnreadIdsRef.current.add(event.id);
+    setItems((prev) =>
+      prev.map((item) => (item.id === event.id ? { ...item, readAt: null } : item))
+    );
+    if (!event.readAt && event.type !== 'house_release') {
+      try {
+        const readAt = new Date().toISOString();
+        await markActivityEventsRead([event.id]);
+        setItems((prev) =>
+          withSessionUnreadHighlight(
+            prev.map((item) => (item.id === event.id ? { ...item, readAt } : item))
+          )
+        );
+        refreshActivityAlerts();
+      } catch {
+        /* still navigate */
+      }
     }
     const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
     navigateActivityHref((h) => router.push(h), href);
@@ -336,7 +342,13 @@ export function ActivityNavDropdown({
           ) : (
             <ul className="divide-y divide-border/60">
               {items.map((event) => (
-                <li key={event.id} className={cn('group relative', !event.readAt && 'bg-emerald-500/5')}>
+                <li
+                  key={event.id}
+                  className={cn(
+                    'group relative',
+                    !event.readAt && 'bg-emerald-500/10 before:absolute before:bottom-2 before:left-0 before:top-2 before:w-0.5 before:rounded-full before:bg-emerald-400 before:shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+                  )}
+                >
                   <button
                     type="button"
                     className="flex w-full gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-emerald-500/5"

@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { CheckCheck, Mail } from 'lucide-react';
+import { Check, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type InboxBulkReadToggleProps = {
   unreadCount: number;
   onMarkAllRead: () => void | Promise<void>;
-  onMarkAllUnread: () => void | Promise<void>;
+  onMarkAllUnread?: () => void | Promise<void>;
   busy?: boolean;
   variant?: 'emerald' | 'amber';
   compact?: boolean;
@@ -18,7 +18,6 @@ type InboxBulkReadToggleProps = {
 export function InboxBulkReadToggle({
   unreadCount,
   onMarkAllRead,
-  onMarkAllUnread,
   busy,
   variant = 'emerald',
   compact,
@@ -29,6 +28,24 @@ export function InboxBulkReadToggle({
     variant === 'amber'
       ? 'text-amber-300 hover:bg-amber-500/10 hover:text-amber-100'
       : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300';
+  const caughtUpAccent =
+    variant === 'amber' ? 'text-amber-300' : 'text-emerald-400';
+
+  if (!hasUnread) {
+    return (
+      <span
+        className={cn(
+          'inline-flex h-7 shrink-0 items-center justify-center px-1.5',
+          caughtUpAccent,
+          className
+        )}
+        title="All caught up"
+        aria-label="All caught up"
+      >
+        <Check className={cn('h-3.5 w-3.5', compact && 'h-3 w-3')} aria-hidden />
+      </span>
+    );
+  }
 
   return (
     <Button
@@ -42,19 +59,10 @@ export function InboxBulkReadToggle({
         compact && 'text-[8px]',
         className
       )}
-      onClick={() => void (hasUnread ? onMarkAllRead() : onMarkAllUnread())}
+      onClick={() => void onMarkAllRead()}
     >
-      {hasUnread ? (
-        <>
-          <CheckCheck className="h-3 w-3" />
-          Mark all read
-        </>
-      ) : (
-        <>
-          <Mail className="h-3 w-3" />
-          Unread all
-        </>
-      )}
+      <CheckCheck className="h-3 w-3" />
+      Mark all read
     </Button>
   );
 }

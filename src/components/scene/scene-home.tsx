@@ -125,6 +125,11 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { useSceneLayout } from '@/hooks/use-scene-layout';
+import { useFeedScrollRestore } from '@/hooks/use-feed-scroll-restore';
+import {
+  captureFeedScrollOnLinkClick,
+  currentFeedScrollRouteKey,
+} from '@/lib/feed-scroll-restore';
 import {
   mergeWallPostFeed,
   WALL_POST_FEED_EVENT,
@@ -867,6 +872,39 @@ export function SceneHome() {
   const visibleBlockPosts = blockPosts.slice(0, blockVisible);
   const visibleDiscoverCards = discoverCards.slice(0, discoverVisible);
 
+  const applySceneScrollExtras = useCallback((extras?: Record<string, unknown>) => {
+    if (!extras) return;
+    if (typeof extras.blockVisible === 'number') {
+      setBlockVisible((n) => Math.max(n, extras.blockVisible as number));
+    }
+    if (typeof extras.discoverVisible === 'number') {
+      setDiscoverVisible((n) => Math.max(n, extras.discoverVisible as number));
+    }
+    if (typeof extras.showMine === 'boolean') setShowMine(extras.showMine);
+    if (typeof extras.blockExpanded === 'boolean') setBlockExpanded(extras.blockExpanded);
+    if (typeof extras.discoverExpanded === 'boolean') setDiscoverExpanded(extras.discoverExpanded);
+  }, []);
+
+  const sceneScrollExtras = useCallback(
+    () => ({
+      blockVisible,
+      discoverVisible,
+      showMine,
+      blockExpanded,
+      discoverExpanded,
+    }),
+    [blockVisible, discoverVisible, showMine, blockExpanded, discoverExpanded]
+  );
+
+  const handleSceneFeedLinkCapture = useCallback(
+    (event: React.MouseEvent) => {
+      captureFeedScrollOnLinkClick(event, currentFeedScrollRouteKey(), sceneScrollExtras());
+    },
+    [sceneScrollExtras]
+  );
+
+  useFeedScrollRestore(loaded && !portalFeed, applySceneScrollExtras);
+
   const rememberPortalFeed = useCallback(() => {
     rememberScenePortalFeedCache(posts, discover);
   }, [discover, posts]);
@@ -1058,7 +1096,10 @@ export function SceneHome() {
 
   return (
     <TooltipProvider>
-    <div className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code">
+    <div
+      className="flex-grow w-full relative min-h-screen selection:bg-primary/30 font-code"
+      onClickCapture={handleSceneFeedLinkCapture}
+    >
       <LockClaimBootstrap />
       <GuestPressingClaimBootstrap />
       <SceneBlockAtmosphere energy={sceneEnergy} pulseKey={posts.length} />

@@ -59,9 +59,16 @@ import { Hint } from '@/components/ui/tooltip';
 import { parseStudioBadge, studioChromeFromUser, studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import {
   parseActivityPostHash,
-  scrollActivityPostTarget,
+  scheduleScrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
-import { activityOpenLinkHref, artistHomePostHref, publicScenePostHref } from '@/lib/activity/href';
+import {
+  activityOpenLinkHref,
+  appendActivityFromHref,
+  artistHomePostHref,
+  currentActivityFromPath,
+  publicScenePostHref,
+} from '@/lib/activity/href';
+import { rememberFeedScroll, shouldSaveFeedScrollBeforeNav } from '@/lib/feed-scroll-restore';
 import { compactReachCount, recordPostViewClient } from '@/lib/post-view-client';
 import { LyricClipCard } from '@/components/profile/lyric-clip-card';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
@@ -460,8 +467,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             setCommentsLoaded(true);
           }
         }
-        window.setTimeout(() => scrollActivityPostTarget(target), 60);
-        window.setTimeout(() => scrollActivityPostTarget(target), 420);
+        scheduleScrollActivityPostTarget(target);
       };
       void reveal();
     };
@@ -822,10 +828,23 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
             </span>
           )}
           <Link
-            href={publicScenePostHref(post.id)}
+            href={appendActivityFromHref(publicScenePostHref(post.id), currentActivityFromPath())}
             prefetch={false}
             className="mt-1 inline-flex whitespace-nowrap text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
             aria-label="Open public Scene post"
+            onClick={() => {
+              if (typeof window === 'undefined') return;
+              const href = appendActivityFromHref(publicScenePostHref(post.id), currentActivityFromPath());
+              if (
+                shouldSaveFeedScrollBeforeNav(
+                  href,
+                  window.location.pathname,
+                  window.location.search
+                )
+              ) {
+                rememberFeedScroll(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+              }
+            }}
           >
             {timeAgo(post.createdAt)}
             <span className="sr-only"> · Public Scene post</span>

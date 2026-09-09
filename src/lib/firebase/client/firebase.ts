@@ -14,17 +14,11 @@ import { registerFirestoreDevRecovery } from '@/lib/firebase/client/firestore-de
 import { registerFirestoreBlockedClientHint } from '@/lib/firebase/client/firestore-blocked-hint';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { initClientAppCheck } from '@/lib/firebase/client/app-check';
-
-/**
- * Google “continue to …” uses this host. Stay on bar4bar.ink until
- * akasheet.com is purchased and Connected in Firebase Hosting.
- */
-const DEFAULT_AUTH_DOMAIN = 'bar4bar.ink';
+import { FIREBASE_AUTH_DOMAIN } from '@/lib/brand';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAJX5uEhA_8SFvXGEnboud6i3VETJcfWVg',
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? DEFAULT_AUTH_DOMAIN,
+  authDomain: FIREBASE_AUTH_DOMAIN,
   projectId: 'lyricai-studio-otgxn',
   storageBucket: 'lyricai-studio-otgxn.firebasestorage.app',
   messagingSenderId: '603155091344',

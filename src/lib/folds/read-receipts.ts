@@ -1,13 +1,8 @@
 import { formatDistanceToNow } from 'date-fns';
+import { formatFoldMessageTime } from '@/lib/folds/message-dates';
 import { peerIdOf, type FoldBar, type FoldDoc } from '@/lib/folds/types';
 
-export function formatFoldMessageTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return '';
-  }
-}
+export { formatFoldMessageTime, formatFoldMessageDateTime, foldMessageTimestamp } from '@/lib/folds/message-dates';
 
 export function formatReadReceiptTime(readAt: string): string {
   try {

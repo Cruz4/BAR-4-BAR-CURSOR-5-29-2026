@@ -81,6 +81,26 @@ import {
   type CreatePostPoll,
   type PostPoll,
 } from '@/lib/profile/post-polls';
+import { FRIENDSHIP_CHANGED_EVENT } from '@/lib/activity/client';
+import { RequestCache } from '@/lib/client/request-cache';
+
+const friendshipsCache = new RequestCache<Friendship[]>(45_000);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener(FRIENDSHIP_CHANGED_EVENT, () => {
+    friendshipsCache.bust();
+  });
+}
+
+export function bustFriendshipsCache(userId?: string) {
+  if (userId) {
+    friendshipsCache.bust(`friends:${userId}:all`);
+    friendshipsCache.bust(`friends:${userId}:accepted`);
+    friendshipsCache.bust(`friends:${userId}:pending`);
+    return;
+  }
+  friendshipsCache.bust();
+}
 
 export type ImprintGiphySyndication = {
   status: 'pending' | 'live' | 'failed';
@@ -1640,6 +1660,15 @@ export async function fetchFriendships(
   status?: FriendshipStatus
 ): Promise<Friendship[]> {
   if (!userId) return [];
+  const key = `friends:${userId}:${status ?? 'all'}`;
+  return friendshipsCache.get(key, () => loadFriendshipsUncached(userId, status));
+}
+
+async function loadFriendshipsUncached(
+  userId: string,
+  status?: FriendshipStatus
+): Promise<Friendship[]> {
+  if (!userId) return [];
 
   const sortRows = (rows: Friendship[]) =>
     [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -2177,15 +2206,22 @@ export type PublicArtistAvatarMeta = {
 };
 
 const publicArtistAvatarMetaInflight = new Map<string, Promise<PublicArtistAvatarMeta | undefined>>();
+const publicArtistAvatarMetaResolved = new Map<string, PublicArtistAvatarMeta | undefined>();
 
 /** Avatar + optional Vesperfold seed for feed chips. One in-flight request per slug. */
 export async function fetchPublicArtistAvatarMeta(
   slug?: string
 ): Promise<PublicArtistAvatarMeta | undefined> {
   if (!slug) return undefined;
+  if (publicArtistAvatarMetaResolved.has(slug)) {
+    return publicArtistAvatarMetaResolved.get(slug);
+  }
   const cached = publicArtistAvatarMetaInflight.get(slug);
   if (cached) return cached;
-  const pending = loadPublicArtistAvatarMeta(slug);
+  const pending = loadPublicArtistAvatarMeta(slug).then((meta) => {
+    publicArtistAvatarMetaResolved.set(slug, meta);
+    return meta;
+  });
   publicArtistAvatarMetaInflight.set(slug, pending);
   return pending;
 }
@@ -2206,21 +2242,17 @@ async function loadPublicArtistAvatarMeta(
 
     const cachedBadge = parseStudioBadge(data?.studioBadge);
 
-    const resolveBadge = async (): Promise<'pro' | 'free' | undefined> => {
-      return (await fetchLiveStudioBadgeFromApi(slug)) || cachedBadge;
-    };
-
     if (useStar) {
       return {
         starMarkUseStar: true,
         starMarkSeed: seed,
-        studioBadge: await resolveBadge(),
+        studioBadge: cachedBadge,
       };
     }
 
     const customUrl = customFeedPhotoUrl(asset) || avatarFromPublicDoc(data || {});
     if (customUrl) {
-      return { avatarUrl: customUrl, starMarkUseStar: false, studioBadge: await resolveBadge() };
+      return { avatarUrl: customUrl, starMarkUseStar: false, studioBadge: cachedBadge };
     }
 
     const res = await fetch(`/api/profile/${encodeURIComponent(slug)}/avatar`);

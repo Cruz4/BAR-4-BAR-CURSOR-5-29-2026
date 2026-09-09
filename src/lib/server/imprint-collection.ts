@@ -21,7 +21,7 @@ export async function saveImprintToCollection(
   db: Firestore,
   userId: string,
   postId: string
-): Promise<{ saved: boolean; imprintSaveCount: number }> {
+): Promise<{ saved: boolean; isNew: boolean; imprintSaveCount: number }> {
   const postRef = db.doc(`posts/${postId}`);
   const collectionRef = db.doc(`users/${userId}/imprintCollection/${postId}`);
   const saveRef = db.doc(`posts/${postId}/imprintSaves/${userId}`);
@@ -31,7 +31,7 @@ export async function saveImprintToCollection(
     assertImprintPost(postSnap.data());
     if (existing.exists) {
       const count = Math.max(0, Math.floor(Number(postSnap.data()?.imprintSaveCount) || 0));
-      return { saved: true, imprintSaveCount: count };
+      return { saved: true, isNew: false, imprintSaveCount: count };
     }
 
     const post = postSnap.data() || {};
@@ -48,7 +48,7 @@ export async function saveImprintToCollection(
     tx.set(saveRef, { savedAt: now });
     tx.update(postRef, { imprintSaveCount: FieldValue.increment(1) });
     const count = Math.max(0, Math.floor(Number(post.imprintSaveCount) || 0)) + 1;
-    return { saved: true, imprintSaveCount: count };
+    return { saved: true, isNew: true, imprintSaveCount: count };
   });
 }
 
@@ -56,7 +56,7 @@ export async function unsaveImprintFromCollection(
   db: Firestore,
   userId: string,
   postId: string
-): Promise<{ saved: boolean; imprintSaveCount: number }> {
+): Promise<{ saved: boolean; isNew: boolean; imprintSaveCount: number }> {
   const postRef = db.doc(`posts/${postId}`);
   const collectionRef = db.doc(`users/${userId}/imprintCollection/${postId}`);
   const saveRef = db.doc(`posts/${postId}/imprintSaves/${userId}`);
@@ -66,7 +66,7 @@ export async function unsaveImprintFromCollection(
     if (!postSnap.exists) throw new Error('Post not found.');
     if (!existing.exists) {
       const count = Math.max(0, Math.floor(Number(postSnap.data()?.imprintSaveCount) || 0));
-      return { saved: false, imprintSaveCount: count };
+      return { saved: false, isNew: false, imprintSaveCount: count };
     }
 
     tx.delete(collectionRef);
@@ -74,7 +74,7 @@ export async function unsaveImprintFromCollection(
     const before = Math.max(0, Math.floor(Number(postSnap.data()?.imprintSaveCount) || 0));
     const next = Math.max(0, before - 1);
     tx.update(postRef, { imprintSaveCount: next });
-    return { saved: false, imprintSaveCount: next };
+    return { saved: false, isNew: false, imprintSaveCount: next };
   });
 }
 

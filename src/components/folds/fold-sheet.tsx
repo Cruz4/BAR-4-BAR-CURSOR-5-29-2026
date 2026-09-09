@@ -39,7 +39,9 @@ import {
   type FoldDoc,
   type FoldPresence,
 } from '@/lib/folds/types';
-import { formatFoldMessageTime, outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
+import { outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
+import { foldMessageTimestamp, isSameMessageDay } from '@/lib/folds/message-dates';
+import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
 import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
 
@@ -49,12 +51,14 @@ function BarStanza({
   peerName,
   onAnswer,
   readAt,
+  timestamp,
 }: {
   bar: FoldBar;
   mine: boolean;
   peerName: string;
   onAnswer: (bar: FoldBar) => void;
   readAt?: string | null;
+  timestamp: string;
 }) {
   const senderLabel = mine ? '[you]' : `[${peerName}]`;
   return (
@@ -69,7 +73,7 @@ function BarStanza({
           {senderLabel}
         </span>
         <span className="shrink-0 font-code text-[9px] text-muted-foreground/80">
-          {formatFoldMessageTime(bar.createdAt)}
+          {timestamp}
         </span>
       </div>
       {bar.replyTo ? (
@@ -428,22 +432,27 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         ) : null}
 
         <div className="space-y-6">
-          {shownBars.map((bar) => {
+          {shownBars.map((bar, index) => {
+            const prev = shownBars[index - 1];
+            const firstOfDay = !prev || !isSameMessageDay(bar.createdAt, prev.createdAt);
             const readAt =
               fold && peerId
                 ? outgoingReadReceiptAt(fold, peerId, shownBars, bar, me)
                 : null;
             return (
-              <BarStanza
-                key={bar.id}
-                bar={bar}
-                mine={bar.senderId === me}
-                peerName={peerName}
-                readAt={readAt}
-                onAnswer={(next) =>
-                  setReplyTo({ barId: next.id, text: next.text, senderId: next.senderId })
-                }
-              />
+              <React.Fragment key={bar.id}>
+                {firstOfDay ? <FoldDateSeparator iso={bar.createdAt} /> : null}
+                <BarStanza
+                  bar={bar}
+                  mine={bar.senderId === me}
+                  peerName={peerName}
+                  readAt={readAt}
+                  timestamp={foldMessageTimestamp(bar.createdAt, firstOfDay)}
+                  onAnswer={(next) =>
+                    setReplyTo({ barId: next.id, text: next.text, senderId: next.senderId })
+                  }
+                />
+              </React.Fragment>
             );
           })}
           {inkMoving ? (

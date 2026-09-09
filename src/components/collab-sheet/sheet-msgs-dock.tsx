@@ -34,7 +34,9 @@ import {
   type FoldBar,
   type FoldDoc,
 } from '@/lib/folds/types';
-import { formatFoldMessageTime, outgoingReadReceiptAt, peerReadLastOutgoing } from '@/lib/folds/read-receipts';
+import { outgoingReadReceiptAt, peerReadLastOutgoing } from '@/lib/folds/read-receipts';
+import { foldMessageTimestamp, isSameMessageDay } from '@/lib/folds/message-dates';
+import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
 import { friendProfilesOf, type Friendship } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
@@ -428,16 +430,20 @@ export function SheetMsgsDock({
                     No messages yet — say hi.
                   </p>
                 ) : (
-                  bars.map((m) => {
+                  bars.map((m, index) => {
+                    const prev = bars[index - 1];
+                    const firstOfDay = !prev || !isSameMessageDay(m.createdAt, prev.createdAt);
                     const mine = m.senderId === me;
                     const readAt =
                       mine && activeFold && peerId
                         ? outgoingReadReceiptAt(activeFold, peerId, bars, m, me)
                         : null;
                     return (
-                      <div key={m.id} className={cn('flex flex-col', mine ? 'items-end' : 'items-start')}>
+                      <React.Fragment key={m.id}>
+                        {firstOfDay ? <FoldDateSeparator iso={m.createdAt} /> : null}
+                      <div className={cn('flex flex-col', mine ? 'items-end' : 'items-start')}>
                         <span className="font-code text-[8px] uppercase tracking-wider text-muted-foreground/80">
-                          {mine ? 'You' : peerName} · {formatFoldMessageTime(m.createdAt)}
+                          {mine ? 'You' : peerName} · {foldMessageTimestamp(m.createdAt, firstOfDay)}
                         </span>
                         <p
                           className={cn(
@@ -449,6 +455,7 @@ export function SheetMsgsDock({
                         </p>
                         {readAt ? <FoldReadReceipt readAt={readAt} compact /> : null}
                       </div>
+                      </React.Fragment>
                     );
                   })
                 )}

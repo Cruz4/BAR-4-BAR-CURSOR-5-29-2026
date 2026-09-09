@@ -61,6 +61,14 @@ export const EMOJI_PALETTE: EmojiPaletteGroup[] = [
     label: 'Hearts',
     emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '❣️', '💕', '💗', '💖', '💘'],
   },
+  {
+    label: 'Wellness & Mood',
+    emojis: [
+      '🧘', '🧘‍♂️', '🧘‍♀️', '🛀', '💆', '🧖', '☮️', '🕊️', '😌', '🥱', '😮‍💨',
+      '🦵', '🦶', '🫶', '🤌', '🫡', '🫢', '🫣', '🤭', '🤫', '🍵', '☕', '🧋',
+      '🍃', '🪷', '🌺', '💫', '🪩', '🛸', '🌌', '🎭', '🪄', '🔮', '🧿', '💭',
+    ],
+  },
 ];
 
 export const EMOJI_PALETTE_FLAT = EMOJI_PALETTE.flatMap((group) => group.emojis);
@@ -285,6 +293,36 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
   '💗': ['growing heart'],
   '💖': ['sparkling heart'],
   '💘': ['cupid'],
+  '🧘': ['meditation', 'yoga', 'zen', 'calm'],
+  '🧘‍♂️': ['meditation', 'yoga', 'man'],
+  '🧘‍♀️': ['meditation', 'yoga', 'woman'],
+  '🛀': ['bath', 'relax', 'spa'],
+  '💆': ['massage', 'spa', 'relax'],
+  '🧖': ['sauna', 'steam', 'spa'],
+  '☮️': ['peace', 'calm'],
+  '😌': ['relieved', 'calm', 'peace'],
+  '🥱': ['yawn', 'tired', 'sleepy'],
+  '😮‍💨': ['exhale', 'sigh', 'relief'],
+  '🦵': ['leg', 'legs'],
+  '🦶': ['foot', 'feet'],
+  '🫶': ['heart hands', 'love'],
+  '🤌': ['pinched fingers', 'italian'],
+  '🫡': ['salute', 'respect'],
+  '🫢': ['gasp', 'shock'],
+  '🫣': ['peek', 'shy'],
+  '🤭': ['giggle', 'oops'],
+  '🤫': ['shush', 'quiet', 'secret'],
+  '🍵': ['tea', 'matcha', 'calm'],
+  '🧋': ['boba', 'bubble tea'],
+  '🍃': ['leaf', 'nature', 'chill'],
+  '🪷': ['lotus', 'zen', 'peace'],
+  '🌺': ['hibiscus', 'flower', 'tropical'],
+  '🪩': ['disco', 'party', 'mirror ball'],
+  '🛸': ['ufo', 'space', 'alien'],
+  '🌌': ['galaxy', 'space', 'stars'],
+  '🎭': ['theater', 'drama', 'masks'],
+  '🪄': ['magic', 'wand', 'sparkle'],
+  '🔮': ['crystal ball', 'mystic', 'fortune'],
 };
 
 export function emojiMatchesQuery(emoji: string, query: string): boolean {

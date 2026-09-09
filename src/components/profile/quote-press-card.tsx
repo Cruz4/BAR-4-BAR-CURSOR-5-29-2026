@@ -5,6 +5,8 @@
  */
 
 import React, { forwardRef, useEffect, useMemo, useState } from 'react';
+import { useImprintMotionGate } from '@/hooks/use-imprint-motion-gate';
+import { ensureImprintKeyframesInjected } from '@/lib/profile/imprint-keyframes';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
@@ -19,75 +21,6 @@ import { MentionText } from '@/components/profile/mention-text';
 
 const GRAIN_URI =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E\")";
-
-const IMPRINT_CSS = `
-@keyframes qp-scan {
-  0% { transform: translateY(-8%); opacity: 0.15; }
-  50% { opacity: 0.5; }
-  100% { transform: translateY(108%); opacity: 0.15; }
-}
-@keyframes qp-aurora {
-  0%, 100% { transform: translate3d(-4%, -2%, 0) rotate(0deg) scale(1.05); filter: hue-rotate(0deg); }
-  50% { transform: translate3d(4%, 3%, 0) rotate(6deg) scale(1.12); filter: hue-rotate(28deg); }
-}
-@keyframes qp-pulse {
-  0%, 100% { transform: scale(0.92); opacity: 0.2; }
-  50% { transform: scale(1.08); opacity: 0.55; }
-}
-@keyframes qp-drift {
-  0%, 100% { transform: translate(-6%, -4%) scale(1); }
-  50% { transform: translate(8%, 6%) scale(1.14); }
-}
-@keyframes qp-ripple {
-  0% { transform: scale(0.65); opacity: 0.45; }
-  100% { transform: scale(1.35); opacity: 0; }
-}
-@keyframes qp-chroma {
-  0% { transform: translateX(-30%) rotate(0deg); }
-  100% { transform: translateX(30%) rotate(8deg); }
-}
-@keyframes qp-twinkle {
-  0%, 100% { opacity: 0.15; transform: scale(0.8); }
-  50% { opacity: 0.95; transform: scale(1.2); }
-}
-@keyframes qp-breathe {
-  0%, 100% { opacity: 0.18; transform: scale(1); }
-  50% { opacity: 0.42; transform: scale(1.06); }
-}
-@keyframes qp-orbit {
-  0% { transform: rotate(0deg) translateX(18%) rotate(0deg); }
-  100% { transform: rotate(360deg) translateX(18%) rotate(-360deg); }
-}
-@keyframes qp-wave {
-  0%, 100% { transform: translateY(0); opacity: 0.25; }
-  50% { transform: translateY(-8%); opacity: 0.5; }
-}
-@keyframes qp-prism {
-  0% { filter: hue-rotate(0deg); opacity: 0.12; }
-  50% { filter: hue-rotate(45deg); opacity: 0.28; }
-  100% { filter: hue-rotate(0deg); opacity: 0.12; }
-}
-@keyframes qp-halo {
-  0%, 100% { transform: scale(0.9); opacity: 0.2; }
-  50% { transform: scale(1.15); opacity: 0.5; }
-}
-@keyframes qp-noise-drift {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-12%, -8%); }
-}
-@keyframes qp-grid {
-  0% { background-position: 0 0, 0 0; }
-  100% { background-position: 40px 40px, 40px 40px; }
-}
-@keyframes qp-ember {
-  0% { transform: translateY(0); opacity: 0; }
-  15% { opacity: 0.85; }
-  100% { transform: translateY(-120%); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .qp-anim { animation: none !important; }
-}
-`;
 
 function LayerBackdrop({ layer }: { layer: QuotePressLayer }) {
   switch (layer.kind) {
@@ -579,23 +512,37 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
     creatorSlug,
     showSignature = true,
   },
-  ref
+  forwardedRef
 ) {
   const [fontsReady, setFontsReady] = useState(false);
+  const { ref: motionRef, motionPaused } = useImprintMotionGate<HTMLDivElement>();
   const tokens = useMemo(() => quotePressTokens(text, config), [text, config]);
+
+  useEffect(() => {
+    ensureImprintKeyframesInjected();
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
     void document.fonts.ready.then(() => setFontsReady(true));
   }, []);
 
+  const setRefs = (node: HTMLDivElement | null) => {
+    motionRef.current = node;
+    if (typeof forwardedRef === 'function') forwardedRef(node);
+    else if (forwardedRef) forwardedRef.current = node;
+  };
+
   const quoteLayer = tokens.layers.find((l) => l.kind === 'quoteMarks');
   const divider = tokens.layers.find((l) => l.kind === 'divider');
 
   return (
-    <>
-      <style>{IMPRINT_CSS}</style>
-      <div ref={ref} data-imprint-root className={cn('relative w-full', className)}>
+    <div
+      ref={setRefs}
+      data-imprint-root
+      data-imprint-motion={motionPaused ? 'paused' : 'live'}
+      className={cn('relative w-full', className)}
+    >
         <figure
           data-imprint-card
           className={cn(
@@ -687,8 +634,7 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
           <ImprintSignature accentColor={tokens.accentColor} creatorSlug={creatorSlug} />
         ) : null}
       </figure>
-      </div>
       <span className="sr-only">{text}</span>
-    </>
+    </div>
   );
 });
