@@ -166,7 +166,10 @@ export function SceneDiscoverCard({
     const dropHref = firstDrop ? `/song/${drop.shareId}` : dnaHref;
     return (
       <Card
-        className="relative min-w-0 touch-pan-y overflow-hidden border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-3 sm:p-4"
+        className={cn(
+          'relative min-w-0 overflow-hidden border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.12] via-card/85 to-card/70 p-3 sm:p-4',
+          !immersive && 'touch-pan-y'
+        )}
         onPointerDown={immersive ? (event) => { dropTapRef.current.x = event.clientX; dropTapRef.current.y = event.clientY; } : undefined}
         onPointerUp={immersive ? (event) => {
           const target = event.target as HTMLElement;

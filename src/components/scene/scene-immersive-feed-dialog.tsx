@@ -176,6 +176,63 @@ function feedSnapIndex(scroller: HTMLDivElement, count: number): number {
   return Math.max(0, Math.min(count - 1, Math.round(scroller.scrollTop / height)));
 }
 
+/** Post body — only nested-scroll when content overflows; otherwise feed snap gets vertical swipes. */
+function ImmersiveSlideContent({
+  maxHeight,
+  children,
+}: {
+  maxHeight: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
+
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const prevOverflow = el.style.overflow;
+    el.style.overflow = 'hidden';
+    const needsScroll = el.scrollHeight > el.clientHeight + 2;
+    el.style.overflow = prevOverflow;
+    setScrollable((prev) => (prev === needsScroll ? prev : needsScroll));
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, children]);
+
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!scrollable) return;
+    const el = ref.current;
+    if (!el) return;
+    const atTop = el.scrollTop <= 0;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) return;
+    event.stopPropagation();
+  };
+
+  return (
+    <div
+      ref={ref}
+      onWheel={handleWheel}
+      className={cn(
+        'relative z-10 h-fit w-full max-w-[44rem]',
+        scrollable
+          ? 'overflow-y-auto overscroll-y-auto [scrollbar-width:thin]'
+          : 'overflow-visible'
+      )}
+      style={{ maxHeight }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function FeedBackdrop({
   meta,
   mode,
@@ -474,9 +531,8 @@ export function SceneImmersiveFeedDialog({
             >
               {paint ? (
               <>
-              <div
-                className="relative z-10 h-fit w-full max-w-[44rem] overflow-y-auto overscroll-contain [scrollbar-width:thin]"
-                style={{ maxHeight: `calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))` }}
+              <ImmersiveSlideContent
+                maxHeight={`calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))`}
               >
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
@@ -505,7 +561,7 @@ export function SceneImmersiveFeedDialog({
                     </>
                   )}
                 </div>
-                <div className="touch-pan-y rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
+                <div className="rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
                   {'post' in item ? (
                     <PostCard
                       post={item.post}
@@ -526,7 +582,7 @@ export function SceneImmersiveFeedDialog({
                     />
                   ) : null}
                 </div>
-              </div>
+              </ImmersiveSlideContent>
 
               <div className="absolute right-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 sm:right-5">
                 <button

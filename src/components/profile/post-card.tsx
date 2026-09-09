@@ -751,7 +751,10 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     <article
       ref={articleRef}
       id={`post-${post.id}`}
-      className="relative touch-pan-y scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80"
+      className={cn(
+        'relative scroll-mt-28 border border-dashed border-[var(--ph-border)] bg-black/20 p-4 transition-shadow data-[activity-focus]:ring-2 data-[activity-focus]:ring-fuchsia-400/80',
+        !immersive && 'touch-pan-y'
+      )}
       onPointerDown={immersive ? (event) => {
         tapRef.current.downX = event.clientX;
         tapRef.current.downY = event.clientY;
