@@ -140,12 +140,19 @@ export function FoldNavButton() {
                 const wet = unreadFor(fold, me) > 0;
                 const isRequest = fold.status === 'pending' && fold.initiatedBy !== me;
                 return (
-                  <li key={fold.id} className="group relative">
+                  <li
+                    key={fold.id}
+                    className={cn(
+                      'group relative',
+                      wet &&
+                        'bg-amber-500/[0.12] before:pointer-events-none before:absolute before:bottom-2 before:left-0 before:top-2 before:z-10 before:w-1 before:rounded-full before:bg-amber-400 before:shadow-[0_0_10px_rgba(251,191,36,0.85)]'
+                    )}
+                  >
                     <button
                       type="button"
                       className={cn(
-                        'flex w-full gap-2.5 px-3 py-2.5 pr-10 text-left transition-colors hover:bg-amber-500/10',
-                        wet && 'bg-amber-500/[0.06]'
+                        'relative z-0 flex w-full gap-2.5 px-3 py-2.5 pr-11 text-left transition-colors',
+                        wet ? 'hover:bg-amber-500/15' : 'hover:bg-amber-500/10'
                       )}
                       onClick={() => openThread(fold.id)}
                     >
@@ -154,7 +161,12 @@ export function FoldNavButton() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className="truncate font-headline text-sm uppercase tracking-tight text-amber-50">
+                          <span
+                            className={cn(
+                              'truncate font-headline text-sm uppercase tracking-tight',
+                              wet ? 'font-bold text-amber-50' : 'text-amber-50/90'
+                            )}
+                          >
                             {peer?.name || 'Artist'}
                           </span>
                           <span className="shrink-0 font-code text-[9px] uppercase tracking-wider text-muted-foreground">

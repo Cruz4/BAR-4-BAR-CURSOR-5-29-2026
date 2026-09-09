@@ -164,7 +164,14 @@ export function ActivityNavDropdown({
           }
           return true;
         });
-      const recent = visibleActivity.slice(0, PREVIEW_LIMIT);
+      const recent = [...visibleActivity]
+        .sort((a, b) => {
+          const aUnread = a.readAt ? 0 : 1;
+          const bUnread = b.readAt ? 0 : 1;
+          if (aUnread !== bUnread) return bUnread - aUnread;
+          return b.createdAt.localeCompare(a.createdAt);
+        })
+        .slice(0, PREVIEW_LIMIT);
       for (const event of recent) {
         if (!event.readAt) sessionUnreadIdsRef.current.add(event.id);
       }
@@ -221,6 +228,24 @@ export function ActivityNavDropdown({
     void loadRecent();
   };
 
+  const markOneRead = async (event: ActivityEvent, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (busyId || event.readAt) return;
+    setBusyId(event.id);
+    try {
+      await markActivityEventsRead([event.id]);
+      sessionUnreadIdsRef.current.delete(event.id);
+      const readAt = new Date().toISOString();
+      setItems((prev) =>
+        prev.map((item) => (item.id === event.id ? { ...item, readAt } : item))
+      );
+      refreshActivityAlerts();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const markOneUnread = async (event: ActivityEvent, e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
@@ -228,7 +253,8 @@ export function ActivityNavDropdown({
     setBusyId(event.id);
     try {
       await markActivityEventsUnread([event.id]);
-      setItems((prev) => prev.map((item) => item.id === event.id ? { ...item, readAt: null } : item));
+      sessionUnreadIdsRef.current.add(event.id);
+      setItems((prev) => prev.map((item) => (item.id === event.id ? { ...item, readAt: null } : item)));
       refreshActivityAlerts();
     } finally {
       setBusyId(null);
@@ -240,6 +266,7 @@ export function ActivityNavDropdown({
     setBulkBusy(true);
     try {
       await markAllActivityEventsRead();
+      sessionUnreadIdsRef.current.clear();
       const readAt = new Date().toISOString();
       setItems((prev) => prev.map((event) => (event.readAt ? event : { ...event, readAt })));
       setHiddenNewCount(0);
@@ -254,6 +281,7 @@ export function ActivityNavDropdown({
     setBulkBusy(true);
     try {
       await markAllActivityEventsUnread();
+      for (const event of items) sessionUnreadIdsRef.current.add(event.id);
       setItems((prev) => prev.map((event) => ({ ...event, readAt: null })));
       refreshActivityAlerts();
     } finally {
@@ -263,18 +291,13 @@ export function ActivityNavDropdown({
 
   const openEvent = async (event: ActivityEvent) => {
     setOpen(false);
-    sessionUnreadIdsRef.current.add(event.id);
-    setItems((prev) =>
-      prev.map((item) => (item.id === event.id ? { ...item, readAt: null } : item))
-    );
     if (!event.readAt && event.type !== 'house_release') {
       try {
         const readAt = new Date().toISOString();
         await markActivityEventsRead([event.id]);
+        sessionUnreadIdsRef.current.delete(event.id);
         setItems((prev) =>
-          withSessionUnreadHighlight(
-            prev.map((item) => (item.id === event.id ? { ...item, readAt } : item))
-          )
+          prev.map((item) => (item.id === event.id ? { ...item, readAt } : item))
         );
         refreshActivityAlerts();
       } catch {
@@ -341,17 +364,23 @@ export function ActivityNavDropdown({
             </div>
           ) : (
             <ul className="divide-y divide-border/60">
-              {items.map((event) => (
+              {items.map((event) => {
+                const unread = !event.readAt;
+                return (
                 <li
                   key={event.id}
                   className={cn(
                     'group relative',
-                    !event.readAt && 'bg-emerald-500/10 before:absolute before:bottom-2 before:left-0 before:top-2 before:w-0.5 before:rounded-full before:bg-emerald-400 before:shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+                    unread &&
+                      'bg-emerald-500/[0.12] before:pointer-events-none before:absolute before:bottom-2 before:left-0 before:top-2 before:z-10 before:w-1 before:rounded-full before:bg-emerald-400 before:shadow-[0_0_10px_rgba(52,211,153,0.85)]'
                   )}
                 >
                   <button
                     type="button"
-                    className="flex w-full gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-emerald-500/5"
+                    className={cn(
+                      'relative z-0 flex w-full gap-2.5 px-3 py-2.5 pr-11 text-left transition-colors',
+                      unread ? 'hover:bg-emerald-500/10' : 'hover:bg-emerald-500/5'
+                    )}
                     onClick={() => void openEvent(event)}
                   >
                     <span className="mt-0.5 shrink-0">
@@ -376,7 +405,10 @@ export function ActivityNavDropdown({
                             <ArtistHomeLink
                               userId={event.actorId}
                               slug={event.actorSlug}
-                              className="font-bold text-foreground hover:underline"
+                              className={cn(
+                                'font-bold hover:underline',
+                                unread ? 'text-emerald-50' : 'text-foreground'
+                              )}
                               onNavigate={() => setOpen(false)}
                             >
                               {event.actorName}
@@ -396,12 +428,32 @@ export function ActivityNavDropdown({
                           “{event.preview}”
                         </span>
                       ) : null}
-                      <span className="mt-1 block text-[9px] uppercase tracking-wider text-muted-foreground/70">
-                        {timeAgo(event.createdAt)}
+                      <span className="mt-1 flex flex-wrap items-center gap-2">
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">
+                          {timeAgo(event.createdAt)}
+                        </span>
+                        {unread ? (
+                          <span className="rounded-full border border-emerald-500/45 bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-200">
+                            Unread
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                   </button>
-                  {event.readAt ? (
+                  {unread ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      title="Mark as read"
+                      aria-label="Mark as read"
+                      disabled={busyId === event.id}
+                      className="absolute right-1.5 top-2 z-20 h-7 w-7 text-emerald-200 hover:bg-emerald-500/15 hover:text-emerald-100"
+                      onClick={(e) => void markOneRead(event, e)}
+                    >
+                      <Mail className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : (
                     <Button
                       type="button"
                       variant="ghost"
@@ -409,20 +461,15 @@ export function ActivityNavDropdown({
                       title="Mark as unread"
                       aria-label="Mark as unread"
                       disabled={busyId === event.id}
-                      className="absolute right-1.5 top-2 h-7 w-7 text-muted-foreground hover:text-emerald-400 opacity-80 group-hover:opacity-100"
+                      className="absolute right-1.5 top-2 z-20 h-7 w-7 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-300 opacity-80 group-hover:opacity-100"
                       onClick={(e) => void markOneUnread(event, e)}
                     >
                       <MailOpen className="h-3.5 w-3.5" />
                     </Button>
-                  ) : (
-                    <span
-                      className="absolute right-3 top-4 h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]"
-                      title="Unread"
-                      aria-label="Unread"
-                    />
                   )}
                 </li>
-              ))}
+              );
+              })}
             </ul>
           )}
         </div>

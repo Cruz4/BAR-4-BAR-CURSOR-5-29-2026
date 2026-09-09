@@ -62,7 +62,7 @@ export function FoldReadToggle({
         aria-label="Mark as read"
         disabled={busy}
         className={cn(
-          'absolute right-1.5 top-2 h-7 w-7 text-muted-foreground hover:text-amber-300 opacity-80 group-hover:opacity-100',
+          'absolute right-1.5 top-2 z-20 h-7 w-7 text-amber-200 hover:bg-amber-500/15 hover:text-amber-50',
           className
         )}
         onClick={(e) => void toggle(e)}
@@ -78,7 +78,7 @@ export function FoldReadToggle({
         aria-label="Mark as unread"
         disabled={busy}
         className={cn(
-          'absolute right-1.5 top-2 h-7 w-7 text-muted-foreground hover:text-amber-300 opacity-80 group-hover:opacity-100',
+          'absolute right-1.5 top-2 z-20 h-7 w-7 text-muted-foreground hover:bg-amber-500/10 hover:text-amber-200 opacity-80 group-hover:opacity-100',
           className
         )}
         onClick={(e) => void toggle(e)}
