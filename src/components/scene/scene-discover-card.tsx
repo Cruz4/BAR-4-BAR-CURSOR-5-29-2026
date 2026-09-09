@@ -106,46 +106,59 @@ export function SceneDiscoverCard({
 
   if (card.kind === 'artist') {
     const { artist } = card;
+    const homeHref = profileHref(artist.slug) || `/${artist.slug}`;
     return (
       <Card className="min-w-0 overflow-hidden border-sky-500/25 bg-gradient-to-r from-sky-500/[0.07] via-card/85 to-card/70 p-4">
         <DiscoverTag label="Recently live" icon={Radio} tone="text-sky-400/90" />
         <MatchReasons match={card.match} />
-        <div className="mt-2.5 flex items-start gap-3">
-          <ArtistStarAvatar
-            name={artist.displayName}
-            avatarUrl={artist.avatarUrl}
-            useStarMark={artist.starMarkUseStar}
-            starMarkSeed={artist.starMarkSeed}
-            href={profileHref(artist.slug) || `/${artist.slug}`}
-            size={56}
-            toneClass="bg-sky-500/25 text-sky-300"
-            studioChrome={parseStudioBadge(artist.studioBadge) || 'free'}
-          />
-          <div className="min-w-0 flex-1">
-            <Link
-              href={profileHref(artist.slug) || `/${artist.slug}`}
-              className={cn(
-                'block truncate font-headline text-sm font-bold uppercase tracking-tight hover:text-sky-300',
-                studioNameClass(parseStudioBadge(artist.studioBadge) || 'free')
-              )}
-            >
-              {artist.displayName}
-            </Link>
-            <p className="flex min-w-0 flex-col font-code text-[9px] font-bold uppercase leading-tight tracking-[0.13em] text-muted-foreground/70 sm:block sm:tracking-[0.18em]">
-              <span className="whitespace-nowrap">Artist Home</span>
-              {artist.updatedAt ? <span className="whitespace-nowrap sm:ml-1">· updated {timeAgo(artist.updatedAt)}</span> : null}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <DoorKnockButton
-              compact
-              targetUserId={artist.userId}
-              targetName={artist.displayName}
-              targetSlug={artist.slug}
-              knockerSlug={viewerSlug}
+        <div className={cn('mt-2.5', immersive ? 'space-y-3' : 'flex items-start gap-3')}>
+          <div className={cn('flex min-w-0 gap-3', immersive ? 'items-start' : 'flex-1 items-start')}>
+            <ArtistStarAvatar
+              name={artist.displayName}
+              avatarUrl={artist.avatarUrl}
+              useStarMark={artist.starMarkUseStar}
+              starMarkSeed={artist.starMarkSeed}
+              href={homeHref}
+              size={56}
+              toneClass="bg-sky-500/25 text-sky-300"
+              studioChrome={parseStudioBadge(artist.studioBadge) || 'free'}
             />
+            <div className="min-w-0 flex-1">
+              <Link
+                href={homeHref}
+                className={cn(
+                  'block font-headline text-sm font-bold uppercase tracking-tight hover:text-sky-300',
+                  immersive ? 'break-words leading-snug' : 'truncate',
+                  studioNameClass(parseStudioBadge(artist.studioBadge) || 'free')
+                )}
+              >
+                {artist.displayName}
+              </Link>
+              <p className="mt-0.5 flex min-w-0 flex-col font-code text-[9px] font-bold uppercase leading-tight tracking-[0.13em] text-muted-foreground/70 sm:block sm:tracking-[0.18em]">
+                <span className="whitespace-nowrap">Artist Home</span>
+                {artist.updatedAt ? (
+                  <span className="whitespace-nowrap sm:ml-1">· updated {timeAgo(artist.updatedAt)}</span>
+                ) : null}
+              </p>
+            </div>
+          </div>
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-1.5',
+              immersive ? 'justify-end pl-[4.25rem]' : ''
+            )}
+          >
+            {!immersive ? (
+              <DoorKnockButton
+                compact
+                targetUserId={artist.userId}
+                targetName={artist.displayName}
+                targetSlug={artist.slug}
+                knockerSlug={viewerSlug}
+              />
+            ) : null}
             <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
-              <Link href={profileHref(artist.slug) || `/${artist.slug}`}>Visit</Link>
+              <Link href={homeHref}>Visit</Link>
             </Button>
           </div>
         </div>

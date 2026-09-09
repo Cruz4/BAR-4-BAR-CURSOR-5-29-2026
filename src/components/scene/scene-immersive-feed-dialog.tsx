@@ -549,14 +549,14 @@ export function SceneImmersiveFeedDialog({
                         link={false}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-white hover:text-sky-200">{item.meta.name}</span>
+                        <span className="block break-words text-sm font-bold leading-snug text-white line-clamp-2 hover:text-sky-200">{item.meta.name}</span>
                       </span>
                     </Link>
                   ) : (
                     <>
                       <LiveArtistStarAvatar name={item.meta.name} userId={item.meta.userId} slug={item.meta.slug} avatarUrl={item.meta.avatarUrl} useStarMark={item.meta.useStarMark} starMarkSeed={item.meta.starMarkSeed} studioChrome={item.meta.studioChrome} size={42} link={false} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-white">{item.meta.name}</span>
+                        <span className="block break-words text-sm font-bold leading-snug text-white line-clamp-2">{item.meta.name}</span>
                       </span>
                     </>
                   )}
