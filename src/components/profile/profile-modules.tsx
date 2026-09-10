@@ -787,6 +787,58 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
 
 const WALL_PAGE_SIZE = 15;
 
+function WallPager({
+  safePage,
+  pageCount,
+  postTotal,
+  onPrev,
+  onNext,
+  edge = 'bottom',
+}: {
+  safePage: number;
+  pageCount: number;
+  postTotal: number;
+  onPrev: () => void;
+  onNext: () => void;
+  edge?: 'top' | 'bottom';
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 border-dashed border-[var(--ph-border,rgba(255,255,255,0.12))]',
+        edge === 'top' ? 'mb-4 border-b pb-4' : 'mt-5 border-t pt-4'
+      )}
+    >
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+        disabled={safePage <= 0}
+        onClick={onPrev}
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        Prev
+      </Button>
+      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
+        {safePage + 1} / {pageCount}
+        <span className="ml-2 font-normal tracking-widest opacity-80">· {postTotal} posts</span>
+      </p>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+        disabled={safePage >= pageCount - 1}
+        onClick={onNext}
+      >
+        Next
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
@@ -813,6 +865,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   );
   const textRef = useRef<HTMLTextAreaElement>(null);
   const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
+  const wallPostsTopRef = useRef<HTMLDivElement>(null);
+  const wallScrollAfterPageRef = useRef(false);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
   const {
     imprintOn,
@@ -967,7 +1021,21 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
 
-  const loadWallPage = async (nextPage: number) => {
+  const scrollWallToTop = () => {
+    wallPostsTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  useEffect(() => {
+    if (!wallScrollAfterPageRef.current) return;
+    wallScrollAfterPageRef.current = false;
+    const id = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => scrollWallToTop());
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [safePage, loaded]);
+
+  const loadWallPage = async (nextPage: number, scrollToTop = false) => {
+    if (scrollToTop) wallScrollAfterPageRef.current = true;
     if (playground || !ctx.profileSlug) {
       setPage(nextPage);
       return;
@@ -990,6 +1058,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       setWallPageCount(Math.max(1, Number(data.pageCount) || 1));
       setWallTotal(Math.max(0, Number(data.total) || 0));
     } catch {
+      wallScrollAfterPageRef.current = false;
       toast({ variant: 'destructive', title: 'Could not load that wall page' });
     }
   };
@@ -1239,7 +1308,19 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div ref={wallPostsTopRef} className="scroll-mt-20">
+        {showPager ? (
+          <WallPager
+            edge="top"
+            safePage={safePage}
+            pageCount={pageCount}
+            postTotal={playground ? posts.length : wallTotal}
+            onPrev={() => void loadWallPage(Math.max(0, safePage - 1))}
+            onNext={() => void loadWallPage(Math.min(pageCount - 1, safePage + 1))}
+          />
+        ) : null}
+
+        <div className="space-y-4">
         {!loaded ? (
           <p className="py-6 text-center text-sm text-[var(--ph-muted,rgba(255,255,255,0.55))]">Loading the wall…</p>
         ) : null}
@@ -1279,39 +1360,18 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
             Your wall is blank — post your first drop.
           </p>
         )}
+        </div>
       </div>
 
       {showPager ? (
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-dashed border-[var(--ph-border,rgba(255,255,255,0.12))] pt-4">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
-            disabled={safePage <= 0}
-            onClick={() => void loadWallPage(Math.max(0, safePage - 1))}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Prev
-          </Button>
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-            {safePage + 1} / {pageCount}
-            <span className="ml-2 font-normal tracking-widest opacity-80">
-              · {playground ? posts.length : wallTotal} posts
-            </span>
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
-            disabled={safePage >= pageCount - 1}
-            onClick={() => void loadWallPage(Math.min(pageCount - 1, safePage + 1))}
-          >
-            Next
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <WallPager
+          edge="bottom"
+          safePage={safePage}
+          pageCount={pageCount}
+          postTotal={playground ? posts.length : wallTotal}
+          onPrev={() => void loadWallPage(Math.max(0, safePage - 1), true)}
+          onNext={() => void loadWallPage(Math.min(pageCount - 1, safePage + 1), true)}
+        />
       ) : null}
     </ModuleShell>
   );
