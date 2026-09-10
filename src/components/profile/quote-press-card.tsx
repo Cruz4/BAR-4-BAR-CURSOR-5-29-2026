@@ -4,7 +4,7 @@
  * The Imprint — live quote card renderer.
  */
 
-import React, { forwardRef, useEffect, useMemo, useState } from 'react';
+import React, { forwardRef, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useImprintMotionGate } from '@/hooks/use-imprint-motion-gate';
 import { ensureImprintKeyframesInjected } from '@/lib/profile/imprint-keyframes';
 import Link from 'next/link';
@@ -515,6 +515,7 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
   forwardedRef
 ) {
   const [fontsReady, setFontsReady] = useState(false);
+  const [quoteFontSize, setQuoteFontSize] = useState<string | null>(null);
   const { ref: motionRef, motionPaused } = useImprintMotionGate<HTMLDivElement>();
   const tokens = useMemo(() => quotePressTokens(text, config), [text, config]);
 
@@ -526,6 +527,28 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
     if (typeof document === 'undefined') return;
     void document.fonts.ready.then(() => setFontsReady(true));
   }, []);
+
+  useEffect(() => {
+    setQuoteFontSize(null);
+  }, [text, config, tokens.fontSizeClamp]);
+
+  useLayoutEffect(() => {
+    const root = motionRef.current;
+    if (!root) return;
+
+    const syncQuoteFontSize = () => {
+      const quote = root.querySelector<HTMLElement>('blockquote');
+      if (!quote) return;
+      const px = getComputedStyle(quote).fontSize;
+      if (px.endsWith('px')) setQuoteFontSize(px);
+    };
+
+    syncQuoteFontSize();
+    const observer = new ResizeObserver(syncQuoteFontSize);
+    observer.observe(root);
+    void document.fonts.ready.then(syncQuoteFontSize);
+    return () => observer.disconnect();
+  }, [text, config, tokens.fontSizeClamp, fontsReady]);
 
   const setRefs = (node: HTMLDivElement | null) => {
     motionRef.current = node;
@@ -583,7 +606,7 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
             lineHeight: tokens.lineHeight,
             textAlign: tokens.textAlign,
             color: tokens.textColor,
-            fontSize: tokens.fontSizeClamp,
+            fontSize: quoteFontSize ?? tokens.fontSizeClamp,
             overflowWrap: 'break-word',
             wordBreak: 'normal',
             hyphens: 'manual',

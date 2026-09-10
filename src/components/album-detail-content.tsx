@@ -171,6 +171,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { PressStageControl } from '@/components/press-stage-control';
 import { AddBlankSheetsDialog } from '@/components/add-blank-sheets-dialog';
+import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
 import {
   albumTrackSearchHaystack,
   readPressTrackingPref,
@@ -1248,13 +1249,10 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto px-3 sm:px-6 py-6 sm:py-10 relative min-h-screen selection:bg-primary/30 overflow-x-hidden">
-        <div className="absolute inset-0 top-0 bottom-0 left-0 right-0 pointer-events-none">
-            <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border/.4),theme(colors.border/.4)_1px,transparent_1px,transparent_24px)] opacity-50"></div>
-            <div className="absolute inset-y-0 left-0 w-px bg-primary/20 ml-12 md:ml-24 hidden sm:block"></div>
-        </div>
-        
-        <div className="relative z-10 min-w-0 md:pl-32">
+      <div className="relative min-h-screen w-full selection:bg-primary/30 overflow-x-hidden font-code" data-album-shell>
+        <VaultChamberAtmosphere />
+
+        <div className="relative z-20 container mx-auto px-3 sm:px-6 py-6 sm:py-10 min-w-0 md:pl-32">
             <Button variant="ghost" size="sm" onClick={() => router.push(vaultHref())} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
                 <ChevronLeft className="mr-2 h-4 w-4" /> Vault
             </Button>

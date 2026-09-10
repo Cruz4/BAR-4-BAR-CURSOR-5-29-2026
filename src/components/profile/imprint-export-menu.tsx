@@ -11,12 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  captureImprintLoop,
-  captureImprintNodeToCanvas,
-  downloadImprintBlob,
+  captureImprintForExport,
   downloadImprintPng,
   imprintExportFilename,
 } from '@/lib/profile/imprint-capture';
+import type { QuotePressConfig } from '@/lib/profile/quote-press';
 import {
   isImprintSaved,
   saveImprintToCollection,
@@ -31,7 +30,9 @@ import { cn } from '@/lib/utils';
 type ImprintExportMenuProps = {
   captureRoot: HTMLElement | null;
   text: string;
-  post?: Pick<ProfilePost, 'id' | 'text' | 'ownerName' | 'ownerSlug' | 'giphySyndication' | 'imprintSaveCount'>;
+  quotePress?: QuotePressConfig | null;
+  creatorSlug?: string;
+  post?: Pick<ProfilePost, 'id' | 'text' | 'ownerName' | 'ownerSlug' | 'giphySyndication' | 'imprintSaveCount' | 'quotePress'>;
   isAdmin?: boolean;
   className?: string;
   onSaveCountChange?: (count: number) => void;
@@ -40,6 +41,8 @@ type ImprintExportMenuProps = {
 export function ImprintExportMenu({
   captureRoot,
   text,
+  quotePress,
+  creatorSlug,
   post,
   isAdmin = false,
   className,
@@ -47,7 +50,7 @@ export function ImprintExportMenu({
 }: ImprintExportMenuProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [busy, setBusy] = useState<'png' | 'loop' | 'giphy' | 'collection' | null>(null);
+  const [busy, setBusy] = useState<'png' | 'giphy' | 'collection' | null>(null);
   const [saved, setSaved] = useState(false);
   const [saveCount, setSaveCount] = useState(post?.imprintSaveCount || 0);
   const syndication = post?.giphySyndication as ImprintGiphySyndication | undefined;
@@ -70,34 +73,29 @@ export function ImprintExportMenu({
     };
   }, [post?.id, user?.id]);
 
-  const run = async (kind: 'png' | 'loop' | 'giphy') => {
-    if (!captureRoot || busy) return;
+  const exportInput = {
+    captureRoot,
+    text,
+    config: quotePress ?? post?.quotePress,
+    creatorSlug: creatorSlug ?? post?.ownerSlug,
+  };
+  const canExport = Boolean(captureRoot && exportInput.config && exportInput.text.trim());
+
+  const run = async (kind: 'png' | 'giphy') => {
+    if (!canExport || busy) return;
     setBusy(kind);
     try {
       if (kind === 'png') {
-        const canvas = await captureImprintNodeToCanvas(captureRoot);
-        downloadImprintPng(canvas, imprintExportFilename(text, 'png'));
+        const canvas = await captureImprintForExport(exportInput);
+        downloadImprintPng(canvas, imprintExportFilename(text));
         toast({ title: 'PNG saved' });
         return;
       }
-      if (kind === 'loop') {
-        const blob = await captureImprintLoop(captureRoot, {
-          durationSec: 4.5,
-          fps: 12,
-          onProgress: (pct) => {
-            if (pct >= 99) return;
-          },
-        });
-        downloadImprintBlob(blob, imprintExportFilename(text, 'webm'));
-        toast({ title: 'Clip saved' });
-        return;
-      }
-      if (kind === 'giphy' && post) {
+      if (kind === 'giphy' && post && captureRoot) {
         const result = await syndicateImprintPost({
           post,
           captureRoot,
           auto: false,
-          preferLoop: true,
         });
         if (result.status === 'live' && result.giphyUrl) {
           toast({
@@ -165,7 +163,7 @@ export function ImprintExportMenu({
             size="sm"
             variant="ghost"
             className="h-7 gap-1 px-2 text-[10px] uppercase tracking-[0.14em] text-cyan-300/80 hover:text-cyan-200"
-            disabled={!captureRoot || Boolean(busy)}
+            disabled={!canExport || Boolean(busy)}
             aria-label="Imprint options"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -188,9 +186,6 @@ export function ImprintExportMenu({
           ) : null}
           <DropdownMenuItem disabled={Boolean(busy)} onClick={() => void run('png')}>
             Save PNG
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={Boolean(busy)} onClick={() => void run('loop')}>
-            Save clip
           </DropdownMenuItem>
           {isAdmin && post ? (
             <>

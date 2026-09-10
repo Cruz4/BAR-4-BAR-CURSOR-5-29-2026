@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 
-type InboxAtmosphereVariant = 'activity' | 'msgs' | 'msgs-thread' | 'public-post';
+type InboxAtmosphereVariant = 'activity' | 'msgs' | 'msgs-thread' | 'public-post' | 'circle';
 
 const VARIANT: Record<
   InboxAtmosphereVariant,
@@ -40,6 +40,14 @@ const VARIANT: Record<
     grid: 'from-fuchsia-400/[0.08] via-transparent to-cyan-400/[0.05]',
     grain: 'opacity-[0.38]',
   },
+  circle: {
+    base: 'bg-[#07050f]',
+    glowA: 'bg-sky-500/18',
+    glowB: 'bg-fuchsia-500/14',
+    glowC: 'bg-violet-500/12',
+    grid: 'from-sky-400/[0.09] via-transparent to-fuchsia-400/[0.06]',
+    grain: 'opacity-[0.4]',
+  },
 };
 
 export function InboxPageAtmosphere({
@@ -55,20 +63,23 @@ export function InboxPageAtmosphere({
       <div className={cn('absolute inset-0', tone.base)} />
       <div
         className={cn(
-          'absolute -left-[18%] top-[-8%] h-[52%] w-[62%] rounded-full blur-[110px]',
-          tone.glowA
+          'absolute -left-[18%] top-[-8%] h-[52%] w-[62%] rounded-full blur-[110px] motion-safe:animate-pulse',
+          tone.glowA,
+          variant === 'circle' && 'motion-safe:[animation-duration:9s]'
         )}
       />
       <div
         className={cn(
-          'absolute -right-[12%] top-[8%] h-[44%] w-[54%] rounded-full blur-[100px]',
-          tone.glowB
+          'absolute -right-[12%] top-[8%] h-[44%] w-[54%] rounded-full blur-[100px] motion-safe:animate-pulse',
+          tone.glowB,
+          variant === 'circle' && 'motion-safe:[animation-duration:11s] motion-safe:[animation-delay:1.5s]'
         )}
       />
       <div
         className={cn(
-          'absolute bottom-[-10%] left-[20%] h-[40%] w-[58%] rounded-full blur-[120px]',
-          tone.glowC
+          'absolute bottom-[-10%] left-[20%] h-[40%] w-[58%] rounded-full blur-[120px] motion-safe:animate-pulse',
+          tone.glowC,
+          variant === 'circle' && 'motion-safe:[animation-duration:13s] motion-safe:[animation-delay:3s]'
         )}
       />
       <div

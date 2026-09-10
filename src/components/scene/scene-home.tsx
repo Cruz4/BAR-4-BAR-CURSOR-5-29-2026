@@ -262,9 +262,8 @@ function SceneComposer({
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
         ...(imprintOn && text.trim() ? { quotePress: activeImprintConfig } : {}),
       });
-      const captureRoot = imprintPreviewRef.current;
-      if (post.quotePress && captureRoot) {
-        void queueAutoImprintSyndication({ post, captureRoot });
+      if (post.quotePress) {
+        void queueAutoImprintSyndication({ post });
       }
       setText('');
       setVoice(null);

@@ -69,6 +69,9 @@ export const IMPRINT_KEYFRAMES_CSS = `
 [data-imprint-motion="paused"] .qp-anim {
   animation-play-state: paused !important;
 }
+[data-imprint-card][data-imprint-exporting] [data-imprint-signature] {
+  z-index: 4 !important;
+}
 `;
 
 const STYLE_ID = 'qp-imprint-keyframes';

@@ -985,9 +985,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
         ...imprintPayload,
       });
-      const captureRoot = imprintPreviewRef.current;
-      if (post.quotePress && captureRoot) {
-        void queueAutoImprintSyndication({ post, captureRoot });
+      if (post.quotePress) {
+        void queueAutoImprintSyndication({ post });
       }
       setPosts((prev) => [post, ...prev]);
       setWallTotal((value) => value + 1);

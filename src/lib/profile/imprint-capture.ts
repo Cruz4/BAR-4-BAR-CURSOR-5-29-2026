@@ -1,10 +1,20 @@
+'use client';
+
 /**
- * Imprint export — PNG + animated clip via persistent capture host.
- * Captures at the live on-screen width and frozen computed typography
- * so line breaks match the posted card.
+ * Imprint export — PNG still only.
+ * Tries html2canvas → html-to-image → modern-screenshot clone (foil pattern).
  */
 
+import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import { domToCanvas } from 'modern-screenshot';
+import { ensureImprintKeyframesInjected } from '@/lib/profile/imprint-keyframes';
+import type { QuotePressConfig } from '@/lib/profile/quote-press';
+import {
+  mountImprintForExport,
+  unmountImprintExport,
+  type ImprintExportMountParams,
+} from '@/components/profile/imprint-export-mount';
 
 export const IMPRINT_EXPORT_WIDTH_PX = 576;
 export const IMPRINT_EXPORT_MATTE_PX = 10;
@@ -22,34 +32,91 @@ function exportScale(): number {
   return Math.min(3, Math.max(2, window.devicePixelRatio || 2));
 }
 
-function pickImprintRecorderMime(): string {
-  const candidates = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4',
-  ];
-  if (typeof MediaRecorder === 'undefined') return '';
-  return candidates.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+function resolveImprintCard(source: HTMLElement): HTMLElement {
+  const card = source.matches('[data-imprint-card]')
+    ? source
+    : source.querySelector<HTMLElement>('[data-imprint-card]');
+  if (!card) throw new Error('Imprint card not found for export.');
+  return card;
 }
 
-function measureImprintWidth(source: HTMLElement): number {
-  const card = source.querySelector<HTMLElement>('[data-imprint-card]');
-  const el = card ?? source;
-  const width = Math.round(el.getBoundingClientRect().width);
-  return width > 0 ? width : IMPRINT_EXPORT_WIDTH_PX;
+function resolveMotionRoot(source: HTMLElement): HTMLElement {
+  if (source.matches('[data-imprint-root]')) return source;
+  return source.closest<HTMLElement>('[data-imprint-root]') ?? source;
 }
 
-function prepareImprintClone(source: HTMLElement, clone: HTMLElement, width: number) {
-  const srcCard = source.querySelector<HTMLElement>('[data-imprint-card]') ?? source;
-  const cloneCard = clone.querySelector<HTMLElement>('[data-imprint-card]') ?? clone;
+function ensureMotionLive(root: HTMLElement | null | undefined) {
+  if (!root) return;
+  root.setAttribute('data-imprint-motion', 'live');
+  root.querySelectorAll<HTMLElement>('.qp-anim').forEach((el) => {
+    el.style.animationPlayState = 'running';
+  });
+}
 
-  clone.style.width = `${width}px`;
-  clone.style.maxWidth = `${width}px`;
-  clone.style.minWidth = `${width}px`;
-  clone.style.margin = '0';
-  clone.style.boxSizing = 'border-box';
-  clone.style.overflow = 'visible';
+async function waitForCapturePaint() {
+  void document.body.offsetHeight;
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  );
+  await new Promise((r) => setTimeout(r, 250));
+}
+
+function canvasHasVisibleContent(canvas: HTMLCanvasElement): boolean {
+  if (canvas.width < 8 || canvas.height < 8) return false;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return false;
+
+  const { width, height } = canvas;
+  const data = ctx.getImageData(0, 0, width, height).data;
+  let minL = 255;
+  let maxL = 0;
+  let opaque = 0;
+
+  for (let i = 0; i < data.length; i += 16) {
+    const a = data[i + 3];
+    if (a < 12) continue;
+    opaque += 1;
+    const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    minL = Math.min(minL, l);
+    maxL = Math.max(maxL, l);
+  }
+
+  return opaque > 24 && maxL - minL > 14;
+}
+
+function assertCanvasHasContent(canvas: HTMLCanvasElement) {
+  if (!canvasHasVisibleContent(canvas)) {
+    throw new Error('Imprint export was blank — card did not rasterize.');
+  }
+}
+
+function compositeWithMatte(
+  cardCanvas: HTMLCanvasElement,
+  mattePx: number,
+  backgroundColor: string,
+  scale: number
+): HTMLCanvasElement {
+  const pad = Math.max(1, Math.round(mattePx * scale));
+  const out = document.createElement('canvas');
+  out.width = cardCanvas.width + pad * 2;
+  out.height = cardCanvas.height + pad * 2;
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('Could not compose export matte.');
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(cardCanvas, pad, pad);
+  return out;
+}
+
+function prepareCloneLayout(liveCard: HTMLElement, cloneRoot: HTMLElement) {
+  const cloneCard = cloneRoot.querySelector<HTMLElement>('[data-imprint-card]');
+  if (!cloneCard) return;
+
+  const width = Math.round(liveCard.getBoundingClientRect().width) || IMPRINT_EXPORT_WIDTH_PX;
+  cloneRoot.style.width = `${width}px`;
+  cloneRoot.style.maxWidth = `${width}px`;
+  cloneRoot.style.margin = '0';
+  cloneRoot.style.boxSizing = 'border-box';
 
   cloneCard.style.width = `${width}px`;
   cloneCard.style.maxWidth = `${width}px`;
@@ -60,17 +127,18 @@ function prepareImprintClone(source: HTMLElement, clone: HTMLElement, width: num
   cloneCard.style.height = 'auto';
   cloneCard.style.maxHeight = 'none';
   cloneCard.style.transform = 'none';
-  cloneCard.style.boxShadow = 'none';
-  cloneCard.style.filter = 'none';
 
-  const cardCs = getComputedStyle(srcCard);
-  cloneCard.style.padding = cardCs.padding;
-  cloneCard.style.borderRadius = cardCs.borderRadius;
+  const figureCs = getComputedStyle(liveCard);
+  cloneCard.style.padding = figureCs.padding;
+  cloneCard.style.borderRadius = figureCs.borderRadius;
+  cloneCard.style.clipPath = figureCs.clipPath;
+  cloneCard.style.borderColor = figureCs.borderColor;
+  cloneCard.style.boxShadow = figureCs.boxShadow;
 
-  const srcQuote = srcCard.querySelector<HTMLElement>('blockquote');
+  const liveQuote = liveCard.querySelector<HTMLElement>('blockquote');
   const cloneQuote = cloneCard.querySelector<HTMLElement>('blockquote');
-  if (srcQuote && cloneQuote) {
-    const cs = getComputedStyle(srcQuote);
+  if (liveQuote && cloneQuote) {
+    const cs = getComputedStyle(liveQuote);
     cloneQuote.style.fontSize = cs.fontSize;
     cloneQuote.style.lineHeight = cs.lineHeight;
     cloneQuote.style.letterSpacing = cs.letterSpacing;
@@ -79,36 +147,22 @@ function prepareImprintClone(source: HTMLElement, clone: HTMLElement, width: num
     cloneQuote.style.fontStyle = cs.fontStyle;
     cloneQuote.style.textAlign = cs.textAlign;
     cloneQuote.style.color = cs.color;
-    cloneQuote.style.width = `${Math.round(srcQuote.getBoundingClientRect().width)}px`;
-    cloneQuote.style.maxWidth = `${Math.round(srcQuote.getBoundingClientRect().width)}px`;
+    cloneQuote.style.textShadow = cs.textShadow;
   }
 
-  const srcSig = srcCard.querySelector<HTMLElement>('[data-imprint-signature]');
-  const cloneSig = cloneCard.querySelector<HTMLElement>('[data-imprint-signature]');
-  if (srcSig && cloneSig) {
-    const cs = getComputedStyle(srcSig);
-    cloneSig.style.fontSize = cs.fontSize;
-    cloneSig.style.letterSpacing = cs.letterSpacing;
-    const sigLink = cloneSig.querySelector<HTMLElement>('a, span');
-    if (sigLink) {
-      const linkCs = getComputedStyle(srcSig.querySelector('a, span') || srcSig);
-      sigLink.style.fontSize = linkCs.fontSize;
-      sigLink.style.letterSpacing = linkCs.letterSpacing;
-    }
-  }
-
-  clone.querySelectorAll<HTMLElement>('*').forEach((el) => {
+  cloneCard.querySelectorAll<HTMLElement>('*').forEach((el) => {
     el.style.maxHeight = 'none';
   });
+
+  ensureMotionLive(cloneRoot);
 }
 
-function buildCaptureHost(source: HTMLElement, options: CaptureImprintOptions = {}) {
-  const width = options.width ?? measureImprintWidth(source);
-  const scale = options.scale ?? exportScale();
-  const mattePx = options.mattePx ?? IMPRINT_EXPORT_MATTE_PX;
-  const backgroundColor = options.backgroundColor ?? IMPRINT_EXPORT_MATTE_COLOR;
-  const frameWidth = width + mattePx * 2;
-
+async function rasterizeWithCloneHost(
+  motionRoot: HTMLElement,
+  liveCard: HTMLElement,
+  scale: number
+): Promise<HTMLCanvasElement> {
+  const width = Math.round(liveCard.getBoundingClientRect().width) || IMPRINT_EXPORT_WIDTH_PX;
   const host = document.createElement('div');
   host.setAttribute('aria-hidden', 'true');
   host.setAttribute('data-imprint-capture-host', 'true');
@@ -116,59 +170,161 @@ function buildCaptureHost(source: HTMLElement, options: CaptureImprintOptions = 
     'position:fixed',
     'left:0',
     'top:0',
-    `width:${frameWidth}px`,
-    `padding:${mattePx}px`,
+    `width:${width}px`,
     'margin:0',
+    'padding:0',
     'box-sizing:border-box',
-    `background:${backgroundColor}`,
     'pointer-events:none',
     'z-index:2147483646',
     'opacity:0.04',
     'overflow:visible',
   ].join(';');
 
-  const clone = source.cloneNode(true) as HTMLElement;
-  prepareImprintClone(source, clone, width);
+  const clone = motionRoot.cloneNode(true) as HTMLElement;
+  prepareCloneLayout(liveCard, clone);
   host.appendChild(clone);
-  return { host, backgroundColor, scale };
-}
-
-async function waitForCapturePaint() {
-  void document.body.offsetHeight;
-  await new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-  );
-  await new Promise((r) => setTimeout(r, 200));
-}
-
-function domCaptureOptions(backgroundColor: string, scale: number) {
-  return {
-    scale,
-    backgroundColor,
-    style: {
-      opacity: '1',
-      transform: 'none',
-    },
-  };
-}
-
-/**
- * Capture an imprint root node (`[data-imprint-root]`) to canvas.
- */
-export async function captureImprintNodeToCanvas(
-  source: HTMLElement,
-  options: CaptureImprintOptions = {}
-): Promise<HTMLCanvasElement> {
-  await document.fonts.ready;
-  const { host, backgroundColor, scale } = buildCaptureHost(source, options);
   document.body.appendChild(host);
   await waitForCapturePaint();
 
   try {
-    return await domToCanvas(host, domCaptureOptions(backgroundColor, scale));
+    return await domToCanvas(host, {
+      scale,
+      backgroundColor: null,
+      style: { opacity: '1', transform: 'none' },
+    });
   } finally {
     host.remove();
   }
+}
+
+async function rasterizeImprintCard(
+  card: HTMLElement,
+  scale: number,
+  motionRoot?: HTMLElement
+): Promise<HTMLCanvasElement> {
+  const attempts: Array<() => Promise<HTMLCanvasElement>> = [
+    () =>
+      html2canvas(card, {
+        scale,
+        backgroundColor: null,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        onclone: (_doc, cloned) => {
+          const root =
+            cloned.matches('[data-imprint-card]')
+              ? cloned
+              : cloned.querySelector<HTMLElement>('[data-imprint-card]') ?? cloned;
+          ensureMotionLive(root.closest<HTMLElement>('[data-imprint-root]') ?? root);
+        },
+      }),
+    () =>
+      toCanvas(card, {
+        pixelRatio: scale,
+        cacheBust: true,
+        skipAutoScale: true,
+      }),
+  ];
+
+  if (motionRoot) {
+    attempts.push(() => rasterizeWithCloneHost(motionRoot, card, scale));
+  }
+
+  let lastError: Error | null = null;
+  for (const attempt of attempts) {
+    try {
+      const canvas = await attempt();
+      if (canvasHasVisibleContent(canvas)) return canvas;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error('Capture failed.');
+    }
+  }
+
+  throw lastError ?? new Error('Imprint export was blank — card did not rasterize.');
+}
+
+async function captureLiveCardCanvas(
+  source: HTMLElement,
+  options: CaptureImprintOptions = {}
+): Promise<HTMLCanvasElement> {
+  ensureImprintKeyframesInjected();
+  await document.fonts.ready;
+
+  const motionRoot = resolveMotionRoot(source);
+  const card = resolveImprintCard(source);
+  const mattePx = options.mattePx ?? IMPRINT_EXPORT_MATTE_PX;
+  const backgroundColor = options.backgroundColor ?? IMPRINT_EXPORT_MATTE_COLOR;
+  const scale = options.scale ?? exportScale();
+
+  ensureMotionLive(motionRoot);
+  card.setAttribute('data-imprint-exporting', 'true');
+  await waitForCapturePaint();
+
+  try {
+    const cardCanvas = await rasterizeImprintCard(card, scale, motionRoot);
+    assertCanvasHasContent(cardCanvas);
+    return compositeWithMatte(cardCanvas, mattePx, backgroundColor, scale);
+  } finally {
+    card.removeAttribute('data-imprint-exporting');
+  }
+}
+
+export async function captureImprintNodeToCanvas(
+  source: HTMLElement,
+  options: CaptureImprintOptions = {}
+): Promise<HTMLCanvasElement> {
+  return captureLiveCardCanvas(source, options);
+}
+
+async function captureMountedImprint(
+  params: ImprintExportMountParams,
+  options: CaptureImprintOptions = {}
+): Promise<HTMLCanvasElement> {
+  const session = await mountImprintForExport(params);
+  const width = options.width ?? IMPRINT_EXPORT_WIDTH_PX;
+  const mattePx = options.mattePx ?? IMPRINT_EXPORT_MATTE_PX;
+  const backgroundColor = options.backgroundColor ?? IMPRINT_EXPORT_MATTE_COLOR;
+  const scale = options.scale ?? exportScale();
+
+  session.motionRoot.style.width = `${width}px`;
+  session.motionRoot.style.maxWidth = `${width}px`;
+  session.card.style.width = `${width}px`;
+  session.card.style.maxWidth = `${width}px`;
+
+  ensureMotionLive(session.motionRoot);
+  session.card.setAttribute('data-imprint-exporting', 'true');
+  await waitForCapturePaint();
+
+  try {
+    const cardCanvas = await rasterizeImprintCard(session.card, scale, session.motionRoot);
+    assertCanvasHasContent(cardCanvas);
+    return compositeWithMatte(cardCanvas, mattePx, backgroundColor, scale);
+  } finally {
+    session.card.removeAttribute('data-imprint-exporting');
+    unmountImprintExport(session);
+  }
+}
+
+export async function captureImprintForExport(
+  input: {
+    captureRoot?: HTMLElement | null;
+    text: string;
+    config?: QuotePressConfig | null;
+    creatorSlug?: string;
+  },
+  options: CaptureImprintOptions = {}
+): Promise<HTMLCanvasElement> {
+  if (input.captureRoot?.isConnected) {
+    return captureImprintNodeToCanvas(input.captureRoot, options);
+  }
+  return captureMountedImprint(
+    {
+      text: input.text,
+      config: input.config,
+      creatorSlug: input.creatorSlug,
+    },
+    options
+  );
 }
 
 export function downloadImprintPng(canvas: HTMLCanvasElement, filename: string) {
@@ -178,15 +334,7 @@ export function downloadImprintPng(canvas: HTMLCanvasElement, filename: string) 
   link.click();
 }
 
-export function downloadImprintBlob(blob: Blob, filename: string) {
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = URL.createObjectURL(blob);
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-}
-
-export function imprintExportFilename(text: string, ext: 'png' | 'webm'): string {
+export function imprintExportFilename(text: string): string {
   const slug = text
     .trim()
     .slice(0, 40)
@@ -194,86 +342,5 @@ export function imprintExportFilename(text: string, ext: 'png' | 'webm'): string
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   const stamp = new Date().toISOString().slice(0, 10);
-  return `akasheet-imprint${slug ? `-${slug}` : ''}-${stamp}.${ext}`;
-}
-
-export type CaptureImprintLoopOptions = CaptureImprintOptions & {
-  durationSec?: number;
-  fps?: number;
-  onProgress?: (pct: number) => void;
-};
-
-/**
- * Record a short clip while CSS animations run on a persistent off-screen clone.
- */
-export async function captureImprintLoop(
-  source: HTMLElement,
-  options: CaptureImprintLoopOptions = {}
-): Promise<Blob> {
-  const mime = pickImprintRecorderMime();
-  if (!mime) throw new Error('Clip export is not supported in this browser.');
-
-  const durationSec = options.durationSec ?? 4.5;
-  const fps = options.fps ?? 15;
-
-  await document.fonts.ready;
-  const { host, backgroundColor, scale } = buildCaptureHost(source, options);
-  document.body.appendChild(host);
-  await waitForCapturePaint();
-
-  const probe = await domToCanvas(host, domCaptureOptions(backgroundColor, scale));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = probe.width;
-  canvas.height = probe.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    host.remove();
-    throw new Error('Could not start clip capture.');
-  }
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  const stream = canvas.captureStream(fps);
-  const chunks: Blob[] = [];
-  const recorder = new MediaRecorder(stream, {
-    mimeType: mime,
-    videoBitsPerSecond: 5_000_000,
-  });
-  recorder.ondataavailable = (event) => {
-    if (event.data.size) chunks.push(event.data);
-  };
-
-  const done = new Promise<Blob>((resolve, reject) => {
-    recorder.onstop = () =>
-      resolve(new Blob(chunks, { type: mime.split(';')[0] || 'video/webm' }));
-    recorder.onerror = () => reject(new Error('Clip capture failed.'));
-  });
-
-  recorder.start(100);
-  const intervalMs = 1000 / fps;
-  const totalFrames = Math.ceil(durationSec * fps);
-  const started = performance.now();
-
-  try {
-    for (let frame = 0; frame < totalFrames; frame += 1) {
-      const frameCanvas = await domToCanvas(host, domCaptureOptions(backgroundColor, scale));
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(frameCanvas, 0, 0, canvas.width, canvas.height);
-      options.onProgress?.(Math.min(99, ((frame + 1) / totalFrames) * 100));
-      const elapsed = performance.now() - started;
-      const target = (frame + 1) * intervalMs;
-      const wait = Math.max(0, target - elapsed);
-      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    }
-  } finally {
-    if (recorder.state !== 'inactive') recorder.stop();
-    host.remove();
-    stream.getTracks().forEach((track) => track.stop());
-  }
-
-  const blob = await done;
-  options.onProgress?.(100);
-  if (!blob.size) throw new Error('Clip export produced an empty file.');
-  return blob;
+  return `akasheet-imprint${slug ? `-${slug}` : ''}-${stamp}.png`;
 }
