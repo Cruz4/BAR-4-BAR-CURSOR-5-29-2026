@@ -7,7 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Disc3, ExternalLink, Globe, Link2, Settings2, Trophy, UserRound } from 'lucide-react';
+import { Bell, Disc3, Globe, Link2, Settings2, Trophy, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -467,8 +467,8 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
             {isLive && homeHref && (
               <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
                 <Button className="h-10 gap-2 font-bold uppercase" asChild>
-                  <Link href={homeHref} target="_blank" onClick={() => setOpen(false)}>
-                    <ExternalLink className="h-4 w-4" /> View profile
+                  <Link href={homeHref} onClick={() => setOpen(false)}>
+                    <UserRound className="h-4 w-4" /> View profile
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-10 gap-2 font-bold uppercase" asChild>

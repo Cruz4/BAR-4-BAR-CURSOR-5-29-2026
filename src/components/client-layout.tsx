@@ -119,7 +119,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
     Boolean(user) && (pathname === '/' || pathname === '/vault');
   const stickyDocumentScroll = isProfileCustomizePage || isStickyRailPage;
   const showAppHeader =
-    !isMarketingShell && !isPerformPage && !isSharePage && !isPublicProfilePage && !isMarketingCapture;
+    !isMarketingShell &&
+    !isPerformPage &&
+    !isSharePage &&
+    !isMarketingCapture &&
+    (!isPublicProfilePage || Boolean(user));
   const showBottomNowPlaying = showDropNowPlaying && !showAppHeader;
   // Public home / login / profile / share need document scroll — overflow-hidden
   // traps the Pressing landing and makes the brand mark feel dead.
