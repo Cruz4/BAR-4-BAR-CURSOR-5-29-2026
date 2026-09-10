@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Gift, Loader, Music, Pencil, Plus, Radio, Trash2, Unlink } from 'lucide-react';
+import { Gift, Link2, Loader, Music, Pencil, Plus, Radio, Trash2, Unlink } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { adminApiFetch } from '@/lib/admin-client';
 import { pingHouseRelease } from '@/lib/release-management-client';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
@@ -18,6 +19,7 @@ export function AdminHouseReleasesCard() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [items, setItems] = useState<HouseReleaseAdminRow[]>([]);
+  const [linkSlugByShare, setLinkSlugByShare] = useState<Record<string, string>>({});
 
   const load = async () => {
     const res = await adminApiFetch('/api/admin/house-releases');
@@ -55,6 +57,40 @@ export function AdminHouseReleasesCard() {
       toast({
         variant: 'destructive',
         title: 'Could not update House release',
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const linkArtist = async (shareId: string) => {
+    const artistSlug = (linkSlugByShare[shareId] || '').trim().toLowerCase();
+    if (!artistSlug) {
+      toast({ variant: 'destructive', title: 'Enter an artist slug' });
+      return;
+    }
+    setBusyId(`link:${shareId}`);
+    try {
+      const res = await adminApiFetch('/api/admin/house-releases', {
+        method: 'POST',
+        body: JSON.stringify({ shareId, action: 'link-artist', artistSlug }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        houseArtistName?: string;
+        houseArtistSlug?: string;
+      };
+      if (!res.ok) throw new Error(data.error || 'Link failed');
+      await load();
+      toast({
+        title: 'House release linked',
+        description: `Now credited to ${data.houseArtistName || artistSlug}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not link artist',
         description: err instanceof Error ? err.message : 'Unknown error',
       });
     } finally {
@@ -128,7 +164,11 @@ export function AdminHouseReleasesCard() {
                   <div className="min-w-0">
                     <p className="truncate font-headline text-sm font-bold uppercase">{item.title}</p>
                     <p className="font-code text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {item.ownerName} · {item.scope === 'album' ? `Album · ${item.trackCount} tracks` : 'Single'}
+                      Vault · {item.ownerName} · {item.scope === 'album' ? `Album · ${item.trackCount} tracks` : 'Single'}
+                    </p>
+                    <p className="font-code text-[10px] uppercase tracking-wider text-cyan-200/80">
+                      Profile · {item.houseArtistName}
+                      {item.houseArtistSlug ? ` · /${item.houseArtistSlug}` : ''}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -139,6 +179,30 @@ export function AdminHouseReleasesCard() {
                       <Badge variant="outline" className="border-amber-400/40 text-amber-200">Notice on</Badge>
                     ) : null}
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Input
+                    value={linkSlugByShare[item.shareId] ?? item.houseArtistSlug ?? ''}
+                    onChange={(e) =>
+                      setLinkSlugByShare((prev) => ({ ...prev, [item.shareId]: e.target.value }))
+                    }
+                    placeholder="artist-slug"
+                    className="h-8 w-[9.5rem] bg-black/30 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1 text-[10px] font-bold uppercase"
+                    disabled={busyId === `link:${item.shareId}`}
+                    onClick={() => void linkArtist(item.shareId)}
+                  >
+                    {busyId === `link:${item.shareId}` ? (
+                      <Loader className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Link2 className="h-3 w-3" />
+                    )}
+                    Link artist
+                  </Button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {owns ? (

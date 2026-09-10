@@ -77,7 +77,9 @@ import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { MentionField } from '@/components/profile/mention-suggestions';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import { ImprintExportMenu } from '@/components/profile/imprint-export-menu';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { ImprintScaleFit, type ImprintShelfDensity } from '@/components/profile/imprint-scale-fit';
 import { queueAutoImprintSyndication } from '@/lib/profile/imprint-syndicate-client';
 import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
@@ -598,20 +600,77 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 const IMPRINT_SHELF_LAYOUT: Record<ModuleSize, string> = {
-  S: 'flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch] [&>*]:w-[min(88%,18rem)] [&>*]:shrink-0 [&>*]:snap-center [&>*]:[content-visibility:auto] [&>*]:[contain:paint]',
-  M: 'grid grid-cols-1 gap-4 sm:grid-cols-2',
-  L: 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3',
+  // S — smallest; uses the former M layout + 504px target.
+  S: 'grid grid-cols-1 gap-4 sm:grid-cols-2 items-start [&>*]:w-full [&>*]:min-w-0',
+  // M — between S and L; single column so cards render at ~540px.
+  M: 'grid grid-cols-1 gap-5 items-start [&>*]:w-full [&>*]:min-w-0',
+  // L — original 576px; one per row, full size.
+  L: 'grid grid-cols-1 gap-6 items-start [&>*]:w-full [&>*]:min-w-0',
 };
+
+function ImprintShelfCard({
+  post,
+  ctx,
+  density,
+}: {
+  post: ProfilePost;
+  ctx: ModuleContext;
+  density: ImprintShelfDensity;
+}) {
+  const [imprintRoot, setImprintRoot] = useState<HTMLElement | null>(null);
+  const [saveCount, setSaveCount] = useState(post.imprintSaveCount || 0);
+
+  useEffect(() => {
+    setSaveCount(post.imprintSaveCount || 0);
+  }, [post.imprintSaveCount]);
+
+  return (
+    <div id={activityPostHash(post.id)} className="min-w-0">
+      <ImprintScaleFit density={density}>
+        <QuotePressCard
+          ref={setImprintRoot}
+          text={post.text}
+          config={post.quotePress!}
+          withMentions
+          creatorSlug={post.ownerSlug}
+        />
+      </ImprintScaleFit>
+      <div className="mt-1 flex items-center justify-end gap-1">
+        <ImprintExportMenu
+          captureRoot={imprintRoot}
+          text={post.text}
+          quotePress={post.quotePress}
+          creatorSlug={post.ownerSlug}
+          post={{ ...post, imprintSaveCount: saveCount }}
+          hostProfileUserId={ctx.profileUserId}
+          onSaveCountChange={setSaveCount}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
   const ids = ctx.featured.imprintShelfPostIds;
   const idKey = ids?.join(',') || '';
+  const previewPosts = ctx.previewMode ? ctx.initialImprintPosts : undefined;
   const hasInitial = Boolean(ctx.initialImprintPosts?.length);
   const [posts, setPosts] = useState<ProfilePost[]>(ctx.initialImprintPosts || []);
-  const [loaded, setLoaded] = useState(hasInitial);
+  const [loaded, setLoaded] = useState(Boolean(previewPosts) || hasInitial);
 
   useEffect(() => {
-    if (!ids?.length || !ctx.profileSlug) {
+    if (!ids?.length) {
+      setPosts([]);
+      setLoaded(true);
+      return;
+    }
+    if (previewPosts) {
+      const byId = new Map(previewPosts.map((post) => [post.id, post]));
+      setPosts(ids.map((id) => byId.get(id)).filter((post): post is ProfilePost => Boolean(post)));
+      setLoaded(true);
+      return;
+    }
+    if (!ctx.profileSlug) {
       setPosts([]);
       setLoaded(true);
       return;
@@ -645,7 +704,7 @@ export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
     return () => {
       cancelled = true;
     };
-  }, [ctx.profileSlug, idKey, hasInitial, ctx.initialImprintPosts]);
+  }, [ctx.profileSlug, idKey, hasInitial, ctx.initialImprintPosts, previewPosts, ctx.previewMode]);
 
   if (!ids?.length) return null;
   if (loaded && !posts.length) return null;
@@ -661,14 +720,7 @@ export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
       ) : (
         <div className={grid}>
           {posts.map((post) => (
-            <div key={post.id} id={activityPostHash(post.id)} className="min-w-0">
-              <QuotePressCard
-                text={post.text}
-                config={post.quotePress!}
-                withMentions
-                creatorSlug={ctx.profileSlug || post.ownerSlug}
-              />
-            </div>
+            <ImprintShelfCard key={post.id} post={post} ctx={ctx} density={ctx.size} />
           ))}
         </div>
       )}

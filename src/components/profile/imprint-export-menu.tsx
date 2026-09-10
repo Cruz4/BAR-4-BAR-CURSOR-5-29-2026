@@ -34,6 +34,8 @@ type ImprintExportMenuProps = {
   creatorSlug?: string;
   post?: Pick<ProfilePost, 'id' | 'text' | 'ownerName' | 'ownerSlug' | 'giphySyndication' | 'imprintSaveCount' | 'quotePress'>;
   isAdmin?: boolean;
+  /** Profile host when saving from an Artist Home shelf (for host notifications). */
+  hostProfileUserId?: string;
   className?: string;
   onSaveCountChange?: (count: number) => void;
 };
@@ -45,6 +47,7 @@ export function ImprintExportMenu({
   creatorSlug,
   post,
   isAdmin = false,
+  hostProfileUserId,
   className,
   onSaveCountChange,
 }: ImprintExportMenuProps) {
@@ -127,7 +130,9 @@ export function ImprintExportMenu({
     try {
       const result = saved
         ? await unsaveImprintFromCollection(post.id)
-        : await saveImprintToCollection(post.id);
+        : await saveImprintToCollection(post.id, {
+            ...(hostProfileUserId ? { hostProfileUserId } : {}),
+          });
       setSaved(result.saved);
       setSaveCount(result.imprintSaveCount);
       onSaveCountChange?.(result.imprintSaveCount);

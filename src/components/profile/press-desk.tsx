@@ -6,18 +6,20 @@
  * artist's own writing; this panel only mixes what the engine composes.
  */
 
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowDown,
   ArrowUp,
   Camera,
+  GripVertical,
   Check,
   Disc3,
   Dna,
   ExternalLink,
   Eye,
   Fingerprint,
+  Gift,
   LayoutGrid,
   Loader2,
   Lock,
@@ -109,6 +111,8 @@ import { studioChromeFromUser } from '@/lib/studio-tier-chrome';
 import { dnaStatusOf } from '@/lib/release-management';
 import { VesperfoldForge } from '@/components/profile/vesperfold-forge';
 import { ImprintShelfEditor } from '@/components/profile/imprint-shelf-editor';
+import { HouseReleaseHomeEditor } from '@/components/profile/house-release-home-editor';
+import type { ProfilePost } from '@/lib/profile/social-client';
 import { SoundIdentityStrip } from '@/components/profile/sound-identity-strip';
 import { auth } from '@/lib/firebase/client/firebase';
 import {
@@ -555,6 +559,27 @@ export function PressDesk() {
   const [featuredPreviewBusy, setFeaturedPreviewBusy] = useState(false);
   const heroFileRef = useRef<HTMLInputElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
+  const [shelfPreviewPosts, setShelfPreviewPosts] = useState<ProfilePost[]>([]);
+  const handleShelfPostsChange = useCallback((posts: ProfilePost[]) => {
+    setShelfPreviewPosts((prev) => {
+      if (prev.length === posts.length && prev.every((post, index) => post.id === posts[index]?.id)) {
+        return prev;
+      }
+      return posts;
+    });
+  }, []);
+  const [linkedHousePreviewDrops, setLinkedHousePreviewDrops] = useState<
+    Array<{
+      shareId: string;
+      title: string;
+      type: 'album' | 'track';
+      albumTitle?: string;
+      trackCount?: number;
+      houseRelease: true;
+      releaseLive: boolean;
+    }>
+  >([]);
+  const [moduleDragIndex, setModuleDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!previewing) return;
@@ -655,6 +680,51 @@ export function PressDesk() {
       });
     return () => { cancelled = true; };
   }, [firstDropsOn, toast, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLinkedHousePreviewDrops([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const current = auth.currentUser;
+        if (!current) return;
+        const token = await current.getIdToken();
+        const res = await fetch(`/api/profile/house-releases?userId=${encodeURIComponent(user.id)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          releases?: Array<{
+            shareId: string;
+            title: string;
+            type: 'album' | 'track';
+            albumTitle?: string;
+            trackCount?: number;
+            releaseLive?: boolean;
+          }>;
+        };
+        if (cancelled || !res.ok) return;
+        setLinkedHousePreviewDrops(
+          (data.releases || []).map((release) => ({
+            shareId: release.shareId,
+            title: release.title,
+            type: release.type,
+            ...(release.albumTitle ? { albumTitle: release.albumTitle } : {}),
+            ...(typeof release.trackCount === 'number' ? { trackCount: release.trackCount } : {}),
+            houseRelease: true,
+            releaseLive: Boolean(release.releaseLive),
+          }))
+        );
+      } catch {
+        if (!cancelled) setLinkedHousePreviewDrops([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const vaultBars = useMemo(() => collectVaultBars(albums), [albums]);
   const albumsWithCovers = useMemo(
@@ -783,17 +853,26 @@ export function PressDesk() {
       studioBadge: studioChromeFromUser(user),
       starMarkUseStar,
       starMarkSeed,
-      liveDnaDrops: publicShares.map((d) => ({
-        shareId: d.shareId,
-        title: d.title,
-        type: d.kind.startsWith('Album') ? ('album' as const) : ('track' as const),
-        ...(d.albumTitle ? { albumTitle: d.albumTitle } : {}),
-        ...(d.albumShareId ? { albumShareId: d.albumShareId } : {}),
-        ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
-        ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
-        ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
-        ...(d.dropPriceSummary ? { dropPriceSummary: d.dropPriceSummary } : {}),
-      })),
+      liveDnaDrops: (() => {
+        const byId = new Map<string, Record<string, unknown>>();
+        for (const d of publicShares) {
+          byId.set(d.shareId, {
+            shareId: d.shareId,
+            title: d.title,
+            type: d.kind.startsWith('Album') ? ('album' as const) : ('track' as const),
+            ...(d.albumTitle ? { albumTitle: d.albumTitle } : {}),
+            ...(d.albumShareId ? { albumShareId: d.albumShareId } : {}),
+            ...(typeof d.trackIndex === 'number' ? { trackIndex: d.trackIndex } : {}),
+            ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
+            ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
+            ...(d.dropPriceSummary ? { dropPriceSummary: d.dropPriceSummary } : {}),
+          });
+        }
+        for (const drop of linkedHousePreviewDrops) {
+          if (!byId.has(drop.shareId)) byId.set(drop.shareId, drop);
+        }
+        return [...byId.values()] as PublicProfileData['liveDnaDrops'];
+      })(),
     };
   }, [
     user,
@@ -804,6 +883,7 @@ export function PressDesk() {
     photoUrl,
     profileSlug,
     publicShares,
+    linkedHousePreviewDrops,
     starMarkUseStar,
     starMarkSeed,
   ]);
@@ -823,6 +903,14 @@ export function PressDesk() {
       return next;
     });
     setDirty(true);
+  };
+
+  const reorderModule = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    update((draft) => {
+      const [item] = draft.modules.splice(from, 1);
+      draft.modules.splice(to, 0, item);
+    });
   };
 
   const saveHero = async (next: {
@@ -1113,6 +1201,7 @@ export function PressDesk() {
               isOwner
               previewMode
               previewViewport={previewViewport}
+              initialImprintPosts={shelfPreviewPosts}
               onExitPreview={() => setPreviewing(false)}
             />
           </div>
@@ -2292,6 +2381,18 @@ export function PressDesk() {
         <LiveDnaDropsManage />
       </DeskSection>
 
+      {/* 8a. House releases on home */}
+      <DeskSection
+        id="artist-home-house-releases"
+        icon={Gift}
+        title="House releases on your home"
+        hint="AKAsheet can link a House drop to your profile. You choose whether it shows on your public Artist Home — members keep it in Library either way."
+      >
+        {user?.id ? (
+          <HouseReleaseHomeEditor userId={user.id} config={config} update={update} />
+        ) : null}
+      </DeskSection>
+
       {/* 8b. Imprint Shelf */}
       <DeskSection
         id="artist-home-imprints"
@@ -2305,6 +2406,7 @@ export function PressDesk() {
             profileSlug={summary?.profileSlug || profileSlug || undefined}
             config={config}
             update={update}
+            onShelfPostsChange={handleShelfPostsChange}
           />
         ) : null}
       </DeskSection>
@@ -2313,7 +2415,7 @@ export function PressDesk() {
       <DeskSection
         icon={SlidersHorizontal}
         title="Module Deck"
-        hint="Stack your page — toggle, reorder, and size each die-cut plate."
+        hint="Stack your page — toggle, drag to reorder, and size each die-cut plate."
       >
         <div className="mb-3 flex justify-end">
           <Button
@@ -2338,16 +2440,44 @@ export function PressDesk() {
           {config.modules.map((module, index) => {
             if (module.id === 'openLock' && !lockOn) return null;
             const meta = MODULE_META[module.id];
+            const dragging = moduleDragIndex === index;
+            const dragOver = moduleDragIndex !== null && moduleDragIndex !== index;
             return (
               <div
                 key={module.id}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl border px-3 py-2.5',
+                  'flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
                   module.enabled
                     ? 'border-white/15 bg-white/[0.04]'
-                    : 'border-white/5 bg-transparent opacity-60'
+                    : 'border-white/5 bg-transparent opacity-60',
+                  dragging && 'border-primary/40 bg-primary/10 opacity-80',
+                  dragOver && 'border-dashed border-primary/30'
                 )}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const from = moduleDragIndex ?? Number(e.dataTransfer.getData('text/plain'));
+                  if (!Number.isNaN(from) && from !== index) reorderModule(from, index);
+                  setModuleDragIndex(null);
+                }}
               >
+                <button
+                  type="button"
+                  draggable
+                  aria-label={`Drag to reorder ${meta.label}`}
+                  className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-primary active:cursor-grabbing"
+                  onDragStart={(e) => {
+                    setModuleDragIndex(index);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragEnd={() => setModuleDragIndex(null)}
+                >
+                  <GripVertical className="h-4 w-4" />
+                </button>
                 <Switch
                   checked={module.enabled}
                   onCheckedChange={(checked) =>
@@ -2446,6 +2576,7 @@ export function PressDesk() {
                     previewMode
                     previewViewport="desktop"
                     embeddedPreview
+                    initialImprintPosts={shelfPreviewPosts}
                     onExitPreview={openPreview}
                   />
                 </div>

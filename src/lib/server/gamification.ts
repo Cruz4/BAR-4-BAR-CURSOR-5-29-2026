@@ -55,6 +55,7 @@ import {
   canonicalDnaShareIds,
   shareDocumentVisibility,
 } from '@/lib/release-management';
+import { resolveHouseArtistId } from '@/lib/house-artist-link';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -1550,6 +1551,10 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
     const visibility = shareDocumentVisibility(data as Record<string, unknown>);
     const dnaLive = visibility.dnaLive && canonicalDnaIds.has(doc.id);
     if (!visibility.releaseLive && !dnaLive) continue;
+    const creditedHouseArtist = resolveHouseArtistId(data as Record<string, unknown>);
+    if (data.houseRelease === true && creditedHouseArtist && creditedHouseArtist !== userId) {
+      continue;
+    }
     const type = data.type === 'album' ? ('album' as const) : ('track' as const);
     const title =
       typeof data?.data?.title === 'string' && data.data.title.trim()
@@ -1598,6 +1603,63 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       entry.trackCount = tracks.length;
     }
 
+    byShareId.set(doc.id, entry);
+  }
+
+  // House releases linked to this artist profile (admin may set houseArtistId ≠ ownerId).
+  const linkedHouseSnap = await db
+    .collection('shares')
+    .where('houseRelease', '==', true)
+    .where('houseArtistId', '==', userId)
+    .get();
+  for (const doc of linkedHouseSnap.docs) {
+    if (byShareId.has(doc.id)) continue;
+    shareDocsById.set(doc.id, doc);
+    const data = doc.data();
+    const visibility = shareDocumentVisibility(data as Record<string, unknown>);
+    if (!visibility.releaseLive) continue;
+    const type = data.type === 'album' ? ('album' as const) : ('track' as const);
+    const title =
+      typeof data?.data?.title === 'string' && data.data.title.trim()
+        ? data.data.title.trim()
+        : type === 'album'
+          ? 'Untitled album'
+          : 'Untitled track';
+    const updatedAt =
+      typeof data.updatedAt === 'string'
+        ? data.updatedAt
+        : typeof data.createdAt === 'string'
+          ? data.createdAt
+          : '';
+    const payload = (data?.data ?? {}) as {
+      dropAudio?: unknown;
+      dropPrice?: unknown;
+      tracks?: Array<{ dropAudio?: unknown; dropPrice?: unknown }>;
+    };
+    const flags =
+      type === 'album'
+        ? shareCommerceFlags({ dropAudio: payload.dropAudio, dropPrice: payload.dropPrice })
+        : shareCommerceFlags(payload);
+    const entry: LiveDnaDropDraft = {
+      shareId: doc.id,
+      title: title.slice(0, 120),
+      type,
+      updatedAt,
+      ...(type === 'track' && flags.hasDropAudio ? { hasDropAudio: true } : {}),
+      releaseLive: true,
+      houseRelease: true,
+      ...(flags.dropPriceSummary ? { dropPriceSummary: flags.dropPriceSummary } : {}),
+      ...(Number(data.playCount) > 0 ? { playCount: Number(data.playCount) } : {}),
+      ...(Number(data.previewCount) > 0 ? { previewCount: Number(data.previewCount) } : {}),
+      ...(Number(data.purchaseCount) > 0 ? { purchaseCount: Number(data.purchaseCount) } : {}),
+      ...(typeof data.firstBuyerName === 'string' && data.firstBuyerName.trim()
+        ? { firstBuyerName: data.firstBuyerName.trim().slice(0, 80) }
+        : {}),
+    };
+    if (type === 'album') {
+      const tracks = Array.isArray(data?.data?.tracks) ? data.data.tracks : [];
+      entry.trackCount = tracks.length;
+    }
     byShareId.set(doc.id, entry);
   }
 

@@ -3,11 +3,18 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { buildAlbumDropPayload, buildTrackDropPayload } from '@/lib/dna-drop';
-import { isCommerceLive, normalizeDropAudio, normalizeDropPrice, shareDocCommerceFlags } from '@/lib/drop-commerce';
+import {
+  isCommerceLive,
+  isDropFree,
+  normalizeDropAudio,
+  normalizeDropPrice,
+  shareDocCommerceFlags,
+} from '@/lib/drop-commerce';
 import { stripForFirestore } from '@/lib/utils';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 import type { Album, StyleProfile, Track } from '@/lib/types';
 import { isFirstDropsEnabled } from '@/lib/server/first-drops-feature';
+import { isFreeDropsEnabled } from '@/lib/server/free-drops-feature';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 import {
   fitAlbumReleasePayload,
@@ -267,8 +274,24 @@ export async function POST(req: Request) {
     if (kind === 'album' && audioTracks.some((item) => !item.dropRightsAttestedAt)) {
       return NextResponse.json({ error: 'Confirm rights for every recording included in this album.' }, { status: 400 });
     }
-    if (!houseRelease && !isCommerceLive(normalizeDropPrice(target.dropPrice))) {
+    const releasePrice = normalizeDropPrice(target.dropPrice);
+    if (!houseRelease && !isCommerceLive(releasePrice)) {
       return NextResponse.json({ error: 'Set a valid sale price before pressing it live.' }, { status: 400 });
+    }
+    if (!houseRelease && isDropFree(releasePrice)) {
+      const freeAllowed = await isFreeDropsEnabled();
+      let wasAlreadyFree = false;
+      if (releaseShareId) {
+        const existingShare = await db.doc(`shares/${releaseShareId}`).get();
+        const payload = (existingShare.data()?.data as Record<string, unknown> | undefined) ?? {};
+        wasAlreadyFree = isDropFree(normalizeDropPrice(payload.dropPrice));
+      }
+      if (!freeAllowed && !wasAlreadyFree) {
+        return NextResponse.json(
+          { error: 'Free releases are not available right now. Set a paid price or pay-what-you-want.' },
+          { status: 400 }
+        );
+      }
     }
     releaseShareId ||= await unusedShareId(db);
     const privatePatch = {
@@ -317,6 +340,10 @@ export async function POST(req: Request) {
       : null;
     const batch = db.batch();
     batch.set(targetRef, privatePatch, { merge: true });
+    const existingHouseArtistId =
+      typeof existingShare.data()?.houseArtistId === 'string'
+        ? existingShare.data()!.houseArtistId.trim()
+        : '';
     batch.set(shareRef, {
       id: releaseShareId,
       type: kind,
@@ -327,6 +354,9 @@ export async function POST(req: Request) {
       releaseStatus: 'live',
       releaseRemovedAt: FieldValue.delete(),
       houseRelease,
+      ...(houseRelease
+        ? { houseArtistId: existingHouseArtistId || userId }
+        : { houseArtistId: FieldValue.delete() }),
       houseLibraryNotice,
       houseLibraryNoticeAt: houseLibraryNoticeAt || FieldValue.delete(),
       releaseSnapshotAt: now,

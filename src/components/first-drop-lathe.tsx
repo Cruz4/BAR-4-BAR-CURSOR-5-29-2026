@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useFreeDropsFeature } from '@/hooks/use-free-drops-feature';
 import { DataContext } from '@/context/data-context';
 import { deleteDropAudioFiles, uploadDropAudio } from '@/lib/drop-audio-upload';
 import {
@@ -222,6 +223,7 @@ function HouseLibraryNoticePing({
 export function FirstDropLatheHost() {
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const { enabled: freeDropsOn } = useFreeDropsFeature();
   const { releaseComposer, releaseRoom: releaseRoomMode } = useProductSurfaces();
   const guided = releaseComposer === 'guided';
   const { user } = useAuth();
@@ -1247,6 +1249,7 @@ export function FirstDropLatheHost() {
               ) : (
                 <PriceEditor
                   omitHidden
+                  allowFreeDrops={freeDropsOn}
                   label="2. One price for the full album"
                   price={albumSellPrice}
                   onChange={(next) => updateAlbum(selectedAlbum.id, { dropPrice: next })}
@@ -1614,6 +1617,7 @@ export function FirstDropLatheHost() {
             ) : (
               <PriceEditor
                 omitHidden
+                allowFreeDrops={freeDropsOn}
                 label="2. What they pay"
                 price={sellPrice}
                 onChange={(next) => {

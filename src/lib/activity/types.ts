@@ -18,6 +18,7 @@ export const ACTIVITY_TYPES = [
   'post_reply',
   'post_reverb',
   'post_imprint_saved',
+  'profile_imprint_saved',
   'mention',
   'dna_import',
   'drop_loved',
@@ -54,6 +55,7 @@ export const SERVER_ONLY_ACTIVITY_TYPES: readonly ActivityType[] = [
   'drop_sold',
   'house_release',
   'post_imprint_saved',
+  'profile_imprint_saved',
   'love_milestone',
   'profile_followed',
   'inner_circle_joined',
@@ -162,6 +164,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reply: 'replied to your post',
     post_reverb: 'Reverbed your post',
     post_imprint_saved: 'saved your Imprint',
+    profile_imprint_saved: 'saved an Imprint from your Artist Home',
     mention: 'mentioned you',
     dna_import: 'imported your DNA Drop',
     drop_loved: 'loved your release',
@@ -192,6 +195,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_reply: 'you replied to a post by',
     post_reverb: 'you Reverbed a post by',
     post_imprint_saved: 'you saved an Imprint by',
+    profile_imprint_saved: 'you saved an Imprint from',
     mention: 'you mentioned',
     dna_import: 'you imported a DNA Drop from',
     drop_loved: 'you loved a release by',
@@ -321,6 +325,11 @@ export function pushCopyForActivity(
         title: 'AKAsheet',
         body: `${actorName} saved your Imprint`,
       };
+    case 'profile_imprint_saved':
+      return {
+        title: 'AKAsheet',
+        body: `${actorName} saved an Imprint from your Artist Home`,
+      };
     case 'mention':
       return {
         title: `${actorName} mentioned you`,
@@ -389,6 +398,7 @@ export function prefsAllowsPush(prefs: ActivityPrefs, type: ActivityType): boole
       return prefs.collabSheets !== false;
     case 'post_love':
     case 'post_imprint_saved':
+    case 'profile_imprint_saved':
       return prefs.postLoves;
     case 'post_reply':
       return prefs.postReplies;

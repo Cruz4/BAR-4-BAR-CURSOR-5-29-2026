@@ -43,16 +43,23 @@ export async function isImprintSaved(postId: string): Promise<boolean> {
 }
 
 export async function saveImprintToCollection(
-  postId: string
+  postId: string,
+  options?: { hostProfileUserId?: string }
 ): Promise<{ saved: boolean; imprintSaveCount: number }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Sign in to save imprints.');
   const headers = await authHeaders();
   if (!headers) throw new Error('Sign in to save imprints.');
+  const hostProfileUserId = options?.hostProfileUserId?.trim();
   const res = await fetch('/api/posts/imprint-collection', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ userId: user.uid, postId, action: 'save' }),
+    body: JSON.stringify({
+      userId: user.uid,
+      postId,
+      action: 'save',
+      ...(hostProfileUserId ? { hostProfileUserId } : {}),
+    }),
   });
   const data = (await res.json().catch(() => ({}))) as {
     saved?: boolean;

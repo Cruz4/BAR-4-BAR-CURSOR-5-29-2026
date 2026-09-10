@@ -177,7 +177,12 @@ export function ArtistHome({
     profile.rankId ?? (savedRankLabel ? rankIdFromLabel(savedRankLabel) : computedRank.id);
   const rankLabel =
     savedRankLabel || STUDIO_RANKS.find((rank) => rank.id === rankId)?.label || computedRank.label;
-  const liveDnaDrops = useMemo(() => profile.liveDnaDrops || [], [profile.liveDnaDrops]);
+  const liveDnaDrops = useMemo(() => {
+    const hidden = new Set(config.featured.hiddenHouseReleaseShareIds || []);
+    return (profile.liveDnaDrops || []).filter(
+      (drop) => !(drop.houseRelease && hidden.has(drop.shareId))
+    );
+  }, [profile.liveDnaDrops, config.featured.hiddenHouseReleaseShareIds]);
   const saleDrops = useMemo(
     () => (firstDropsOn ? musicReleaseItems(liveDnaDrops) : []),
     [firstDropsOn, liveDnaDrops]
@@ -778,7 +783,11 @@ export function ArtistHome({
               size: setting.size,
               ...(playgroundWall ? { playgroundWall } : {}),
               ...(initialWallPosts ? { initialWallPosts } : {}),
-              ...(initialImprintPosts.length ? { initialImprintPosts } : {}),
+              ...(previewMode
+                ? { initialImprintPosts }
+                : initialImprintPosts.length
+                  ? { initialImprintPosts }
+                  : {}),
               ...(playgroundFriends ? { playgroundFriends } : {}),
               ...(playgroundGuestbook ? { playgroundGuestbook } : {}),
               ...(playgroundBarOfWeek ? { playgroundBarOfWeek } : {}),

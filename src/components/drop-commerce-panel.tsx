@@ -27,12 +27,15 @@ import {
 import type { Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useFreeDropsFeature } from '@/hooks/use-free-drops-feature';
 
-const MODES: { id: DropPriceMode; label: string }[] = [
+const BASE_MODES: { id: DropPriceMode; label: string }[] = [
   { id: 'hidden', label: 'DNA only' },
   { id: 'fixed', label: 'Set price' },
   { id: 'pwyw', label: 'Pay what you want' },
 ];
+
+const FREE_MODE = { id: 'free' as DropPriceMode, label: 'Free' };
 
 function FeePreviewBlock({ cents }: { cents: number }) {
   const charged = Math.max(DROP_PAID_MIN_CENTS, cents);
@@ -49,18 +52,23 @@ export function PriceEditor({
   onChange,
   label,
   omitHidden = false,
+  allowFreeDrops = false,
 }: {
   price: DropPrice;
   onChange: (next: DropPrice) => void;
   label: string;
   omitHidden?: boolean;
+  allowFreeDrops?: boolean;
 }) {
   const amount = price.amountCents ?? 777;
   const min = price.minCents ?? DROP_PAID_MIN_CENTS;
   const suggested = price.suggestedCents ?? 777;
   const effectiveMin = Math.max(DROP_PAID_MIN_CENTS, min);
   const effectiveSuggested = Math.max(DROP_PAID_MIN_CENTS, suggested);
-  const modes = omitHidden ? MODES.filter((m) => m.id !== 'hidden') : MODES;
+  const modes = [
+    ...(omitHidden ? BASE_MODES.filter((m) => m.id !== 'hidden') : BASE_MODES),
+    ...(allowFreeDrops ? [FREE_MODE] : []),
+  ];
   const [fixedDraft, setFixedDraft] = useState(() => ((amount || DROP_PAID_MIN_CENTS) / 100).toFixed(2));
   const [minDraft, setMinDraft] = useState(() => (effectiveMin / 100).toFixed(2));
   const [suggestedDraft, setSuggestedDraft] = useState(() => (effectiveSuggested / 100).toFixed(2));
@@ -91,6 +99,11 @@ export function PriceEditor({
           </Button>
         ))}
       </div>
+      {price.mode === 'free' && (
+        <p className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 px-2.5 py-2 text-[10px] leading-snug text-cyan-100/90">
+          Fans add this release to Library for free — no checkout. You still keep full rights.
+        </p>
+      )}
       {price.mode === 'fixed' && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
@@ -225,6 +238,7 @@ export function DropCommercePanel({
   const { user } = useAuth();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const { enabled: freeDropsOn } = useFreeDropsFeature();
   const { getAlbumById, updateAlbum, updateTrack } = React.useContext(DataContext);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -339,6 +353,7 @@ export function DropCommercePanel({
       <PriceEditor
         label={type === 'album' ? 'Album price' : 'Song price'}
         price={price.mode ? price : defaultDropPrice()}
+        allowFreeDrops={freeDropsOn}
         onChange={(next) => {
           if (type === 'album') updateAlbum(id, { dropPrice: next });
           else saveTrack({ dropPrice: next });

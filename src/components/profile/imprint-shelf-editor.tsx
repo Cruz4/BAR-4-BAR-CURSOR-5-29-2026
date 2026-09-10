@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { ImprintScaleFit } from '@/components/profile/imprint-scale-fit';
 import { fetchImprintCollection } from '@/lib/profile/imprint-collection-client';
 import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import { fetchPostById, type ProfilePost } from '@/lib/profile/social-client';
@@ -16,11 +17,13 @@ export function ImprintShelfEditor({
   profileSlug,
   config,
   update,
+  onShelfPostsChange,
 }: {
   userId: string;
   profileSlug?: string;
   config: ArtistHomeConfig;
   update: UpdateFn;
+  onShelfPostsChange?: (posts: ProfilePost[]) => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<ProfilePost[]>([]);
@@ -46,7 +49,10 @@ export function ImprintShelfEditor({
     };
   }, [userId]);
 
-  const selectedIds = config.featured.imprintShelfPostIds || [];
+  const selectedIds = useMemo(
+    () => config.featured.imprintShelfPostIds ?? [],
+    [config.featured.imprintShelfPostIds]
+  );
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const selectedPosts = useMemo(() => {
@@ -57,6 +63,15 @@ export function ImprintShelfEditor({
   }, [candidates, selectedIds]);
 
   const available = candidates.filter((post) => !selectedSet.has(post.id));
+
+  const shelfPostKey = selectedPosts.map((post) => post.id).join(',');
+  const lastShelfPostKeyRef = useRef('');
+  useEffect(() => {
+    if (!onShelfPostsChange) return;
+    if (lastShelfPostKeyRef.current === shelfPostKey) return;
+    lastShelfPostKeyRef.current = shelfPostKey;
+    onShelfPostsChange(selectedPosts);
+  }, [onShelfPostsChange, selectedPosts, shelfPostKey]);
 
   const addPost = (postId: string) => {
     update((draft) => {
@@ -145,11 +160,13 @@ export function ImprintShelfEditor({
                   </Button>
                 </div>
               </div>
-              <QuotePressCard
-                text={post.text}
-                config={post.quotePress!}
-                creatorSlug={profileSlug || post.ownerSlug}
-              />
+              <ImprintScaleFit density="L">
+                <QuotePressCard
+                  text={post.text}
+                  config={post.quotePress!}
+                  creatorSlug={profileSlug || post.ownerSlug}
+                />
+              </ImprintScaleFit>
             </div>
           ))}
         </div>
@@ -203,11 +220,13 @@ export function ImprintShelfEditor({
       {selectedPosts[0] ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-primary">Live preview</p>
-          <QuotePressCard
-            text={selectedPosts[0].text}
-            config={selectedPosts[0].quotePress!}
-            creatorSlug={profileSlug || selectedPosts[0].ownerSlug}
-          />
+          <ImprintScaleFit density="L">
+            <QuotePressCard
+              text={selectedPosts[0].text}
+              config={selectedPosts[0].quotePress!}
+              creatorSlug={profileSlug || selectedPosts[0].ownerSlug}
+            />
+          </ImprintScaleFit>
         </div>
       ) : null}
     </div>

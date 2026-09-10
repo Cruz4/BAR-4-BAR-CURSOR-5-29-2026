@@ -23,6 +23,7 @@ import {
 import {
   normalizeImprintShelfPostIds,
 } from '@/lib/profile/imprint-shelf';
+import { normalizeHiddenHouseReleaseShareIds } from '@/lib/profile/house-release-home';
 import {
   normalizeSoundIdentity,
   type ArtistHomeSoundIdentity,
@@ -119,6 +120,8 @@ export type ArtistHomeFeatured = {
   socials?: ArtistHomeSocials;
   /** Curated imprint post ids (must already exist as wall/scene posts). */
   imprintShelfPostIds?: string[];
+  /** Linked House releases hidden from this Artist Home (Library access unchanged). */
+  hiddenHouseReleaseShareIds?: string[];
   /** Optional 3-second hello — first badge in the social row under the portrait. */
   voiceMemo?: VoiceNote;
   /** Optional contact line under the streak boxes — public or request-to-see. */
@@ -442,6 +445,11 @@ function normalizeFeatured(raw: unknown): ArtistHomeFeatured {
 
   const imprintShelfPostIds = normalizeImprintShelfPostIds(obj.imprintShelfPostIds);
   if (imprintShelfPostIds) featured.imprintShelfPostIds = imprintShelfPostIds;
+
+  const hiddenHouseReleaseShareIds = normalizeHiddenHouseReleaseShareIds(
+    obj.hiddenHouseReleaseShareIds
+  );
+  if (hiddenHouseReleaseShareIds) featured.hiddenHouseReleaseShareIds = hiddenHouseReleaseShareIds;
 
   return featured;
 }

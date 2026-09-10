@@ -6,26 +6,80 @@ import {
   saveImprintToCollection,
   unsaveImprintFromCollection,
 } from '@/lib/server/imprint-collection';
+import { activityPostHash } from '@/lib/activity/post-deep-link';
 import { emitActivityEvent } from '@/lib/server/activity';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
 
 export const runtime = 'nodejs';
 
-async function actorProfile(
+async function userProfile(
   db: Awaited<ReturnType<typeof getDb>>,
   userId: string
-): Promise<{ actorName: string; actorSlug?: string }> {
+): Promise<{ name: string; slug?: string }> {
   const snap = await db.doc(`users/${userId}/gamification/summary`).get();
   const data = snap.data() || {};
-  const actorName =
+  const name =
     (typeof data.displayName === 'string' && data.displayName.trim()) ||
     (typeof data.artistName === 'string' && data.artistName.trim()) ||
     'Artist';
-  const actorSlug =
+  const slug =
     typeof data.profileSlug === 'string' && data.profileSlug.trim()
       ? data.profileSlug.trim()
       : undefined;
-  return { actorName, ...(actorSlug ? { actorSlug } : {}) };
+  return { name, ...(slug ? { slug } : {}) };
+}
+
+async function emitImprintSaveNotifications(
+  db: Awaited<ReturnType<typeof getDb>>,
+  input: {
+    saverId: string;
+    postId: string;
+    hostProfileUserId?: string;
+  }
+) {
+  const postSnap = await db.doc(`posts/${input.postId}`).get();
+  const post = postSnap.data() || {};
+  const ownerId = String(post.ownerId || '');
+  const hostId = (input.hostProfileUserId || '').trim();
+  const preview =
+    (typeof post.text === 'string' && post.text.trim()) ||
+    (typeof post.quoteText === 'string' && post.quoteText.trim()) ||
+    undefined;
+
+  const actor = await userProfile(db, input.saverId);
+  const base = {
+    actorId: input.saverId,
+    actorName: actor.name,
+    ...(actor.slug ? { actorSlug: actor.slug } : {}),
+    postId: input.postId,
+    ...(preview ? { preview: preview.slice(0, 120) } : {}),
+  };
+
+  if (ownerId && ownerId !== input.saverId) {
+    await emitActivityEvent({
+      ...base,
+      type: 'post_imprint_saved',
+    }).catch((error) => {
+      console.warn('[posts/imprint-collection post owner activity]', error);
+    });
+  }
+
+  if (hostId && hostId !== input.saverId && hostId !== ownerId) {
+    const host = await userProfile(db, hostId);
+    const href =
+      profileHref(host.slug, activityPostHash(input.postId)) || '/activity';
+    await emitActivityEvent({
+      ...base,
+      type: 'profile_imprint_saved',
+      recipientId: hostId,
+      recipientName: host.name,
+      ...(host.slug ? { recipientSlug: host.slug } : {}),
+      href,
+    }).catch((error) => {
+      console.warn('[posts/imprint-collection profile host activity]', error);
+    });
+  }
 }
 
 /** Save / unsave / list personal imprint collection entries. */
@@ -64,6 +118,8 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
     const postId = typeof body.postId === 'string' ? body.postId.trim() : '';
+    const hostProfileUserId =
+      typeof body.hostProfileUserId === 'string' ? body.hostProfileUserId.trim() : '';
     const action = typeof body.action === 'string' ? body.action : '';
     if (!userId || !postId) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -82,26 +138,11 @@ export async function POST(req: Request) {
     if (action === 'save') {
       const result = await saveImprintToCollection(db, userId, postId);
       if (result.isNew) {
-        const postSnap = await db.doc(`posts/${postId}`).get();
-        const post = postSnap.data() || {};
-        const ownerId = String(post.ownerId || '');
-        if (ownerId && ownerId !== userId) {
-          const { actorName, actorSlug } = await actorProfile(db, userId);
-          const preview =
-            (typeof post.text === 'string' && post.text.trim()) ||
-            (typeof post.quoteText === 'string' && post.quoteText.trim()) ||
-            undefined;
-          await emitActivityEvent({
-            type: 'post_imprint_saved',
-            actorId: userId,
-            actorName,
-            ...(actorSlug ? { actorSlug } : {}),
-            postId,
-            ...(preview ? { preview: preview.slice(0, 120) } : {}),
-          }).catch((error) => {
-            console.warn('[posts/imprint-collection activity]', error);
-          });
-        }
+        await emitImprintSaveNotifications(db, {
+          saverId: userId,
+          postId,
+          ...(hostProfileUserId ? { hostProfileUserId } : {}),
+        });
       }
       return NextResponse.json({ ok: true, ...result });
     }

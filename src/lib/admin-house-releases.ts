@@ -4,6 +4,9 @@ export type HouseReleaseAdminRow = {
   scope: 'album' | 'track';
   ownerId: string;
   ownerName: string;
+  houseArtistId: string;
+  houseArtistName: string;
+  houseArtistSlug?: string;
   albumId?: string;
   trackId?: string;
   trackCount: number;

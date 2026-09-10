@@ -73,12 +73,18 @@ export async function getPressedSongSummary(
   if (!priced.audio) return null;
   const shareSnap = await db.collection('shares').doc(shareId).get();
   const shareRaw = shareSnap.data() || {};
-  const ownerProfiles = await publicProfilesByUser(db, [share.ownerId]);
-  const ownerProfile = ownerProfiles.get(share.ownerId);
-  const ownerData = ownerProfile?.data() || {};
-  const ownerAvatars = await avatarUrlsByProfile(db, ownerProfiles.values());
+  const houseArtistId =
+    share.houseRelease === true &&
+    typeof shareRaw.houseArtistId === 'string' &&
+    shareRaw.houseArtistId.trim()
+      ? shareRaw.houseArtistId.trim()
+      : share.ownerId;
+  const creditedProfiles = await publicProfilesByUser(db, [houseArtistId, share.ownerId]);
+  const creditedProfile = creditedProfiles.get(houseArtistId);
+  const creditedData = creditedProfile?.data() || {};
+  const creditedAvatars = await avatarUrlsByProfile(db, creditedProfiles.values());
   const artistName =
-    (typeof ownerData.displayName === 'string' && ownerData.displayName.trim()) ||
+    (typeof creditedData.displayName === 'string' && creditedData.displayName.trim()) ||
     share.ownerName ||
     'Artist';
   const releasedAt = timestamp(priced.audio.uploadedAt || shareRaw.createdAt);
@@ -101,14 +107,14 @@ export async function getPressedSongSummary(
     releasedAt,
     artist: {
       name: artistName,
-      ...(ownerProfile ? { slug: ownerProfile.id } : {}),
-      ...(ownerProfile && ownerAvatars.get(ownerProfile.id)
-        ? { avatarUrl: ownerAvatars.get(ownerProfile.id) }
+      ...(creditedProfile ? { slug: creditedProfile.id } : {}),
+      ...(creditedProfile && creditedAvatars.get(creditedProfile.id)
+        ? { avatarUrl: creditedAvatars.get(creditedProfile.id) }
         : {}),
-      studioBadge: ownerData.studioBadge === 'pro' ? 'pro' : 'free',
-      starMarkUseStar: ownerData.starMarkUseStar === true,
-      ...(typeof ownerData.starMarkSeed === 'number' ? { starMarkSeed: ownerData.starMarkSeed } : {}),
-      pressing: normalizeArtistHomeConfig(ownerData.artistHome).theme,
+      studioBadge: creditedData.studioBadge === 'pro' ? 'pro' : 'free',
+      starMarkUseStar: creditedData.starMarkUseStar === true,
+      ...(typeof creditedData.starMarkSeed === 'number' ? { starMarkSeed: creditedData.starMarkSeed } : {}),
+      pressing: normalizeArtistHomeConfig(creditedData.artistHome).theme,
     },
     publicTotals: {
       plays: nonnegative(shareRaw.playCount) + nonnegative(shareRaw.previewCount),

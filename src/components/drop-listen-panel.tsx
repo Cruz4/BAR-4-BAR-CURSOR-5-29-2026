@@ -13,6 +13,7 @@ import {
   centsToUsdLabel,
   dropPriceSummary,
   isCommerceLive,
+  isDropFree,
   normalizeDropPrice,
   parseUsdToCents,
   resolveCheckoutCents,
@@ -140,6 +141,7 @@ export function DropListenPanel({
   const [pwyw, setPwyw] = useState('');
   const [isHouseRelease, setIsHouseRelease] = useState(houseRelease);
   const normalized = normalizeDropPrice(price);
+  const artistFreeRelease = isDropFree(normalized) && !houseRelease;
   const isOwner = Boolean(user && user.id === ownerId);
   const enteredPwywCents = parseUsdToCents(pwyw);
   const pwywCheckoutCents = normalized.mode === 'pwyw'
@@ -361,7 +363,63 @@ export function DropListenPanel({
     user,
   ]);
 
+  const claimFree = useCallback(async () => {
+    if (!user) {
+      router.push(
+        buildDropBuyLoginPath(
+          shareId,
+          { trackId: effectiveTrackId, referralPostId: effectiveReferralPostId },
+          checkoutDestination
+        )
+      );
+      return;
+    }
+    if (!authReady) return;
+    setBusy(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch('/api/drops/claim', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          userId: user.id,
+          shareId,
+          trackId: effectiveTrackId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not add to Library');
+      await loadStream();
+      toast({
+        title: 'Added to Library',
+        description: 'Full stream is ready.',
+      });
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not add to Library',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }, [
+    authReady,
+    checkoutDestination,
+    effectiveReferralPostId,
+    effectiveTrackId,
+    loadStream,
+    router,
+    shareId,
+    toast,
+    user,
+  ]);
+
   const buy = () => {
+    if (artistFreeRelease) {
+      void claimFree();
+      return;
+    }
     if (normalized.mode === 'pwyw') {
       const entered = parseUsdToCents(pwyw);
       const cents = resolveCheckoutCents(normalized, entered ?? undefined);
@@ -637,7 +695,13 @@ export function DropListenPanel({
               <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
                 <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Release</dt>
                 <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
-                  {isHouseRelease ? 'House · free' : normalized.mode === 'pwyw' ? 'Pay your way' : 'Buy once'}
+                  {isHouseRelease
+                    ? 'House · free'
+                    : artistFreeRelease
+                      ? 'Free'
+                      : normalized.mode === 'pwyw'
+                        ? 'Pay your way'
+                        : 'Buy once'}
                 </dd>
               </div>
             </dl>
@@ -691,7 +755,30 @@ export function DropListenPanel({
         </div>
       ) : null}
 
-      {showPurchase && !isHouseRelease && !full && !isOwner && isCommerceLive(normalized) && (
+      {showPurchase && artistFreeRelease && !full && !isOwner && (
+        <div
+          className={
+            compactPresentation
+              ? 'border-t border-white/10 pt-2'
+              : '!mt-2 border-t border-white/10 pt-2'
+          }
+        >
+          <Button
+            className={
+              compactPresentation
+                ? 'h-8 w-full text-[10px] font-bold uppercase bg-cyan-400 text-black hover:bg-cyan-300'
+                : 'h-9 w-full text-xs font-bold uppercase bg-cyan-400 text-black hover:bg-cyan-300'
+            }
+            disabled={busy || (Boolean(user) && !authReady)}
+            onClick={() => void claimFree()}
+          >
+            {busy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {user ? 'Add to Library · Free' : 'Sign up · add free to Library'}
+          </Button>
+        </div>
+      )}
+
+      {showPurchase && !isHouseRelease && !artistFreeRelease && !full && !isOwner && isCommerceLive(normalized) && (
         <div className={compactPresentation
           ? 'space-y-1.5 border-t border-white/10 pt-2'
           : '!mt-2 space-y-1.5 border-t border-white/10 pt-2'}>
@@ -710,7 +797,7 @@ export function DropListenPanel({
             onClick={buy}
           >
             {busy ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {normalized.mode === 'fixed' || normalized.mode === 'free'
+            {normalized.mode === 'fixed'
                 ? user
                   ? `Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`
                   : `Sign up · Buy · ${centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, normalized.amountCents ?? DROP_PAID_MIN_CENTS))}`

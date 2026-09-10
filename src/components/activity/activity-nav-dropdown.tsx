@@ -76,6 +76,7 @@ function TypeIcon({ type }: { type: ActivityType }) {
     case 'post_reverb':
       return <Repeat2 className={cn(className, 'text-violet-400')} />;
     case 'post_imprint_saved':
+    case 'profile_imprint_saved':
       return <Bookmark className={cn(className, 'text-fuchsia-400')} />;
     case 'dna_import':
       return <Import className={cn(className, 'text-amber-400')} />;

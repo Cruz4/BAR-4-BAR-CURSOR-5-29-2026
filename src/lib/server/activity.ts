@@ -38,6 +38,7 @@ export type EmitActivityInput = {
   /** Recipient of the "received" event. Required unless resolved from post/share. */
   recipientId?: string;
   recipientName?: string;
+  recipientSlug?: string;
   postId?: string;
   commentId?: string;
   shareId?: string;
@@ -199,7 +200,18 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
   const postId = input.postId?.trim() || undefined;
   const commentId = input.commentId?.trim() || undefined;
 
-  if (
+  if (input.type === 'profile_imprint_saved') {
+    recipientId = input.recipientId?.trim() || '';
+    recipientName = input.recipientName?.trim() || 'Artist';
+    recipientSlug = await resolveProfileSlug(recipientId, input.recipientSlug);
+    if (!preview && postId) {
+      const postSnap = await db.collection('posts').doc(postId).get();
+      const post = postSnap.data() || {};
+      if (typeof post.text === 'string') {
+        preview = post.text.trim().slice(0, 120);
+      }
+    }
+  } else if (
     (input.type === 'post_love' ||
       input.type === 'post_reply' ||
       input.type === 'post_reverb' ||

@@ -64,6 +64,7 @@ import { AdminLockFeatureCard } from '@/components/admin-lock-feature-card';
 import { AdminFoldsFeatureCard } from '@/components/admin-folds-feature-card';
 import { AdminCollabSheetFeatureCard } from '@/components/admin-collab-sheet-feature-card';
 import { AdminFirstDropsCard } from '@/components/admin-first-drops-card';
+import { AdminFreeDropsCard } from '@/components/admin-free-drops-card';
 import { AdminHouseBarCard } from '@/components/admin-house-bar-card';
 import { AdminHouseReleasesCard } from '@/components/admin-house-releases-card';
 import { AdminTonightsFormCard } from '@/components/admin-tonights-form-card';
@@ -1339,6 +1340,7 @@ export default function AdminPage() {
             <AdminFoldsFeatureCard />
             <AdminCollabSheetFeatureCard />
             <AdminFirstDropsCard />
+            <AdminFreeDropsCard />
             <AdminHouseReleasesCard />
             <AdminHouseBarCard />
             <AdminTonightsFormCard />

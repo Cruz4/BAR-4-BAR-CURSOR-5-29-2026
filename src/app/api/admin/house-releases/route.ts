@@ -3,6 +3,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 import { isHouseReleaseDocument, shareDocumentVisibility } from '@/lib/release-management';
+import { resolveHouseArtistId } from '@/lib/house-artist-link';
+import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
 import type { HouseReleaseAdminRow } from '@/lib/admin-house-releases';
 
 export const runtime = 'nodejs';
@@ -24,9 +26,45 @@ function ownerTargetPath(share: Record<string, unknown>, payload: Record<string,
   return '';
 }
 
+type ArtistMeta = { userId: string; name: string; slug?: string };
+
+async function artistMetaByUserIds(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userIds: string[]
+): Promise<Map<string, ArtistMeta>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  const result = new Map<string, ArtistMeta>();
+  if (!unique.length) return result;
+
+  for (const userId of unique) {
+    const profiles = await db.collection('publicProfiles').where('userId', '==', userId).limit(3).get();
+    const profile = profiles.docs[0];
+    if (profile) {
+      const data = profile.data();
+      result.set(userId, {
+        userId,
+        name:
+          typeof data.displayName === 'string' && data.displayName.trim()
+            ? data.displayName.trim()
+            : 'Artist',
+        slug: profile.id,
+      });
+      continue;
+    }
+    const userSnap = await db.doc(`users/${userId}`).get();
+    const displayName = userSnap.data()?.displayName;
+    result.set(userId, {
+      userId,
+      name: typeof displayName === 'string' && displayName.trim() ? displayName.trim() : 'Artist',
+    });
+  }
+  return result;
+}
+
 function rowFromShare(
   shareId: string,
-  share: Record<string, unknown>
+  share: Record<string, unknown>,
+  artistMeta: Map<string, ArtistMeta>
 ): HouseReleaseAdminRow | null {
   if (!isHouseReleaseDocument(share)) return null;
   const payload = share.data && typeof share.data === 'object'
@@ -38,6 +76,8 @@ function rowFromShare(
   const scope = share.type === 'album' ? 'album' : 'track';
   const tracks = Array.isArray(payload.tracks) ? payload.tracks : [];
   const albumId = typeof payload.albumId === 'string' ? payload.albumId : undefined;
+  const houseArtistId = resolveHouseArtistId(share) || ownerId;
+  const houseArtist = artistMeta.get(houseArtistId);
   return {
     shareId,
     title:
@@ -52,6 +92,9 @@ function rowFromShare(
       typeof share.ownerName === 'string' && share.ownerName.trim()
         ? share.ownerName.trim()
         : 'Artist',
+    houseArtistId,
+    houseArtistName: houseArtist?.name || 'Artist',
+    ...(houseArtist?.slug ? { houseArtistSlug: houseArtist.slug } : {}),
     albumId: scope === 'album' ? projectId : albumId,
     trackId: scope === 'track' ? projectId : undefined,
     trackCount: scope === 'album' ? tracks.length : 1,
@@ -65,8 +108,16 @@ export async function GET(req: Request) {
     await verifyAdminRequest(req);
     const db = await getDb();
     const snap = await db.collection('shares').where('houseRelease', '==', true).get();
-    const items = snap.docs
-      .map((doc) => rowFromShare(doc.id, (doc.data() || {}) as Record<string, unknown>))
+    const drafts = snap.docs
+      .map((doc) => ({
+        shareId: doc.id,
+        share: (doc.data() || {}) as Record<string, unknown>,
+      }))
+      .filter(({ share }) => isHouseReleaseDocument(share));
+    const artistIds = drafts.map(({ share }) => resolveHouseArtistId(share) || String(share.ownerId || ''));
+    const artistMeta = await artistMetaByUserIds(db, artistIds);
+    const items = drafts
+      .map(({ shareId, share }) => rowFromShare(shareId, share, artistMeta))
       .filter((row): row is HouseReleaseAdminRow => Boolean(row))
       .sort((a, b) => a.title.localeCompare(b.title));
     return NextResponse.json({ items });
@@ -84,7 +135,14 @@ export async function POST(req: Request) {
     await verifyAdminRequest(req);
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const shareId = typeof body.shareId === 'string' ? body.shareId.trim().toUpperCase() : '';
-    const action = body.action === 'remove' ? 'remove' : body.action === 'revoke' ? 'revoke' : '';
+    const action =
+      body.action === 'remove'
+        ? 'remove'
+        : body.action === 'revoke'
+          ? 'revoke'
+          : body.action === 'link-artist'
+            ? 'link-artist'
+            : '';
     if (!safeId(shareId) || !action) {
       return NextResponse.json({ error: 'Invalid House-release action.' }, { status: 400 });
     }
@@ -100,6 +158,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This share is not a House release.' }, { status: 409 });
     }
 
+    if (action === 'link-artist') {
+      const slug = typeof body.artistSlug === 'string' ? body.artistSlug.trim().toLowerCase() : '';
+      const directUserId = typeof body.houseArtistId === 'string' ? body.houseArtistId.trim() : '';
+      let houseArtistId = directUserId;
+      if (!houseArtistId && slug) {
+        const profile = await resolvePublicProfileSlugDoc(db, slug);
+        if (!profile) {
+          return NextResponse.json({ error: 'Artist profile not found for that slug.' }, { status: 404 });
+        }
+        houseArtistId = profile.userId;
+      }
+      if (!safeId(houseArtistId, 128)) {
+        return NextResponse.json({ error: 'Provide artistSlug or houseArtistId.' }, { status: 400 });
+      }
+      const now = new Date().toISOString();
+      await shareRef.set({ houseArtistId, updatedAt: now }, { merge: true });
+      const meta = await artistMetaByUserIds(db, [houseArtistId]);
+      const artist = meta.get(houseArtistId);
+      return NextResponse.json({
+        ok: true,
+        action,
+        shareId,
+        houseArtistId,
+        houseArtistName: artist?.name || 'Artist',
+        ...(artist?.slug ? { houseArtistSlug: artist.slug } : {}),
+      });
+    }
+
     const payload = share.data && typeof share.data === 'object'
       ? (share.data as Record<string, unknown>)
       : {};
@@ -110,6 +196,7 @@ export async function POST(req: Request) {
     const houseOff = {
       houseRelease: false,
       houseLibraryNotice: false,
+      houseArtistId: FieldValue.delete(),
       updatedAt: now,
       'data.houseRelease': false,
     };

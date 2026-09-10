@@ -216,7 +216,8 @@ export function normalizeDropPrice(raw: unknown): DropPrice {
     o.mode === 'free' || o.mode === 'fixed' || o.mode === 'pwyw' || o.mode === 'hidden'
       ? o.mode
       : 'hidden';
-  const mode: DropPriceMode = rawMode === 'free' ? 'fixed' : rawMode;
+  if (rawMode === 'free') return { mode: 'free' };
+  const mode: DropPriceMode = rawMode;
   const amountCents = typeof o.amountCents === 'number' ? Math.round(o.amountCents) : undefined;
   const minCents = typeof o.minCents === 'number' ? Math.round(o.minCents) : undefined;
   const suggestedCents =
@@ -232,13 +233,18 @@ export function normalizeDropPrice(raw: unknown): DropPrice {
   return next;
 }
 
+export function isDropFree(price?: DropPrice | null): boolean {
+  return normalizeDropPrice(price).mode === 'free';
+}
+
 export function isCommerceLive(price?: DropPrice | null): boolean {
-  return Boolean(price && price.mode !== 'hidden');
+  const normalized = normalizeDropPrice(price);
+  return normalized.mode !== 'hidden';
 }
 
 export function dropPriceSummary(price?: DropPrice | null): string {
   if (!price || price.mode === 'hidden') return '';
-  if (price.mode === 'free') return centsToUsdLabel(DROP_PAID_MIN_CENTS);
+  if (price.mode === 'free') return 'Free';
   if (price.mode === 'fixed') {
     return centsToUsdLabel(Math.max(DROP_PAID_MIN_CENTS, price.amountCents ?? DROP_PAID_MIN_CENTS));
   }
@@ -251,7 +257,7 @@ export function dropPriceSummary(price?: DropPrice | null): string {
 /** Amount the fan owes for this click. Live First Drops are always paid. */
 export function resolveCheckoutCents(price: DropPrice, fanEnteredCents?: number): number {
   if (price.mode === 'hidden') return 0;
-  if (price.mode === 'free') return DROP_PAID_MIN_CENTS;
+  if (price.mode === 'free') return 0;
   if (price.mode === 'fixed') {
     return Math.max(DROP_PAID_MIN_CENTS, price.amountCents ?? DROP_PAID_MIN_CENTS);
   }
