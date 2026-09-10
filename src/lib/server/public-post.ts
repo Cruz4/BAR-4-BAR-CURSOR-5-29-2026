@@ -10,6 +10,7 @@ import type { WallClip } from '@/lib/profile/wall-clips';
 import { parsePostPoll } from '@/lib/profile/post-polls';
 import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
 import { sanitizePostMediaFields } from '@/lib/profile/post-media';
+import { loadImprintShelfPosts } from '@/lib/server/imprint-shelf-posts';
 
 export type PublicPostPageData = {
   post: ProfilePost;
@@ -203,24 +204,9 @@ export const getPublicProfileWallPosts = cache(
 export const getPublicProfileImprintPosts = cache(
   async (ownerUserId: string, postIds: string[]): Promise<ProfilePost[]> => {
     const userId = ownerUserId.trim();
-    const ids = postIds.map((id) => id.trim()).filter(Boolean).slice(0, 12);
-    if (!userId || !ids.length) return [];
+    if (!userId) return [];
     const db = await getDb();
-    const posts = db.collection('posts');
-    const rows: ProfilePost[] = [];
-    for (const id of ids) {
-      try {
-        const snap = await posts.doc(id).get();
-        const data = snap.data() || {};
-        if (!snap.exists || data.ownerId !== userId || !data.quotePress) continue;
-        rows.push(postFromServerDoc(snap.id, data as Record<string, unknown>));
-      } catch {
-        /* skip missing imprint */
-      }
-    }
-    return ids
-      .map((id) => rows.find((post) => post.id === id))
-      .filter((post): post is ProfilePost => Boolean(post));
+    return loadImprintShelfPosts(db, userId, postIds);
   }
 );
 

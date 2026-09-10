@@ -16,8 +16,7 @@ import {
   artistHomeForPublic,
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
-import { IMPRINT_SHELF_MAX } from '@/lib/profile/imprint-shelf';
-import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
+import { filterValidImprintShelfPostIds } from '@/lib/server/imprint-shelf-posts';
 import {
   isReleaseShareLive,
   loadAudioForPlay,
@@ -148,15 +147,7 @@ async function validateImprintShelf(
   }
 
   const db = await getDb();
-  const validated: string[] = [];
-  for (const id of ids.slice(0, IMPRINT_SHELF_MAX)) {
-    const snap = await db.doc(`posts/${id}`).get();
-    if (!snap.exists) continue;
-    const data = snap.data() || {};
-    if (data.ownerId !== userId) continue;
-    if (!normalizeQuotePressConfig(data.quotePress)) continue;
-    validated.push(id);
-  }
+  const validated = await filterValidImprintShelfPostIds(db, userId, ids);
 
   const featured = { ...config.featured };
   if (validated.length) featured.imprintShelfPostIds = validated;

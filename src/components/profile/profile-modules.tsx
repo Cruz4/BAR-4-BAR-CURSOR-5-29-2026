@@ -600,8 +600,8 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 const IMPRINT_SHELF_LAYOUT: Record<ModuleSize, string> = {
-  // S — smallest; uses the former M layout + 504px target.
-  S: 'grid grid-cols-1 gap-4 sm:grid-cols-2 items-start [&>*]:w-full [&>*]:min-w-0',
+  // S — single column so a lone imprint doesn't leave a phantom second column.
+  S: 'grid grid-cols-1 gap-4 items-start [&>*]:w-full [&>*]:min-w-0 [&>*]:max-w-full',
   // M — between S and L; single column so cards render at ~540px.
   M: 'grid grid-cols-1 gap-5 items-start [&>*]:w-full [&>*]:min-w-0',
   // L — original 576px; one per row, full size.

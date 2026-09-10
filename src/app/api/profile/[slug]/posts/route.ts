@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { parseActivityPostHash } from '@/lib/activity/post-deep-link';
+import { loadImprintShelfPosts } from '@/lib/server/imprint-shelf-posts';
 import { postFromServerDoc } from '@/lib/server/public-post';
 import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
 
@@ -63,13 +64,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
         .map((id) => id.trim())
         .filter(Boolean)
         .slice(0, 12);
-      const rows: ReturnType<typeof postFromServerDoc>[] = [];
-      for (const id of ids) {
-        const snap = await posts.doc(id).get();
-        const data = snap.data() || {};
-        if (!snap.exists || data.ownerId !== owner.userId || !data.quotePress) continue;
-        rows.push(postFromServerDoc(snap.id, data as Record<string, unknown>));
-      }
+      const rows = await loadImprintShelfPosts(db, owner.userId, ids);
       return NextResponse.json({ posts: rows });
     }
 

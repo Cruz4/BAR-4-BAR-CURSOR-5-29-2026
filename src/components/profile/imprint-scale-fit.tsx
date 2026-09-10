@@ -10,11 +10,11 @@ export type ImprintShelfDensity = ModuleSize;
 
 /**
  * Rendered card width per tier (proportional scale, never reflow).
- * S = smallest shelf tier (+20% over the former 420px M baseline).
+ * S = compact shelf tier (605px — 20% larger than the prior 504px S).
  * M = midpoint between S and L. L = full export width.
  */
 export const IMPRINT_SHELF_TARGET_WIDTH: Record<ImprintShelfDensity, number> = {
-  S: 504,
+  S: 605,
   M: 540,
   L: IMPRINT_EXPORT_WIDTH_PX,
 };
@@ -73,8 +73,8 @@ export function ImprintScaleFit({
     return () => observer.disconnect();
   }, [density, referenceWidth]);
 
-  const centerCard =
-    layout.scale < 0.999 || (density === 'L' && layout.scale >= 0.999);
+  const usesTransform = Math.abs(layout.scale - 1) > 0.001;
+  const centerCard = usesTransform || density === 'L';
 
   return (
     <div ref={measureRef} className={cn('w-full', className)}>
@@ -92,9 +92,9 @@ export function ImprintScaleFit({
           ref={innerRef}
           style={{
             width: referenceWidth,
-            transform: layout.scale < 0.999 ? `scale(${layout.scale})` : undefined,
+            transform: usesTransform ? `scale(${layout.scale})` : undefined,
             transformOrigin: 'top left',
-            position: layout.scale < 0.999 ? 'absolute' : 'relative',
+            position: usesTransform ? 'absolute' : 'relative',
             top: 0,
             left: 0,
           }}
