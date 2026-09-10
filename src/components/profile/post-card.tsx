@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Share2, Sparkles, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { formatUserDateTime } from '@/lib/user-date';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -95,6 +96,8 @@ type PostCardProps = {
   immersive?: boolean;
   /** Play this card's clip while it is the focused immersive slide. */
   mediaActive?: boolean;
+  /** Show full date/time instead of relative time (public /p/ pages). */
+  showExactTimestamp?: boolean;
 };
 
 function timeAgo(iso: string): string {
@@ -350,7 +353,16 @@ function ReverbSourceBody({
   );
 }
 
-export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onReverbed, immersive = false, mediaActive }: PostCardProps) {
+export function PostCard({
+  post,
+  showAuthor = false,
+  viewerSlug,
+  onDeleted,
+  onReverbed,
+  immersive = false,
+  mediaActive,
+  showExactTimestamp = false,
+}: PostCardProps) {
   const showInlineAuthor = showAuthor && !immersive;
   const resolvedImageUrl = usePostImageUrl(post.imageUrl, post.imageStoragePath);
   const { user, loading: authLoading } = useAuth();
@@ -423,7 +435,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
     authorStudioChrome || (isOwner ? studioChromeFromUser(user) : undefined);
   const rootIdForReverb =
     post.isReverb && post.reverbPostId ? post.reverbPostId : post.id;
-  const canReverb = Boolean(user && !isOwner && rootIdForReverb);
+  const canReverb = Boolean(user && rootIdForReverb);
 
   useEffect(() => {
     if (authLoading) return;
@@ -846,7 +858,7 @@ export function PostCard({ post, showAuthor = false, viewerSlug, onDeleted, onRe
               }
             }}
           >
-            {timeAgo(post.createdAt)}
+            {showExactTimestamp ? formatUserDateTime(post.createdAt) : timeAgo(post.createdAt)}
             <span className="sr-only"> · Public Scene post</span>
           </Link>
         </div>

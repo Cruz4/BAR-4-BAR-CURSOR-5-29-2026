@@ -43,6 +43,13 @@ export function formatUserJoinDate(value: unknown): { date: string; time?: strin
   };
 }
 
+/** Full calendar date + clock time for public post pages and detail views. */
+export function formatUserDateTime(value: unknown): string {
+  const d = parseUserDate(value);
+  if (!d) return '';
+  return format(d, 'MMM d, yyyy · h:mm a');
+}
+
 export function userDateSortValue(value: unknown): number {
   return parseUserDate(value)?.getTime() ?? 0;
 }

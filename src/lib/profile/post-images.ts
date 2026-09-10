@@ -136,6 +136,16 @@ export async function processPostImageFile(
   }
 }
 
+/** Turn a canvas/export data URL into a compressible pending upload (foil share, etc.). */
+export async function pendingPostImageFromDataUrl(dataUrl: string): Promise<PendingPostImage> {
+  if (!dataUrl.startsWith('data:image/')) {
+    throw new Error('Invalid image data.');
+  }
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return processPostImageFile(blob);
+}
+
 export async function pendingImageToDataUrl(image: PendingPostImage): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

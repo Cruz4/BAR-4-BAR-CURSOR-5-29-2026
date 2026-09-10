@@ -787,6 +787,9 @@ export function ProofWallModule({ ctx }: { ctx: ModuleContext }) {
 
 const WALL_PAGE_SIZE = 15;
 
+const wallPagerButtonClass =
+  'h-8 gap-1 bg-[var(--ph-accent)] px-2.5 text-[10px] font-bold uppercase tracking-wider text-black shadow-none hover:opacity-90 disabled:opacity-40';
+
 function WallPager({
   safePage,
   pageCount,
@@ -812,8 +815,7 @@ function WallPager({
       <Button
         type="button"
         size="sm"
-        variant="outline"
-        className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+        className={wallPagerButtonClass}
         disabled={safePage <= 0}
         onClick={onPrev}
       >
@@ -827,8 +829,7 @@ function WallPager({
       <Button
         type="button"
         size="sm"
-        variant="outline"
-        className="h-8 gap-1 border-[var(--ph-border,rgba(255,255,255,0.12))] bg-black/20 px-2.5 text-[10px] font-bold uppercase tracking-wider text-[var(--ph-text,#fff)] hover:border-[var(--ph-accent,#7dd3fc)] hover:text-[var(--ph-accent,#7dd3fc)]"
+        className={wallPagerButtonClass}
         disabled={safePage >= pageCount - 1}
         onClick={onNext}
       >

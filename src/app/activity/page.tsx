@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
@@ -14,6 +14,7 @@ import {
   Flame,
   Heart,
   Import,
+  Library,
   Lock,
   Mail,
   MailOpen,
@@ -42,7 +43,16 @@ import {
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
-import { activityShowsActor, activityVerb, type ActivityDirection, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import {
+  activityDefersReadOnOpen,
+  activityShowsActor,
+  activityVerb,
+  isActivityUnread,
+  type ActivityDirection,
+  type ActivityEvent,
+  type ActivityType,
+} from '@/lib/activity/types';
+import { scrollPageToTop } from '@/lib/feed-scroll-restore';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import {
   acceptFriendRequest,
@@ -126,6 +136,8 @@ function TypeIcon({ type }: { type: ActivityType }) {
       return <Flame className={cn(className, 'text-fuchsia-400')} />;
     case 'drop_sold':
       return <Banknote className={cn(className, 'text-emerald-400')} />;
+    case 'house_release':
+      return <Library className={cn(className, 'text-amber-300')} />;
     case 'love_milestone':
       return <Droplets className={cn(className, 'text-violet-300')} />;
     case 'lock_answered':
@@ -167,7 +179,7 @@ function ActivityRow({
   /** Friend request already accepted/declined — hide Accept/Decline. */
   requestResolved?: boolean;
 }) {
-  const unread = event.direction === 'received' && !event.readAt;
+  const unread = isActivityUnread(event);
   const primaryName =
     event.direction === 'received' ? event.actorName : event.targetName || event.actorName;
   const primarySlug =
@@ -348,6 +360,16 @@ function ActivityPageInner() {
    */
   const sessionUnreadIdsRef = React.useRef<Set<string> | null>(null);
   const serverMarkedIdsRef = React.useRef<Set<string>>(new Set());
+
+  useLayoutEffect(() => {
+    scrollPageToTop();
+    const t1 = window.setTimeout(() => scrollPageToTop(), 50);
+    const t2 = window.setTimeout(() => scrollPageToTop(), 180);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, []);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -546,7 +568,10 @@ function ActivityPageInner() {
     if (!sessionUnreadIds?.size) return;
     const eventIds = [...sessionUnreadIds]
       .filter((id) => !serverMarkedIdsRef.current.has(id))
-      .filter((id) => inbox.find((event) => event.id === id)?.type !== 'house_release');
+      .filter((id) => {
+        const type = inbox.find((event) => event.id === id)?.type;
+        return type ? !activityDefersReadOnOpen(type) : true;
+      });
     if (!eventIds.length) return;
     eventIds.forEach((id) => serverMarkedIdsRef.current.add(id));
     void markActivityEventsRead(eventIds)
@@ -660,18 +685,20 @@ function ActivityPageInner() {
   };
 
   const handleOpen = async (event: ActivityEvent) => {
-    try {
-      await markActivityEventsRead([event.id]);
-      serverMarkedIdsRef.current.add(event.id);
-      sessionUnreadIdsRef.current?.delete(event.id);
-      setInbox((prev) =>
-        prev.map((item) =>
-          item.id === event.id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item
-        )
-      );
-      refreshActivityAlerts();
-    } catch {
-      /* still navigate */
+    if (!activityDefersReadOnOpen(event.type)) {
+      try {
+        await markActivityEventsRead([event.id]);
+        serverMarkedIdsRef.current.add(event.id);
+        sessionUnreadIdsRef.current?.delete(event.id);
+        setInbox((prev) =>
+          prev.map((item) =>
+            item.id === event.id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item
+          )
+        );
+        refreshActivityAlerts();
+      } catch {
+        /* still navigate */
+      }
     }
     const href = await resolveActivityOpenHref(event, { viewerUserId: user?.id });
     navigateActivityHref((h) => router.push(h), href);

@@ -50,7 +50,7 @@ export function PublicPostPageClient({
           <div
             className="scroll-mt-28 rounded-2xl border border-white/10 bg-black/25 p-1 shadow-[0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm"
           >
-            <PostCard post={post} showAuthor />
+            <PostCard post={post} showAuthor showExactTimestamp />
           </div>
         </div>
         <p className="text-center font-code text-[10px] uppercase tracking-widest text-muted-foreground/70">

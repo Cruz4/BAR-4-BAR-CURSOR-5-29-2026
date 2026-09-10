@@ -218,6 +218,15 @@ export function activityShowsActor(type: ActivityType): boolean {
   return !isCraftActivityType(type) && type !== 'house_release';
 }
 
+/** House Library pings stay unread until Library is opened or the row is marked read. */
+export function activityDefersReadOnOpen(type: ActivityType): boolean {
+  return type === 'house_release';
+}
+
+export function isActivityUnread(event: ActivityEvent): boolean {
+  return event.direction === 'received' && !event.readAt;
+}
+
 export function pushCopyForActivity(
   type: ActivityType,
   actorName: string,

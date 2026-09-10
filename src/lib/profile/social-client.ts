@@ -55,6 +55,7 @@ import { parseLyricClip, type LyricClip } from '@/lib/profile/lyric-clip';
 import {
   deletePostImageStorage,
   parseImageStoragePath,
+  pendingPostImageFromDataUrl,
   processPostImageFile,
   revokePostImagePreview,
   uploadPostImage,
@@ -330,14 +331,16 @@ export async function createPost(input: {
   const embedUrl = (input.embedUrl?.trim() || firstInlineHref(text) || '').slice(0, 500) || undefined;
   let imageUrl = input.imageUrl?.trim() || undefined;
   let imageStoragePath: string | undefined;
+  let image = input.image;
+  if (!image && imageUrl?.startsWith('data:image/')) {
+    image = await pendingPostImageFromDataUrl(imageUrl);
+    imageUrl = undefined;
+  }
   if (imageUrl && imageUrl.length > MAX_POST_IMAGE_URL) {
     throw new Error('Image is too large to post.');
   }
-  if (imageUrl?.startsWith('data:image/') && !input.image) {
-    throw new Error('Attach the photo again — wall images now upload to Storage instead of inline data.');
-  }
   if (poll && !text) throw new Error('Write the poll question in your post.');
-  if (!text && !embedUrl && !imageUrl && !input.image && !input.video && !input.voice && !parseLyricClip(input.lyricClip)) {
+  if (!text && !embedUrl && !imageUrl && !image && !input.video && !input.voice && !parseLyricClip(input.lyricClip)) {
     throw new Error('Write something, add a link, attach a photo or clip, or record a voice note.');
   }
 
@@ -365,17 +368,19 @@ export async function createPost(input: {
       throw err instanceof Error ? err : new Error('Could not upload clip.');
     }
   }
-  if (input.image) {
+  if (image) {
     try {
       const uploaded = await uploadPostImage({
         storagePath: wallImagePostPath(user.uid, id),
-        image: input.image,
+        image,
       });
       imageUrl = uploaded.url;
       imageStoragePath = uploaded.storagePath;
+      revokePostImagePreview(image);
     } catch (err) {
       if (voice) await deleteVoiceStorage(voice.storagePath);
       if (video) await deleteWallClipStorage(video.storagePath);
+      revokePostImagePreview(image);
       throw err instanceof Error ? err : new Error('Could not upload image.');
     }
   } else if (input.video?.posterBlob) {
@@ -676,9 +681,6 @@ export async function toggleReverb(
   options?: ReverbComposerOptions
 ): Promise<{ status: 'created' | 'updated' | 'removed'; post?: ProfilePost }> {
   const user = requireUser();
-  if (source.ownerId === user.uid) {
-    throw new Error('You already own this post.');
-  }
 
   // Unwrap if someone Reverbed a Reverb — always point at the root post.
   const rootPostId = source.isReverb && source.reverbPostId ? source.reverbPostId : source.id;

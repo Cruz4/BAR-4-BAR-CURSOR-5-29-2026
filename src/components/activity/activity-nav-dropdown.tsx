@@ -42,7 +42,14 @@ import {
   type FriendshipChangedDetail,
 } from '@/lib/activity/client';
 import { navigateActivityHref, resolveActivityOpenHref } from '@/lib/activity/href';
-import { activityShowsActor, activityVerb, type ActivityEvent, type ActivityType } from '@/lib/activity/types';
+import {
+  activityDefersReadOnOpen,
+  activityShowsActor,
+  activityVerb,
+  isActivityUnread,
+  type ActivityEvent,
+  type ActivityType,
+} from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { useAuth } from '@/hooks/use-auth';
 import { StudioLoader } from '@/components/studio-loader';
@@ -292,7 +299,7 @@ export function ActivityNavDropdown({
 
   const openEvent = async (event: ActivityEvent) => {
     setOpen(false);
-    if (!event.readAt && event.type !== 'house_release') {
+    if (!event.readAt && !activityDefersReadOnOpen(event.type)) {
       try {
         const readAt = new Date().toISOString();
         await markActivityEventsRead([event.id]);
@@ -366,7 +373,7 @@ export function ActivityNavDropdown({
           ) : (
             <ul className="divide-y divide-border/60">
               {items.map((event) => {
-                const unread = !event.readAt;
+                const unread = isActivityUnread(event);
                 return (
                 <li
                   key={event.id}

@@ -53,6 +53,7 @@ export function DoorKnockHomeListener({
         toast({
           title: 'Knocks at the door',
           description: `${who} knocked while you were away. Check Activity for the full list.`,
+          duration: 12_000,
         });
       }
     });

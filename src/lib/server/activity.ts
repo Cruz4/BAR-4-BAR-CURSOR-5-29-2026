@@ -598,15 +598,22 @@ export async function markActivityRead(userId: string, eventIds: string[]): Prom
   }
 
   const markedLocal = marked - markedGlobal;
-  if (markedLocal > 0) {
+  if (markedLocal > 0 || markedGlobal > 0) {
     const summaryRef = db.doc(`users/${userId}/activityMeta/summary`);
     await db.runTransaction(async (tx) => {
       const s = await tx.get(summaryRef);
       const current = typeof s.data()?.unreadReceived === 'number' ? s.data()!.unreadReceived : 0;
+      const currentHouse =
+        typeof s.data()?.unreadHouseReleases === 'number' ? s.data()!.unreadHouseReleases : 0;
       tx.set(
         summaryRef,
         {
-          unreadReceived: Math.max(0, current - markedLocal),
+          ...(markedLocal > 0
+            ? { unreadReceived: Math.max(0, current - markedLocal) }
+            : {}),
+          ...(markedGlobal > 0
+            ? { unreadHouseReleases: Math.max(0, currentHouse - markedGlobal) }
+            : {}),
           updatedAt: now,
         },
         { merge: true }

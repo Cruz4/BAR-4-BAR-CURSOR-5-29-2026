@@ -140,6 +140,18 @@ export function shouldSaveFeedScrollBeforeNav(
   return true;
 }
 
+/** Reset window scroll when entering a non-feed page (e.g. Activity from a scrolled Scene). */
+export function scrollPageToTop() {
+  if (typeof window === 'undefined') return;
+  const run = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+  run();
+  window.requestAnimationFrame(run);
+}
+
 export function captureFeedScrollOnLinkClick(
   event: { target: EventTarget | null },
   routeKey: string,
