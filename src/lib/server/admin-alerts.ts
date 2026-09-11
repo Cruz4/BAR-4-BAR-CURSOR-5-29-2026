@@ -94,6 +94,42 @@ function buildMessage(input: EnqueueInput, refLabel: string | null): string {
     const detail = input.detail ? ` — ${input.detail}` : '';
     return `${input.method || 'Finish this bar activity'}${via}${detail}`;
   }
+  if (input.kind === 'landing_burst') {
+    const page = input.path || 'public pages';
+    const detail = input.detail ? ` — ${input.detail}` : '';
+    return `Many visits from one network on ${page}${detail}`;
+  }
+  if (input.kind === 'probe') {
+    return `Scanner requested ${input.path || 'a bait path'}`;
+  }
+  if (input.kind === 'admin_denied') {
+    const who = input.userEmail ? ` (${input.userEmail})` : '';
+    return `Admin API denied on ${input.path || '/api/admin'}${who}`;
+  }
+  if (input.kind === 'admin_role') {
+    return input.detail || `${input.userEmail || 'Admin'} changed a studio role`;
+  }
+  if (input.kind === 'admin_action') {
+    if (input.method === 'eradicate') {
+      return `${input.userEmail || 'Admin'} eradicated an account${input.detail ? ` — ${input.detail}` : ''}`;
+    }
+    return `${input.userEmail || 'Admin'} adjusted Ink${input.detail ? ` — ${input.detail}` : ''}`;
+  }
+  if (input.kind === 'admin_device') {
+    return input.detail || `New device on an admin account${input.method ? ` (${input.method})` : ''}`;
+  }
+  if (input.kind === 'ink_spike') {
+    return input.detail || 'Ink spend spiked';
+  }
+  if (input.kind === 'signup_burst') {
+    return input.detail || 'Many new accounts from one network';
+  }
+  if (input.kind === 'stripe_risk') {
+    return input.detail || `Stripe ${input.method || 'risk'} event`;
+  }
+  if (input.kind === 'blocked_ai') {
+    return input.detail || 'A blocked account hit AI';
+  }
   const page = input.path || '/';
   const who = input.guestAlias || 'Visitor';
   const via = refLabel ? ` from ${refLabel}` : '';
@@ -154,7 +190,7 @@ export async function listAdminAlertsSince(since: string): Promise<AdminAlert[]>
     .collection(COLLECTION)
     .where('timestamp', '>', since)
     .orderBy('timestamp', 'asc')
-    .limit(25)
+    .limit(40)
     .get();
 
   return snap.docs.map((doc) => {

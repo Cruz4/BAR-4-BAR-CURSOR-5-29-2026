@@ -14,6 +14,7 @@ import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 import { getPublicAppUrl } from '@/lib/app-url';
+import { withCheckoutCard3ds } from '@/lib/stripe-checkout-security';
 
 export const runtime = 'nodejs';
 
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create(sessionParams);
+      session = await stripe.checkout.sessions.create(withCheckoutCard3ds(sessionParams));
     } catch (createErr) {
       if (sessionParams.customer && db && isStripeMissingCustomerError(createErr)) {
         await clearStaleStripeBillingProfile(db, userId);
@@ -165,7 +166,7 @@ export async function POST(req: Request) {
           sessionParams.customer_creation = 'always';
         }
         if (email) sessionParams.customer_email = email;
-        session = await stripe.checkout.sessions.create(sessionParams);
+        session = await stripe.checkout.sessions.create(withCheckoutCard3ds(sessionParams));
       } else {
         throw createErr;
       }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { AiGateError } from '@/lib/server/ai-gate';
+import { AppCheckError, enforceAppCheck } from '@/lib/server/app-check-gate';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -41,6 +42,15 @@ export async function POST(req: Request) {
 
   if (!loader || !input || typeof input !== 'object') {
     return NextResponse.json({ error: 'Invalid AI action payload' }, { status: 400 });
+  }
+
+  try {
+    await enforceAppCheck(req);
+  } catch (error) {
+    if (error instanceof AppCheckError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
   }
 
   try {

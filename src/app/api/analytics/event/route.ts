@@ -5,6 +5,7 @@ import { enqueueSignupAlertOnce } from '@/lib/server/signup-alert';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { checkRateLimit } from '@/lib/server/rate-limit';
+import { clientIpFromRequest, hashVisitorIp } from '@/lib/server/visit-fingerprint';
 
 export const runtime = 'nodejs';
 
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
         guestAlias,
         barsWritten: Number.isFinite(barsWritten as number) ? (barsWritten as number) : null,
         assistsUsed: Number.isFinite(assistsUsed as number) ? (assistsUsed as number) : null,
+        ipHash: hashVisitorIp(clientIpFromRequest(req)),
       });
     }
 

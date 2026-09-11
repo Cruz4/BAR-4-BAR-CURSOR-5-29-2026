@@ -3,6 +3,7 @@ import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { recordInkLedgerEntry } from '@/lib/server/ink-ledger';
+import { notifyAdminInkGrant } from '@/lib/server/security-alerts';
 
 export const runtime = 'nodejs';
 
@@ -74,6 +75,13 @@ export async function POST(req: Request) {
       details: `By ${admin.email}`,
     });
   }
+
+  await notifyAdminInkGrant({
+    actorEmail: admin.email,
+    targetUserId,
+    amount,
+    pool: type === 'res' ? 'residency' : 'permanent',
+  });
 
   return NextResponse.json({ ok: true, field, amount });
 }

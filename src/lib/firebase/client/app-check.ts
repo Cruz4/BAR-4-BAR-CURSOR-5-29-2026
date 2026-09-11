@@ -48,3 +48,8 @@ export async function getClientAppCheckToken(forceRefresh = false): Promise<stri
     return null;
   }
 }
+
+export async function applyAppCheckHeader(headers: Headers): Promise<void> {
+  const token = await getClientAppCheckToken();
+  if (token) headers.set('X-Firebase-AppCheck', token);
+}

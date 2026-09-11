@@ -191,6 +191,7 @@ import {
 } from '@/components/guest-try-signup-toast';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
 import { getOrCreateGuestIdentity } from '@/lib/guest-identity';
+import { applyAppCheckHeader } from '@/lib/firebase/client/app-check';
 import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 import { loadPhoneticDictionary } from '@/lib/lyrics-analysis';
 import { MobileLyricsTabBar, type MobileLyricsTab } from '@/components/mobile-lyrics-tab-bar';
@@ -4624,9 +4625,11 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       setGenerating(true, mode === 'starter' ? 'Crafting starter…' : 'Neural Synthesis Active...');
       try {
         const guestIdentity = getOrCreateGuestIdentity();
+        const demoHeaders = new Headers({ 'Content-Type': 'application/json' });
+        await applyAppCheckHeader(demoHeaders);
         const res = await fetch('/api/ai/demo', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: demoHeaders,
           body: JSON.stringify({
             mode: mode === 'starter' ? 'starter' : 'next',
             lines: sheetLines.slice(-6),

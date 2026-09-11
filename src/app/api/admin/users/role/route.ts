@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
 import { isMasterAdminEmail } from '@/lib/server/master-admin';
+import { notifyAdminRoleChange } from '@/lib/server/security-alerts';
 
 export const runtime = 'nodejs';
 
@@ -64,6 +65,13 @@ export async function POST(req: Request) {
     }
 
     await db.doc(`users/${targetUserId}`).set({ role }, { merge: true });
+
+    await notifyAdminRoleChange({
+      actorEmail: admin.email,
+      targetUserId,
+      targetEmail: targetEmail || null,
+      role,
+    });
 
     return NextResponse.json({ ok: true, role, targetUserId });
   } catch (err) {

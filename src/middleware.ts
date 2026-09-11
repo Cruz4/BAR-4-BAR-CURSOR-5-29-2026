@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAppRootSegment } from '@/lib/profile/profile-slug';
+import { matchSecurityCanaryPath } from '@/lib/security-canary-paths';
 
 const PROTECTED_PREFIXES = ['/albums', '/usage', '/admin', '/vault', '/earnings'];
 
@@ -21,6 +22,13 @@ export function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  const canaryPath = matchSecurityCanaryPath(pathname);
+  if (canaryPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/api/security/canary';
+    url.search = `?p=${encodeURIComponent(canaryPath)}`;
+    return NextResponse.rewrite(url);
+  }
 
   if (pathname.startsWith('/profile/')) {
     if (pathname === '/profile/customize' || pathname.startsWith('/profile/customize/')) {

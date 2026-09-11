@@ -76,7 +76,11 @@ async function grantProFeaturePreview(
 }
 
 /** Server-side balance bootstrap — requires FIREBASE_SERVICE_ACCOUNT_KEY locally. */
-export async function initializeUserUsage(idToken: string, userId: string): Promise<void> {
+export async function initializeUserUsage(
+  idToken: string,
+  userId: string,
+  extras?: { ipHash?: string | null }
+): Promise<void> {
   if (!hasAdminFirestoreCredentials()) {
     console.error('[usage-init] Admin Firestore credentials missing — skipping welcome Ink bootstrap');
     return;
@@ -137,6 +141,7 @@ export async function initializeUserUsage(idToken: string, userId: string): Prom
         userId,
         userEmail: userEmail || null,
         method: 'usage_init',
+        ipHash: extras?.ipHash || null,
       });
     } catch (alertErr) {
       console.warn('[usage-init] signup alert skipped', alertErr);

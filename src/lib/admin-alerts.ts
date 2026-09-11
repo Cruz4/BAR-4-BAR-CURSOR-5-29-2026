@@ -3,11 +3,21 @@
 export type AdminAlertKind =
   | 'signup'
   | 'landing_hit'
+  | 'landing_burst'
+  | 'probe'
   | 'pricing_view'
   | 'checkout_started'
   | 'guest_try'
   | 'guest_pressing'
-  | 'lock_funnel';
+  | 'lock_funnel'
+  | 'admin_denied'
+  | 'admin_role'
+  | 'admin_action'
+  | 'admin_device'
+  | 'ink_spike'
+  | 'signup_burst'
+  | 'stripe_risk'
+  | 'blocked_ai';
 
 export type AdminAlert = {
   id: string;

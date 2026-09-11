@@ -1,4 +1,5 @@
 import { auth } from '@/lib/firebase/client/firebase';
+import { applyAppCheckHeader } from '@/lib/firebase/client/app-check';
 
 export async function adminApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const user = auth.currentUser;
@@ -10,6 +11,7 @@ export async function adminApiFetch(path: string, init: RequestInit = {}): Promi
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+  await applyAppCheckHeader(headers);
 
   return fetch(path, { ...init, headers });
 }

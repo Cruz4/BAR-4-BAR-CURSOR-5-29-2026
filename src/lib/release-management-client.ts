@@ -1,6 +1,7 @@
 'use client';
 
 import { auth } from '@/lib/firebase/client/firebase';
+import { adminApiFetch } from '@/lib/admin-client';
 
 export const RELEASE_VISIBILITY_CHANGED_EVENT = 'b4b:release-visibility-changed';
 
@@ -52,12 +53,8 @@ export async function pingHouseRelease(shareId: string): Promise<{
 }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Admin sign-in required.');
-  const response = await fetch('/api/admin/house-release-ping', {
+  const response = await adminApiFetch('/api/admin/house-release-ping', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${await user.getIdToken()}`,
-    },
     body: JSON.stringify({ shareId }),
   });
   const result = (await response.json().catch(() => ({}))) as {

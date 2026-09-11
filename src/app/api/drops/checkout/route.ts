@@ -3,6 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, getStripe, verifyCheckoutUser } from '@/lib/stripe-server';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 import { getPublicAppUrl } from '@/lib/app-url';
+import { withCheckoutCard3ds } from '@/lib/stripe-checkout-security';
 import {
   assertPaidAmount,
   BAR4BAR_FIRST_DROPS,
@@ -143,7 +144,7 @@ export async function POST(req: Request) {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create(sessionParams);
+      session = await stripe.checkout.sessions.create(withCheckoutCard3ds(sessionParams));
     } catch (createErr) {
       if (sessionParams.payment_intent_data) {
         console.warn('[drops/checkout] destination charge failed, holding payout', createErr);
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
           ...sessionParams.metadata,
           payoutMode: 'held',
         };
-        session = await stripe.checkout.sessions.create(sessionParams);
+        session = await stripe.checkout.sessions.create(withCheckoutCard3ds(sessionParams));
       } else {
         throw createErr;
       }

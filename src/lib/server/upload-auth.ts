@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { getAppCheck } from 'firebase-admin/app-check';
-import { getAdminApp, getAuth } from '@/lib/firebase/server';
+import { getAuth } from '@/lib/firebase/server';
+import { AppCheckError, enforceAppCheck, shouldEnforceAppCheck } from '@/lib/server/app-check-gate';
 
 export class UploadAuthError extends Error {
   status: number;
@@ -13,11 +13,7 @@ export class UploadAuthError extends Error {
   }
 }
 
-export function shouldEnforceUploadAppCheck(): boolean {
-  if (process.env.UPLOAD_APP_CHECK_ENFORCE === 'false') return false;
-  if (process.env.NODE_ENV === 'development') return process.env.UPLOAD_APP_CHECK_ENFORCE === 'true';
-  return Boolean(process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY?.trim());
-}
+export { shouldEnforceAppCheck as shouldEnforceUploadAppCheck };
 
 /** Verifies Firebase ID token + optional App Check for upload ticket APIs. */
 export async function verifyUploadRequest(req: Request): Promise<{ uid: string }> {
@@ -29,19 +25,15 @@ export async function verifyUploadRequest(req: Request): Promise<{ uid: string }
   const token = header.slice('Bearer '.length).trim();
   const auth = await getAuth();
   const decoded = await auth.verifyIdToken(token);
-  const uid = decoded.uid;
 
-  if (shouldEnforceUploadAppCheck()) {
-    const appCheckToken = req.headers.get('x-firebase-appcheck')?.trim();
-    if (!appCheckToken) {
-      throw new UploadAuthError('App verification failed. Refresh and try again.', 403);
+  try {
+    await enforceAppCheck(req);
+  } catch (error) {
+    if (error instanceof AppCheckError) {
+      throw new UploadAuthError(error.message, 403);
     }
-    try {
-      await getAppCheck(getAdminApp()).verifyToken(appCheckToken);
-    } catch {
-      throw new UploadAuthError('App verification failed. Refresh and try again.', 403);
-    }
+    throw error;
   }
 
-  return { uid };
+  return { uid: decoded.uid };
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest, AdminAuthError } from '@/lib/server/admin-auth';
 import { hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { eradicateUserIdentity } from '@/lib/server/eradicate-user';
+import { notifyAdminEradicate } from '@/lib/server/security-alerts';
 
 export const runtime = 'nodejs';
 
@@ -34,6 +35,11 @@ export async function POST(req: Request) {
 
   try {
     const result = await eradicateUserIdentity(targetUserId, admin.email, { mode: 'admin' });
+    await notifyAdminEradicate({
+      actorEmail: admin.email,
+      targetUserId,
+      detail: `${result.albumsDeleted} albums, ${result.tracksDeleted} tracks, auth=${result.authDeleted}`,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Eradication failed';

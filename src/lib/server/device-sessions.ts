@@ -82,6 +82,7 @@ export async function touchDeviceSession(options: {
   let active = true;
   let createdAt = now;
   let lastSeenAt = now;
+  let isNewSession = false;
 
   await db.runTransaction(async (transaction) => {
     const controlSnap = await transaction.get(db.doc(sessionControlPath(decoded.uid)));
@@ -97,6 +98,8 @@ export async function touchDeviceSession(options: {
       active = false;
       return;
     }
+
+    isNewSession = !existing;
 
     createdAt = existing?.createdAt || now;
     lastSeenAt = existing?.lastSeenAt || now;
@@ -124,6 +127,16 @@ export async function touchDeviceSession(options: {
       { merge: true }
     );
   });
+
+  if (isNewSession && active) {
+    const { notifyAdminNewDevice } = await import('@/lib/server/security-alerts');
+    void notifyAdminNewDevice({
+      email: decoded.email || null,
+      uid: decoded.uid,
+      browser: device.browser,
+      operatingSystem: device.operatingSystem,
+    });
+  }
 
   return active
     ? publicSession(

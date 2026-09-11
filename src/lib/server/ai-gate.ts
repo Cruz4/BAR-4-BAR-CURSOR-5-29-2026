@@ -83,6 +83,8 @@ export async function verifyAiToken(idToken: string, claimedUserId: string): Pro
       const db = await getDb();
       const userSnap = await db.doc(`users/${decoded.uid}`).get();
       if (userSnap.exists && userSnap.data()?.status === 'blocked') {
+        const { notifyBlockedAiHit } = await import('@/lib/server/security-alerts');
+        void notifyBlockedAiHit({ userId: decoded.uid, email: decoded.email || null });
         throw new AiGateError('Account suspended.', 'AUTH');
       }
     } catch (error) {
@@ -176,6 +178,15 @@ export async function deductInkTransaction(
   if (depletedAfterSpend) {
     await recordStudioEvent(uid, 'ink_depletion', { actionName }, userName);
   }
+
+  void import('@/lib/server/security-alerts').then(({ noteInkSpike }) =>
+    noteInkSpike({
+      userId: uid,
+      userName: userName || null,
+      amount: finalAmount,
+      actionName,
+    })
+  );
 
   try {
     const { markUserActivatedIfNeeded } = await import('@/lib/server/milestones');

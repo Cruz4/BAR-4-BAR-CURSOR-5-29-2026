@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { auth } from '@/lib/firebase/client/firebase';
+import { adminApiFetch } from '@/lib/admin-client';
 import { cn } from '@/lib/utils';
 
 type GateFinding = {
@@ -31,12 +31,7 @@ export function AdminProductionGateCard() {
   const run = async () => {
     setBusy(true);
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Sign in as admin.');
-      const token = await user.getIdToken();
-      const res = await fetch('/api/admin/production-gate', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminApiFetch('/api/admin/production-gate');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gate failed');
       setReport(data as GateReport);

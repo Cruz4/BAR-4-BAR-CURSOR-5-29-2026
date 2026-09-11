@@ -1,11 +1,15 @@
 'use client';
 
+import { applyAppCheckHeader } from '@/lib/firebase/client/app-check';
+
 type AiFlowInput = Record<string, unknown>;
 
 async function runAiFlow<T>(action: string, input: AiFlowInput): Promise<T> {
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  await applyAppCheckHeader(headers);
   const res = await fetch('/api/ai/run', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ action, input }),
   });
 

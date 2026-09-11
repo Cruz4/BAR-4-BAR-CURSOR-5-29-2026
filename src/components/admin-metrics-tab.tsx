@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase/client/firebase';
+import { adminApiFetch } from '@/lib/admin-client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,15 +119,10 @@ export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
     setLoading(true);
     setError(null);
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Sign in required');
-      const token = await user.getIdToken();
       const params = new URLSearchParams();
       params.set('range', rangeKey);
       if (forceRefresh) params.set('refresh', '1');
-      const res = await fetch(`/api/admin/metrics?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminApiFetch(`/api/admin/metrics?${params.toString()}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Failed (${res.status})`);
@@ -185,15 +180,8 @@ export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
   const saveMarketing = async () => {
     setSavingMarketing(true);
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      await fetch('/api/admin/marketing', {
+      await adminApiFetch('/api/admin/marketing', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           adSpend30d: parseFloat(adSpend30d) || 0,
           adSpend90d: parseFloat(adSpend90d) || 0,

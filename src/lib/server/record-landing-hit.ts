@@ -9,7 +9,14 @@ const COLLECTION = 'studio_landing_hits';
 export async function recordLandingHit(
   ref: string,
   path: string,
-  guest?: { guestId?: string | null; guestAlias?: string | null }
+  guest?: {
+    guestId?: string | null;
+    guestAlias?: string | null;
+    ipHash?: string | null;
+    uaFamily?: string | null;
+    botLikely?: boolean;
+    sameOrigin?: boolean;
+  }
 ): Promise<void> {
   if (!hasAdminFirestoreCredentials()) return;
   const normalizedRef =
@@ -25,6 +32,10 @@ export async function recordLandingHit(
       path: path.slice(0, 120),
       guestId: guest?.guestId || null,
       guestAlias: guest?.guestAlias || null,
+      ipHash: guest?.ipHash || null,
+      uaFamily: guest?.uaFamily || null,
+      botLikely: Boolean(guest?.botLikely),
+      sameOrigin: Boolean(guest?.sameOrigin),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

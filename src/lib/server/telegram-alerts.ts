@@ -21,11 +21,21 @@ type TelegramAlertInput = {
 const KIND_HEADLINE: Record<AdminAlertKind, string> = {
   signup: '🆕 New signup',
   landing_hit: '👀 Page visit',
+  landing_burst: '⚠️ Visit burst',
+  probe: '🪤 Scanner path',
   pricing_view: '💰 Pricing page',
   checkout_started: '🛒 Checkout started',
   guest_try: '🎤 Demo sheet',
   guest_pressing: '🏠 Profile sandbox',
   lock_funnel: '🔐 Finish-the-bar',
+  admin_denied: '🛡️ Admin door denied',
+  admin_role: '👑 Admin role change',
+  admin_action: '🚨 Admin action',
+  admin_device: '📱 Admin new device',
+  ink_spike: '🧪 Ink spike',
+  signup_burst: '📈 Signup burst',
+  stripe_risk: '💳 Stripe risk',
+  blocked_ai: '🚫 Blocked account → AI',
 };
 
 function telegramConfigured(): boolean {
@@ -69,7 +79,19 @@ function formatTelegramText(input: TelegramAlertInput): string {
     lines.push(`ref: ${input.refLabel || input.ref}`);
   }
   if (input.path) lines.push(`path: ${input.path}`);
-  if (input.detail && input.kind === 'signup') lines.push(input.detail);
+  if (
+    input.method &&
+    (input.kind === 'landing_burst' ||
+      input.kind === 'probe' ||
+      input.kind === 'admin_denied' ||
+      input.kind === 'admin_device' ||
+      input.kind === 'stripe_risk')
+  ) {
+    lines.push(`client: ${input.method}`);
+  }
+  if (input.detail && (input.kind === 'signup' || input.kind === 'admin_denied')) {
+    lines.push(input.detail);
+  }
   if (input.userId) lines.push(`uid: ${input.userId.slice(0, 12)}…`);
   return lines.join('\n');
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import type { AdminAlert } from '@/lib/admin-alerts';
+import { adminApiFetch } from '@/lib/admin-client';
 
 const CURSOR_KEY = 'b4b_admin_alerts_cursor';
 const POLL_MS = 20_000;
@@ -48,6 +48,16 @@ function alertTitle(kind: AdminAlert['kind']): string {
   if (kind === 'guest_try') return 'Demo sheet';
   if (kind === 'guest_pressing') return 'Profile sandbox';
   if (kind === 'lock_funnel') return 'Finish this bar';
+  if (kind === 'landing_burst') return 'Visit burst';
+  if (kind === 'probe') return 'Scanner path';
+  if (kind === 'admin_denied') return 'Admin door denied';
+  if (kind === 'admin_role') return 'Admin role change';
+  if (kind === 'admin_action') return 'Admin action';
+  if (kind === 'admin_device') return 'Admin new device';
+  if (kind === 'ink_spike') return 'Ink spike';
+  if (kind === 'signup_burst') return 'Signup burst';
+  if (kind === 'stripe_risk') return 'Stripe risk';
+  if (kind === 'blocked_ai') return 'Blocked account hit AI';
   return 'Page visit';
 }
 
@@ -85,14 +95,10 @@ export function AdminAlertListener() {
     let cancelled = false;
 
     const poll = async () => {
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser || cancelled) return;
+      if (cancelled) return;
       try {
-        const token = await firebaseUser.getIdToken();
         const since = cursorRef.current;
-        const res = await fetch(`/api/admin/alerts?since=${encodeURIComponent(since)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await adminApiFetch(`/api/admin/alerts?since=${encodeURIComponent(since)}`);
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { alerts?: AdminAlert[] };
         const alerts = data.alerts || [];

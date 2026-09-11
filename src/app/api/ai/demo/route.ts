@@ -8,6 +8,7 @@ import { GUEST_FUNNEL_EVENTS } from '@/lib/guest-funnel-events';
 import { recordGuestFunnelEvent } from '@/lib/server/record-guest-funnel-event';
 import { normalizeMarketingRef } from '@/lib/marketing-attribution';
 import { guestAliasFromId, normalizeGuestAlias, normalizeGuestId } from '@/lib/guest-identity';
+import { AppCheckError, enforceAppCheck } from '@/lib/server/app-check-gate';
 
 export const runtime = 'nodejs';
 
@@ -153,6 +154,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  try {
+    await enforceAppCheck(req);
+  } catch (error) {
+    if (error instanceof AppCheckError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
+
   let body: {
     lines?: unknown;
     mode?: unknown;

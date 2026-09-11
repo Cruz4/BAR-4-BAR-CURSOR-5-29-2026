@@ -23,6 +23,9 @@ const EVENTS = [
   'customer.subscription.updated',
   'customer.subscription.deleted',
   'account.updated',
+  'charge.dispute.created',
+  'payout.failed',
+  'radar.early_fraud_warning.created',
 ];
 
 function loadEnv() {

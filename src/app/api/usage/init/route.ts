@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { initializeUserUsage } from '@/lib/server/usage-init';
 import { getAuth, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
+import { clientIpFromRequest, hashVisitorIp } from '@/lib/server/visit-fingerprint';
 
 export const runtime = 'nodejs';
 
@@ -42,7 +43,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'userId required' }, { status: 400 });
     }
 
-    await initializeUserUsage(idToken, userId);
+    await initializeUserUsage(idToken, userId, {
+      ipHash: hashVisitorIp(clientIpFromRequest(req)),
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[usage/init]', err);

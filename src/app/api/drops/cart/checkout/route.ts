@@ -4,6 +4,7 @@ import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, getStripe, verifyCheckoutUser } from '@/lib/stripe-server';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 import { getPublicAppUrl } from '@/lib/app-url';
+import { withCheckoutCard3ds } from '@/lib/stripe-checkout-security';
 import {
   assertPaidAmount,
   BAR4BAR_FIRST_DROPS,
@@ -199,7 +200,7 @@ export async function POST(req: Request) {
     if (email) sessionParams.customer_email = email;
 
     try {
-      const session = await stripe.checkout.sessions.create(sessionParams, {
+      const session = await stripe.checkout.sessions.create(withCheckoutCard3ds(sessionParams), {
         idempotencyKey: `drop-cart-checkout-${orderRef.id}`,
       });
       await orderRef.update({ stripeSessionId: session.id, updatedAt: new Date().toISOString() });

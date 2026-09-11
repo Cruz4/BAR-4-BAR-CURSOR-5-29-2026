@@ -29,6 +29,7 @@ import {
   persistConnectStatus,
 } from '@/lib/server/stripe-connect';
 import { releaseHeldDropEarnings } from '@/lib/server/drop-earnings';
+import { notifyStripeRisk } from '@/lib/server/security-alerts';
 
 export const runtime = 'nodejs';
 
@@ -267,6 +268,35 @@ export async function POST(req: Request) {
             console.warn('[stripe/webhook] held earnings release', artistId, err);
           }
         }
+        break;
+      }
+
+      case 'charge.dispute.created': {
+        const dispute = event.data.object as Stripe.Dispute;
+        const amountUsd = ((dispute.amount || 0) / 100).toFixed(2);
+        void notifyStripeRisk({
+          eventType: event.type,
+          detail: `Dispute opened for $${amountUsd} (${dispute.reason || 'unknown reason'}) charge ${dispute.charge}`,
+        });
+        break;
+      }
+
+      case 'payout.failed': {
+        const payout = event.data.object as Stripe.Payout;
+        const amountUsd = ((payout.amount || 0) / 100).toFixed(2);
+        void notifyStripeRisk({
+          eventType: event.type,
+          detail: `Payout failed for $${amountUsd}${payout.failure_message ? ` — ${payout.failure_message}` : ''}`,
+        });
+        break;
+      }
+
+      case 'radar.early_fraud_warning.created': {
+        const warning = event.data.object as Stripe.Radar.EarlyFraudWarning;
+        void notifyStripeRisk({
+          eventType: event.type,
+          detail: `Early fraud warning (${warning.fraud_type || 'unknown'}) on charge ${warning.charge}`,
+        });
         break;
       }
 
