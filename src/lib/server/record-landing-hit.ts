@@ -16,6 +16,10 @@ export async function recordLandingHit(
     uaFamily?: string | null;
     botLikely?: boolean;
     sameOrigin?: boolean;
+    userId?: string | null;
+    userName?: string | null;
+    userEmail?: string | null;
+    referrer?: string | null;
   }
 ): Promise<void> {
   if (!hasAdminFirestoreCredentials()) return;
@@ -36,6 +40,10 @@ export async function recordLandingHit(
       uaFamily: guest?.uaFamily || null,
       botLikely: Boolean(guest?.botLikely),
       sameOrigin: Boolean(guest?.sameOrigin),
+      userId: guest?.userId || null,
+      userName: guest?.userName || null,
+      userEmail: guest?.userEmail || null,
+      referrer: guest?.referrer ? guest.referrer.slice(0, 240) : null,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

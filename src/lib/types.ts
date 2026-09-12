@@ -12,6 +12,8 @@ export interface User {
   photoURL?: string;
   createdAt: string; // ISO 8601 string
   trialStartedAt?: string | null; // Legacy internal trial — no longer set on signup
+  /** ISO timestamp — last Firebase Auth sign-in. */
+  lastSignInAt?: string | null;
   albums?: Album[];
   role?: 'admin' | 'artist';
   status?: 'active' | 'blocked';

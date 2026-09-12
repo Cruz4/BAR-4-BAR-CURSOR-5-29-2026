@@ -284,7 +284,12 @@ function trackSocialEvent(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ event, userId: user.uid, metadata }),
+        body: JSON.stringify({
+          event,
+          userId: user.uid,
+          userName: user.displayName || 'Artist',
+          metadata,
+        }),
       })
     )
     .catch(() => undefined);

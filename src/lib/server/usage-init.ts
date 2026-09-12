@@ -93,11 +93,16 @@ export async function initializeUserUsage(
   let authEmailVerified = decoded.email_verified === true;
   let userRecordEmail = '';
   let authDisplayName = '';
+  let authLastSignInAt = '';
   try {
     const userRecord = await auth.getUser(userId);
     authEmailVerified = authEmailVerified || userRecord.emailVerified === true;
     userRecordEmail = userRecord.email?.trim() || '';
     authDisplayName = userRecord.displayName?.trim() || '';
+    if (userRecord.metadata.lastSignInTime) {
+      const at = new Date(userRecord.metadata.lastSignInTime);
+      if (!Number.isNaN(at.getTime())) authLastSignInAt = at.toISOString();
+    }
   } catch {
     // Keep token claim when Admin lookup fails.
   }
@@ -127,6 +132,9 @@ export async function initializeUserUsage(
       identityPatch.displayName = authDisplayName || 'Anonymous Artist';
     }
     if (!userData?.status) identityPatch.status = 'active';
+    if (authLastSignInAt && authLastSignInAt !== userData?.lastSignInAt) {
+      identityPatch.lastSignInAt = authLastSignInAt;
+    }
     if (Object.keys(identityPatch).length > 0) {
       identityPatch.updatedAt = new Date().toISOString();
       await userRef.set(identityPatch, { merge: true });

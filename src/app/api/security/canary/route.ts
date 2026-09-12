@@ -33,7 +33,10 @@ async function handleCanary(req: Request) {
         kind: 'probe',
         path,
         method: ua.family,
-        detail: ua.botLikely ? 'bot-like client' : 'browser-like client',
+        ipHash,
+        detail: ua.botLikely
+          ? 'bot-like client probing a bait path (WordPress/php/.env). That hole does not exist here.'
+          : 'browser-like client probing a bait path (WordPress/php/.env). That hole does not exist here.',
       });
     }
   } catch (err) {

@@ -13,4 +13,6 @@ export type AdminGamificationRosterEntry = {
   /** Artist Home live on the public Scene. */
   publicProfile: boolean;
   profileSlug?: string;
+  /** ISO — last Firebase Auth sign-in. */
+  lastSignInAt?: string | null;
 };

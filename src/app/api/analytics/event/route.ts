@@ -3,6 +3,7 @@ import { verifyCheckoutUser, CheckoutAuthError } from '@/lib/stripe-server';
 import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { enqueueSignupAlertOnce } from '@/lib/server/signup-alert';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
+import { getAuth } from '@/lib/firebase/server';
 import type { AnalyticsEventName } from '@/lib/analytics-events';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 import { clientIpFromRequest, hashVisitorIp } from '@/lib/server/visit-fingerprint';
@@ -60,11 +61,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Too many analytics events.' }, { status: 429 });
     }
 
-    await recordStudioEvent(uid, event, metadata || {}, userName);
-
-    const auth = await import('@/lib/firebase/server').then((m) => m.getAuth());
+    const auth = await getAuth();
     const userRecord = await auth.getUser(uid).catch(() => null);
     const userEmail = userRecord?.email || null;
+    const resolvedName =
+      (typeof userName === 'string' && userName.trim()) ||
+      userRecord?.displayName?.trim() ||
+      'Artist';
+
+    await recordStudioEvent(uid, event, metadata || {}, resolvedName);
 
     if (event === 'signup') {
       const ref = typeof metadata?.ref === 'string' ? metadata.ref : null;

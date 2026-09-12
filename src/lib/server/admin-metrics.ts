@@ -57,6 +57,8 @@ type AdminUserDoc = {
   id: string;
   status?: string;
   createdAt?: unknown;
+  displayName?: string;
+  email?: string;
   signupAttribution?: string;
   proTrialWinCompletedAt?: string;
   subscriptionStatus?: 'active' | 'canceled' | 'none';
@@ -695,16 +697,23 @@ export async function computeAdminMetrics(
     openToSignupCtaPercent: pct(lockSignupCtas, lockOpens),
   };
 
+  const usersById = new Map(users.map((u) => [u.id, u]));
   const recentEvents = eventDocs
     .filter((doc) => inPeriod(parseDate(doc.data().timestamp), periodStart))
     .slice(0, 25)
     .map((doc) => {
       const data = doc.data();
+      const userId = String(data.userId || '');
+      const roster = usersById.get(userId);
       return {
         timestamp: String(data.timestamp || ''),
         event: String(data.event || ''),
-        userId: String(data.userId || ''),
-        userName: data.userName ? String(data.userName) : null,
+        userId,
+        userName:
+          (data.userName ? String(data.userName) : null) ||
+          roster?.displayName ||
+          roster?.email ||
+          null,
         metadata: (data.metadata as Record<string, unknown>) || {},
       };
     });

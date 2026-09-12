@@ -144,19 +144,19 @@ export function SceneDiscoverCard({
           </div>
           <div
             className={cn(
-              'flex shrink-0 items-center gap-1.5',
-              immersive ? 'justify-end pl-[4.25rem]' : ''
+              'relative z-10 flex shrink-0 items-center gap-1.5',
+              immersive ? 'flex-wrap justify-end pl-[4.25rem]' : ''
             )}
+            onPointerDown={immersive ? (event) => event.stopPropagation() : undefined}
+            onClick={immersive ? (event) => event.stopPropagation() : undefined}
           >
-            {!immersive ? (
-              <DoorKnockButton
-                compact
-                targetUserId={artist.userId}
-                targetName={artist.displayName}
-                targetSlug={artist.slug}
-                knockerSlug={viewerSlug}
-              />
-            ) : null}
+            <DoorKnockButton
+              compact
+              targetUserId={artist.userId}
+              targetName={artist.displayName}
+              targetSlug={artist.slug}
+              knockerSlug={viewerSlug}
+            />
             <Button size="sm" variant="outline" className="h-8 shrink-0 font-bold uppercase" asChild>
               <Link href={homeHref}>Visit</Link>
             </Button>

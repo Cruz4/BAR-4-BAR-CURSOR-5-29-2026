@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { checkRateLimit } from '@/lib/server/rate-limit';
+import { checkRateLimit, incrementWindowCount } from '@/lib/server/rate-limit';
 
 const IP_RECORD_WINDOW_MS = 5 * 60_000;
 const IP_RECORD_MAX = 20;
@@ -21,25 +21,26 @@ export async function allowOnce(key: string, windowMs: number): Promise<boolean>
 export async function gateLandingHitRecord(opts: {
   ipHash: string;
   guestRateKey: string;
-}): Promise<{ record: boolean; burst: boolean }> {
-  const burstCount = await checkRateLimit(
+}): Promise<{ record: boolean; burst: boolean; seen: number }> {
+  const seen = await incrementWindowCount(
     `landing-burst:${opts.ipHash}`,
+    1,
     BURST_MAX,
     BURST_WINDOW_MS
   );
-  const burst = !burstCount.allowed;
+  const burst = seen.count > BURST_MAX;
 
   const ipOk = await checkRateLimit(
     `landing-hit-ip:${opts.ipHash}`,
     IP_RECORD_MAX,
     IP_RECORD_WINDOW_MS
   );
-  if (!ipOk.allowed) return { record: false, burst };
+  if (!ipOk.allowed) return { record: false, burst, seen: seen.count };
 
   const guestOk = await checkRateLimit(opts.guestRateKey, GUEST_MAX, GUEST_WINDOW_MS);
-  if (!guestOk.allowed) return { record: false, burst };
+  if (!guestOk.allowed) return { record: false, burst, seen: seen.count };
 
-  return { record: true, burst };
+  return { record: true, burst, seen: seen.count };
 }
 
 export async function gateLandingHitVisitAlert(opts: {

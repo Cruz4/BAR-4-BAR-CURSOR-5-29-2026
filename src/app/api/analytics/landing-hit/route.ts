@@ -15,11 +15,40 @@ import {
   hashVisitorIp,
   isSameOriginRequest,
 } from '@/lib/server/visit-fingerprint';
+import {
+  formatLandingBurstDetail,
+  landingBurstHeadline,
+  summarizeRecentLandingHits,
+} from '@/lib/server/landing-burst-summary';
+import { getAuth } from '@/lib/firebase/server';
 
 export const runtime = 'nodejs';
 
 const VISIT_ALERT_PATHS = new Set(['/', '/pricing', '/login', '/welcome', '/discover']);
 const VOLUME_WINDOW_MS = 10 * 60_000;
+
+async function resolveSignedInVisitor(req: Request): Promise<{
+  userId: string | null;
+  userName: string | null;
+  userEmail: string | null;
+}> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) {
+    return { userId: null, userName: null, userEmail: null };
+  }
+  try {
+    const auth = await getAuth();
+    const decoded = await auth.verifyIdToken(header.slice('Bearer '.length).trim());
+    const record = await auth.getUser(decoded.uid).catch(() => null);
+    return {
+      userId: decoded.uid,
+      userName: record?.displayName?.trim() || decoded.name?.trim() || null,
+      userEmail: record?.email?.trim() || decoded.email?.trim() || null,
+    };
+  } catch {
+    return { userId: null, userName: null, userEmail: null };
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -43,11 +72,13 @@ export async function POST(req: Request) {
     const guestId = normalizeGuestId(body?.guestId);
     const guestAlias =
       normalizeGuestAlias(body?.guestAlias) || (guestId ? guestAliasFromId(guestId) : null);
+    const referrer = typeof body?.referrer === 'string' ? body.referrer.trim().slice(0, 240) : null;
 
     const ip = clientIpFromRequest(req);
     const ipHash = hashVisitorIp(ip);
     const ua = classifyUserAgent(req.headers.get('user-agent'));
     const sameOrigin = isSameOriginRequest(req);
+    const visitor = await resolveSignedInVisitor(req);
 
     const guestRateKey = guestId
       ? `landing-hit:${guestId}:${ref}:${path}`
@@ -56,12 +87,20 @@ export async function POST(req: Request) {
     const gate = await gateLandingHitRecord({ ipHash, guestRateKey });
 
     if (gate.burst && (await allowOnce(`landing-burst-notify:${ipHash}`, BURST_WINDOW_MS))) {
+      const summary = await summarizeRecentLandingHits({ ipHash, seen: gate.seen });
       await enqueueAdminAlert({
         kind: 'landing_burst',
         ref,
         path,
         method: ua.family,
-        detail: ua.botLikely ? 'bot-like client' : 'same network, many guest ids',
+        guestId,
+        guestAlias,
+        userId: visitor.userId,
+        userName: visitor.userName,
+        userEmail: visitor.userEmail,
+        detail: formatLandingBurstDetail(summary),
+        burstHeadline: landingBurstHeadline(summary),
+        ipHash,
       });
     }
 
@@ -76,7 +115,16 @@ export async function POST(req: Request) {
       uaFamily: ua.family,
       botLikely: ua.botLikely,
       sameOrigin,
+      userId: visitor.userId,
+      userName: visitor.userName,
+      userEmail: visitor.userEmail,
+      referrer,
     });
+
+    const memberQuiet =
+      Boolean(visitor.userId) &&
+      ref === 'organic' &&
+      (path === '/' || path === '/discover' || path === '/pricing');
 
     const alerts = await gateLandingHitVisitAlert({
       ipHash,
@@ -85,25 +133,37 @@ export async function POST(req: Request) {
       botLikely: ua.botLikely,
     });
 
-    if (alerts.visit) {
+    if (alerts.visit && !memberQuiet) {
       await enqueueAdminAlert({
         kind: 'landing_hit',
         ref,
         path,
         guestId,
         guestAlias,
+        userId: visitor.userId,
+        userName: visitor.userName,
+        userEmail: visitor.userEmail,
       });
     } else if (
       alerts.volume &&
       !gate.burst &&
+      !memberQuiet &&
       (await allowOnce('landing-hit-volume:global', VOLUME_WINDOW_MS))
     ) {
+      const summary = await summarizeRecentLandingHits({ seen: gate.seen });
       await enqueueAdminAlert({
         kind: 'landing_burst',
         path,
         ref,
         method: ua.family,
-        detail: 'lots of page visits — extras are logged, not pinged',
+        guestId,
+        guestAlias,
+        userId: visitor.userId,
+        userName: visitor.userName,
+        userEmail: visitor.userEmail,
+        detail: formatLandingBurstDetail(summary),
+        burstHeadline: landingBurstHeadline(summary),
+        ipHash,
       });
     }
 

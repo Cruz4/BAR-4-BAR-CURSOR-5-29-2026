@@ -18,6 +18,8 @@ type EnqueueInput = {
   detail?: string | null;
   guestId?: string | null;
   guestAlias?: string | null;
+  burstHeadline?: string | null;
+  ipHash?: string | null;
 };
 
 type RefPresentation = {
@@ -95,9 +97,7 @@ function buildMessage(input: EnqueueInput, refLabel: string | null): string {
     return `${input.method || 'Finish this bar activity'}${via}${detail}`;
   }
   if (input.kind === 'landing_burst') {
-    const page = input.path || 'public pages';
-    const detail = input.detail ? ` — ${input.detail}` : '';
-    return `Many visits from one network on ${page}${detail}`;
+    return input.burstHeadline || input.detail || 'Many public page loads in a short window.';
   }
   if (input.kind === 'probe') {
     return `Scanner requested ${input.path || 'a bait path'}`;
@@ -130,10 +130,20 @@ function buildMessage(input: EnqueueInput, refLabel: string | null): string {
   if (input.kind === 'blocked_ai') {
     return input.detail || 'A blocked account hit AI';
   }
-  const page = input.path || '/';
-  const who = input.guestAlias || 'Visitor';
-  const via = refLabel ? ` from ${refLabel}` : '';
-  return `${who} visited${via} on ${page}`;
+  if (input.kind === 'landing_hit') {
+    const page = input.path || '/';
+    const via = refLabel ? ` from ${refLabel}` : '';
+    if (input.userName || input.userEmail) {
+      const who =
+        input.userName && input.userEmail
+          ? `${input.userName} <${input.userEmail}>`
+          : input.userEmail || input.userName || 'Signed-in artist';
+      return `${who} visited${via} on ${page}`;
+    }
+    const who = input.guestAlias || 'Anonymous visitor';
+    return `${who} visited${via} on ${page}`;
+  }
+  return input.detail || `Alert ${input.kind}`;
 }
 
 export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
@@ -154,6 +164,7 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
     guestAlias: input.guestAlias,
     refLabel: refPresentation.label,
     referralName: refPresentation.referralName,
+    ipHash: input.ipHash,
   });
 
   if (!hasAdminFirestoreCredentials()) return;
@@ -173,6 +184,7 @@ export async function enqueueAdminAlert(input: EnqueueInput): Promise<void> {
       guestId: input.guestId || null,
       guestAlias: input.guestAlias || null,
       refLabel: refPresentation.label,
+      ipHash: input.ipHash || null,
       timestamp,
     });
   } catch (error) {

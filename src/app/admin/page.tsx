@@ -90,7 +90,7 @@ import {
 
 type AdminGamificationStats = AdminGamificationRosterEntry;
 
-type RosterSortKey = 'artist' | 'tier' | 'rank' | 'trophies' | 'streak' | 'joined' | 'residency' | 'permanent';
+type RosterSortKey = 'artist' | 'tier' | 'rank' | 'trophies' | 'streak' | 'joined' | 'lastLogin' | 'residency' | 'permanent';
 type SortDir = 'asc' | 'desc';
 
 const TOTAL_ACHIEVEMENTS = ACHIEVEMENTS.length;
@@ -163,6 +163,11 @@ export default function AdminPage() {
           return dir * ((gamA?.currentStreak ?? 0) - (gamB?.currentStreak ?? 0));
         case 'joined':
           return dir * (userDateSortValue(a.createdAt) - userDateSortValue(b.createdAt));
+        case 'lastLogin':
+          return dir * (
+            userDateSortValue(gamA?.lastSignInAt || a.lastSignInAt) -
+            userDateSortValue(gamB?.lastSignInAt || b.lastSignInAt)
+          );
         case 'residency':
           return dir * ((balances[a.id]?.res || 0) - (balances[b.id]?.res || 0));
         case 'permanent':
@@ -918,6 +923,7 @@ export default function AdminPage() {
                       ['Artist', 'artist'],
                       ['Tier', 'tier'],
                       ['Joined', 'joined'],
+                      ['Last login', 'lastLogin'],
                       ['Rank / XP', 'rank'],
                       ['Trophies', 'trophies'],
                       ['Streak', 'streak'],
@@ -988,6 +994,7 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div className="text-[9px] text-muted-foreground uppercase">{u.email}</div>
+                        <div className="font-code text-[8px] text-muted-foreground/70">{u.id}</div>
                       </TableCell>
                       <TableCell>
                           <div className="space-y-1.5">
@@ -1065,6 +1072,23 @@ export default function AdminPage() {
                                   {joined.time}
                                 </p>
                               )}
+                            </>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const lastLogin = formatUserJoinDate(gam?.lastSignInAt || u.lastSignInAt);
+                          return (
+                            <>
+                              <div className="text-[10px] font-code text-muted-foreground uppercase whitespace-nowrap">
+                                {lastLogin.date}
+                              </div>
+                              {lastLogin.time ? (
+                                <p className="text-[8px] text-muted-foreground/70 font-code normal-case">
+                                  {lastLogin.time}
+                                </p>
+                              ) : null}
                             </>
                           );
                         })()}
@@ -1283,7 +1307,7 @@ export default function AdminPage() {
                     </TableRow>
                     );
                   }) : (
-                    <TableRow><TableCell colSpan={10} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="h-32 text-center text-muted-foreground text-[10px] uppercase tracking-[0.4em]">Searching studio roster...</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

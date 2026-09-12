@@ -2,6 +2,7 @@ import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb, hasAdminFirestoreCredentials } from '@/lib/firebase/server';
+import { loadAuthLastSignInMap } from '@/lib/server/auth-last-sign-in';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
 import { getAchievement, ACHIEVEMENTS } from '@/lib/gamification/achievements';
 import { getDayKey, getMonthKey, getWeekKey } from '@/lib/gamification/challenges';
@@ -1080,14 +1081,23 @@ export async function getAdminGamificationRoster(): Promise<Record<string, Admin
   }
 
   const db = await getDb();
-  const usersSnap = await db.collection('users').get();
+  const [usersSnap, lastSignIn] = await Promise.all([
+    db.collection('users').get(),
+    loadAuthLastSignInMap(),
+  ]);
   const entries = await Promise.all(
     usersSnap.docs.map(async (userDoc) => {
       const profile = userDoc.data() || {};
+      const storedLastSignIn =
+        typeof profile.lastSignInAt === 'string' && profile.lastSignInAt.trim()
+          ? profile.lastSignInAt.trim()
+          : null;
+      const lastSignInAt = lastSignIn[userDoc.id] || storedLastSignIn;
       const base = {
         displayName: String(profile.displayName || 'Artist'),
         email: String(profile.email || ''),
         status: String(profile.status || 'active'),
+        lastSignInAt,
       };
 
       const gamSnap = await db.doc(`users/${userDoc.id}/gamification/summary`).get();

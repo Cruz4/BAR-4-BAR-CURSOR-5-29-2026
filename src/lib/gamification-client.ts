@@ -178,7 +178,12 @@ export async function trackShareCardEvent(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ event: type, userId: user.uid, metadata: metadata || {} }),
+      body: JSON.stringify({
+        event: type,
+        userId: user.uid,
+        userName: user.displayName || 'Artist',
+        metadata: metadata || {},
+      }),
     });
   } catch {
     /* non-blocking */

@@ -16,6 +16,7 @@ type TelegramAlertInput = {
   guestAlias?: string | null;
   refLabel?: string | null;
   referralName?: string | null;
+  ipHash?: string | null;
 };
 
 const KIND_HEADLINE: Record<AdminAlertKind, string> = {
@@ -64,10 +65,21 @@ function formatTelegramText(input: TelegramAlertInput): string {
     }
   }
   if (
+    (input.kind === 'landing_hit' || input.kind === 'landing_burst' || input.kind === 'pricing_view') &&
+    (input.userName || input.userEmail)
+  ) {
+    const who =
+      input.userName && input.userEmail
+        ? `${input.userName} <${input.userEmail}>`
+        : input.userEmail || input.userName || '';
+    if (who) lines.push(`signed-in: ${who}`);
+  }
+  if (
     (input.kind === 'guest_try' ||
       input.kind === 'guest_pressing' ||
       input.kind === 'lock_funnel' ||
       input.kind === 'landing_hit' ||
+      input.kind === 'landing_burst' ||
       input.kind === 'pricing_view') &&
     input.guestAlias
   ) {
@@ -89,10 +101,17 @@ function formatTelegramText(input: TelegramAlertInput): string {
   ) {
     lines.push(`client: ${input.method}`);
   }
-  if (input.detail && (input.kind === 'signup' || input.kind === 'admin_denied')) {
+  if (input.detail && !input.message.includes(input.detail)) {
     lines.push(input.detail);
   }
-  if (input.userId) lines.push(`uid: ${input.userId.slice(0, 12)}…`);
+  if (input.ipHash) lines.push(`same-IP id: ${input.ipHash}`);
+  if (input.userId) {
+    lines.push(
+      input.kind === 'landing_burst' || input.kind === 'landing_hit'
+        ? `uid: ${input.userId}`
+        : `uid: ${input.userId.slice(0, 12)}…`
+    );
+  }
   return lines.join('\n');
 }
 

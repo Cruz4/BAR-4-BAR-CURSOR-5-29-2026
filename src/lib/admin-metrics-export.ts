@@ -1,4 +1,5 @@
 import type { AdminMetricsResponse } from '@/lib/admin-metrics-types';
+import { describeStudioActivity } from '@/lib/admin-activity-detail';
 
 function lines(title: string, rows: Array<[string, string | number | null | undefined]>): string {
   const body = rows
@@ -203,12 +204,12 @@ export function formatAdminMetricsMarkdown(metrics: AdminMetricsResponse): strin
   if (!metrics.recentEvents.length) {
     parts.push(`_None in snapshot._\n`);
   } else {
-    parts.push(`| timestamp | event | userId | userName | metadata |`);
+    parts.push(`| timestamp | event | artist | userId | what they did |`);
     parts.push(`| --- | --- | --- | --- | --- |`);
     for (const ev of metrics.recentEvents) {
-      const meta = JSON.stringify(ev.metadata || {}).replace(/\|/g, '\\|');
+      const summary = describeStudioActivity(ev.event, ev.metadata || {}).replace(/\|/g, '\\|');
       parts.push(
-        `| ${ev.timestamp || '—'} | ${ev.event} | ${ev.userId || '—'} | ${ev.userName || '—'} | ${meta} |`
+        `| ${ev.timestamp || '—'} | ${ev.event} | ${ev.userName || 'Unknown artist'} | ${ev.userId || '—'} | ${summary} |`
       );
     }
     parts.push('');

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Select,
@@ -25,7 +24,6 @@ import {
   Target,
   Activity,
   BarChart3,
-  ArrowRight,
   Megaphone,
   Save,
   Link2,
@@ -40,6 +38,7 @@ import {
   type MetricsRangeKey,
 } from '@/lib/admin-metrics-range';
 import { formatAdminMetricsJson, formatAdminMetricsMarkdown } from '@/lib/admin-metrics-export';
+import { AdminActivitySheet } from '@/components/admin-activity-sheet';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -771,50 +770,7 @@ export function AdminMetricsTab({ embedded = false }: { embedded?: boolean }) {
         </Card>
       </section>
 
-      {/* Recent events */}
-      <section>
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-muted-foreground mb-4 flex items-center gap-2">
-          <ArrowRight className="h-3 w-3" /> Recent analytics events
-        </h3>
-        <Card className="bg-card/40 border-white/10">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Artist</TableHead>
-                  <TableHead>Detail</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {metrics.recentEvents.length > 0 ? (
-                  metrics.recentEvents.map((ev, i) => (
-                    <TableRow key={`${ev.timestamp}-${i}`} className="border-white/5">
-                      <TableCell className="text-[10px] font-code text-muted-foreground">
-                        {ev.timestamp ? format(new Date(ev.timestamp), 'MM/dd HH:mm') : '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-[8px] uppercase">{ev.event}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-bold uppercase">{ev.userName || ev.userId.slice(0, 8)}</TableCell>
-                      <TableCell className="text-[10px] text-muted-foreground font-code truncate max-w-[200px]">
-                        {Object.keys(ev.metadata).length > 0 ? JSON.stringify(ev.metadata) : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                      No events yet — tracking starts as users sign up and use the studio
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </section>
+      <AdminActivitySheet />
     </div>
   );
 }
