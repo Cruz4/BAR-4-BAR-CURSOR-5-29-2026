@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/firebase/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
-import { getLiveDnaDropsForUser } from '@/lib/server/gamification';
+import {
+  isHouseReleaseCreditedToUser,
+  toLinkedHouseRelease,
+  type LinkedHouseRelease,
+} from '@/lib/house-artist-link';
 
 export const runtime = 'nodejs';
 
-/** Linked House releases for an artist profile (Edit Public Page + owner tools). */
+/** House releases owned by or credited to this artist (Edit Public Page + Release Catalog). */
 export async function GET(req: Request) {
   try {
     const userId = new URL(req.url).searchParams.get('userId')?.trim() || '';
@@ -13,19 +18,17 @@ export async function GET(req: Request) {
     }
     await verifyCheckoutUser(req, userId);
 
-    const drops = await getLiveDnaDropsForUser(userId);
-    const house = drops
-      .filter((drop) => drop.houseRelease)
-      .map((drop) => ({
-        shareId: drop.shareId,
-        title: drop.title,
-        type: drop.type,
-        ...(drop.albumTitle ? { albumTitle: drop.albumTitle } : {}),
-        ...(typeof drop.trackCount === 'number' ? { trackCount: drop.trackCount } : {}),
-        releaseLive: Boolean(drop.releaseLive),
-      }));
+    const db = await getDb();
+    const snap = await db.collection('shares').where('houseRelease', '==', true).get();
+    const byId = new Map<string, LinkedHouseRelease>();
+    for (const doc of snap.docs) {
+      const share = (doc.data() || {}) as Record<string, unknown>;
+      if (!isHouseReleaseCreditedToUser(share, userId)) continue;
+      const row = toLinkedHouseRelease(doc.id, share);
+      if (row) byId.set(row.shareId, row);
+    }
 
-    return NextResponse.json({ releases: house });
+    return NextResponse.json({ releases: [...byId.values()] });
   } catch (error) {
     if (error instanceof CheckoutAuthError) {
       return NextResponse.json({ error: error.message }, { status: 401 });

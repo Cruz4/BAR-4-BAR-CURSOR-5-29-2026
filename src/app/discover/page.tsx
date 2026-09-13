@@ -28,6 +28,7 @@ import {
 import type { DiscoveryGraphMode } from '@/lib/discovery-graph';
 import { DISCOVER_PAGE_SIZE } from '@/lib/scene/scene-section-prefs';
 import { LivingPressField } from '@/components/profile/living-press-field';
+import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
 import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 import { cn } from '@/lib/utils';
 import {
@@ -215,10 +216,11 @@ export default function DiscoverPage() {
 
   return (
     <div
-      className="relative min-h-screen w-full overflow-x-clip bg-background"
+      className="relative min-h-screen w-full overflow-x-clip"
       style={guestPressingStyle as React.CSSProperties}
       onClickCapture={handleDiscoverLinkCapture}
     >
+      <SceneBlockAtmosphere energy={Math.min(14, Math.max(3, cards.length))} pulseKey={cards.length} />
       {!user && guestPressing ? <LivingPressField config={guestPressing} /> : null}
       <div className={cn('relative z-10 mx-auto w-full min-w-0 px-3 py-6 sm:px-4 sm:py-8', user ? 'max-w-2xl' : 'grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]')}>
       <main className="min-w-0 space-y-6">

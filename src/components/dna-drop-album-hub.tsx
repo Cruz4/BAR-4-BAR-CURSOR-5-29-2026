@@ -95,7 +95,7 @@ export function DnaDropAlbumHub({
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {tracks.map((track, idx) => {
-              const live = hasActiveDnaDrop(track.shareId);
+              const live = hasActiveDnaDrop(track.shareId) && track.dnaStatus !== 'unlisted';
               const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
               const releasedInAlbum = albumForSale && hasAudio;
               const releaseHref = releasedInAlbum

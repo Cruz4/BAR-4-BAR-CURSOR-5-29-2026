@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
+import { NoLyricsDnaHint } from '@/components/no-lyrics-dna-hint';
+import type { DnaStatus } from '@/lib/types';
 
 const LIVE_TOOLTIP = (
   <>
@@ -18,18 +20,23 @@ const LIVE_TOOLTIP = (
 
 type DnaDropLiveIndicatorProps = {
   shareId?: string | null;
+  dnaStatus?: DnaStatus;
   variant?: 'badge' | 'dot' | 'compact';
   className?: string;
   href?: string;
+  showMissing?: boolean;
 };
 
 export function DnaDropLiveIndicator({
   shareId,
+  dnaStatus,
   variant = 'badge',
   className,
   href,
+  showMissing = false,
 }: DnaDropLiveIndicatorProps) {
-  if (!hasActiveDnaDrop(shareId)) return null;
+  const live = dnaStatus ? dnaStatus === 'live' : hasActiveDnaDrop(shareId);
+  if (!live) return showMissing ? <NoLyricsDnaHint variant="chip" className={className} /> : null;
 
   const indicator =
     variant === 'dot' ? (

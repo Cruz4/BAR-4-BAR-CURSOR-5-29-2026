@@ -49,6 +49,10 @@ export function dnaStatusOf(record: Pick<ReleaseRecord, 'shareId' | 'dnaStatus'>
   return record.dnaStatus || 'live';
 }
 
+export function hasLiveDnaDrop(record: Pick<ReleaseRecord, 'shareId' | 'dnaStatus'>): boolean {
+  return dnaStatusOf(record) === 'live';
+}
+
 export function isReleasePublic(record: ReleaseRecord): boolean {
   return releaseStatusOf(record) === 'live';
 }
@@ -327,4 +331,19 @@ function classifyTrack(groups: VaultReleaseGroups, album: Album, track: Track): 
     }
   } else if (dnaStatusOf(track) === 'live') groups.dnaPreviews.push({ album, track });
   else groups.unpressed.push({ album, track });
+}
+
+export function findVaultReleaseByShareId(
+  albums: Album[],
+  shareId: string
+): { album: Album; track?: Track } | undefined {
+  const needle = shareId.trim();
+  if (!needle) return undefined;
+  for (const album of albums) {
+    if (releaseShareIdOf({ ...album, tracks: album.tracks }) === needle) return { album };
+    for (const track of album.tracks || []) {
+      if (releaseShareIdOf(track) === needle) return { album, track };
+    }
+  }
+  return undefined;
 }

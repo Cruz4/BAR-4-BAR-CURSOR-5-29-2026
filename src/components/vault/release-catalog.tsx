@@ -1,16 +1,29 @@
 'use client';
 
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ChevronDown, Disc3, ExternalLink, FileText, Link2, Loader, Music, Radio, Settings2, Trash2, Unlink } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Disc3, ExternalLink, FileText, Gift, Link2, Loader, Music, Radio, Settings2, Trash2, Unlink } from 'lucide-react';
 import { DataContext } from '@/context/data-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/client/firebase';
 import { attachReleaseToSheet, manageRelease } from '@/lib/release-management-client';
-import { groupVaultReleases, hasLyrics, releaseShareIdOf, releaseStatusOf, type VaultReleaseGroups } from '@/lib/release-management';
+import {
+  findVaultReleaseByShareId,
+  groupVaultReleases,
+  hasLyrics,
+  releaseShareIdOf,
+  releaseStatusOf,
+  type VaultReleaseGroups,
+} from '@/lib/release-management';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { fetchArtistHomeConfig, saveArtistHomeConfigClient } from '@/lib/profile/artist-home-client';
+import { isHouseReleaseVisibleOnHome, type LinkedHouseRelease } from '@/lib/house-artist-link';
+import { pressedSongHref } from '@/lib/pressed-song';
 import type { Album, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -120,6 +133,66 @@ function asRows(value: VaultReleaseGroups[keyof VaultReleaseGroups]): Row[] {
   return value.map((item) => ('album' in item ? item : { album: item as Album }));
 }
 
+type HouseCatalogRow = LinkedHouseRelease & {
+  vault?: Row;
+};
+
+function vaultHouseRows(albums: Album[]): HouseCatalogRow[] {
+  const rows: HouseCatalogRow[] = [];
+  const seen = new Set<string>();
+  const push = (shareId: string | undefined, row: HouseCatalogRow) => {
+    const id = shareId?.trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    rows.push({ ...row, shareId: id });
+  };
+  for (const album of albums) {
+    const albumRecord = { ...album, tracks: album.tracks };
+    const albumShareId = releaseShareIdOf(albumRecord);
+    const albumStatus = releaseStatusOf(albumRecord);
+    if (album.houseRelease && albumShareId && (albumStatus === 'live' || albumStatus === 'unlisted')) {
+      push(albumShareId, {
+        shareId: '',
+        title: album.title || 'Untitled album',
+        type: 'album',
+        trackCount: album.tracks.length,
+        releaseLive: albumStatus === 'live',
+        vault: { album },
+      });
+    }
+    for (const track of album.tracks || []) {
+      const trackStatus = releaseStatusOf(track);
+      if (!track.houseRelease || (trackStatus !== 'live' && trackStatus !== 'unlisted')) continue;
+      const trackShareId = releaseShareIdOf(track);
+      if (trackShareId && trackShareId === albumShareId) continue;
+      push(trackShareId, {
+        shareId: '',
+        title: track.title || 'Untitled',
+        type: 'track',
+        albumTitle: album.title,
+        ...(albumShareId ? { albumShareId } : {}),
+        releaseLive: trackStatus === 'live',
+        vault: { album, track },
+      });
+    }
+  }
+  return rows;
+}
+
+function collapseHouseCatalogRows(rows: HouseCatalogRow[]): HouseCatalogRow[] {
+  const albumIds = new Set(rows.filter((row) => row.type === 'album').map((row) => row.shareId));
+  return rows.filter((row) => {
+    if (row.type !== 'track') return true;
+    if (albumIds.has(row.shareId)) return false;
+    if (row.albumShareId && albumIds.has(row.albumShareId)) return false;
+    const parentShare = row.vault?.album
+      ? releaseShareIdOf({ ...row.vault.album, tracks: row.vault.album.tracks })
+      : undefined;
+    if (parentShare && albumIds.has(parentShare)) return false;
+    return true;
+  });
+}
+
 type ReleaseCatalogDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -128,6 +201,7 @@ type ReleaseCatalogDialogProps = {
 
 function ReleaseCatalogBody({ className }: { className?: string }) {
   const { albums, updateAlbum, updateTrack, deleteTrack, moveTrack, flushCloudNow } = useContext(DataContext);
+  const { user } = useAuth();
   const { toast } = useToast();
   const groups = useMemo(() => groupVaultReleases(albums), [albums]);
   const lyricSheets = useMemo(
@@ -138,6 +212,59 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   const [unpress, setUnpress] = useState<UnpressTarget | null>(null);
   const [remove, setRemove] = useState<RemoveTarget | null>(null);
   const [attach, setAttach] = useState<Row | null>(null);
+  const [linkedHouse, setLinkedHouse] = useState<LinkedHouseRelease[]>([]);
+  const [hiddenHouseIds, setHiddenHouseIds] = useState<string[]>([]);
+  const [houseHomeBusy, setHouseHomeBusy] = useState('');
+
+  useEffect(() => {
+    if (!user?.id) {
+      setLinkedHouse([]);
+      setHiddenHouseIds([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const current = auth.currentUser;
+        if (!current || current.uid !== user.id) return;
+        const token = await current.getIdToken();
+        const [houseRes, homeConfig] = await Promise.all([
+          fetch(`/api/profile/house-releases?userId=${encodeURIComponent(user.id)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetchArtistHomeConfig().catch(() => null),
+        ]);
+        const data = (await houseRes.json().catch(() => ({}))) as { releases?: LinkedHouseRelease[] };
+        if (cancelled) return;
+        setLinkedHouse(houseRes.ok && Array.isArray(data.releases) ? data.releases : []);
+        setHiddenHouseIds(homeConfig?.featured.hiddenHouseReleaseShareIds || []);
+      } catch {
+        if (!cancelled) setLinkedHouse([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const houseRows = useMemo(() => {
+    const byId = new Map<string, HouseCatalogRow>();
+    for (const row of vaultHouseRows(albums)) byId.set(row.shareId, row);
+    for (const item of linkedHouse) {
+      const existing = byId.get(item.shareId);
+      if (existing) {
+        byId.set(item.shareId, { ...existing, ...item, vault: existing.vault });
+        continue;
+      }
+      byId.set(item.shareId, {
+        ...item,
+        vault: findVaultReleaseByShareId(albums, item.shareId),
+      });
+    }
+    return collapseHouseCatalogRows([...byId.values()]);
+  }, [albums, linkedHouse]);
+
+  const houseShareIds = useMemo(() => new Set(houseRows.map((row) => row.shareId)), [houseRows]);
 
   const unpressRelease = async (hideDna: boolean) => {
     if (!unpress) return;
@@ -258,17 +385,21 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
     () =>
       GROUPS.map((group) => ({
         ...group,
-        rows: asRows(groups[group.key]),
+        rows: asRows(groups[group.key]).filter((row) => {
+          const shareId = releaseShareIdOf(row.track || { ...row.album, tracks: row.album.tracks });
+          return !shareId || !houseShareIds.has(shareId);
+        }),
         style: GROUP_STYLE[group.key],
         Icon: groupIcon(group.key),
       })),
-    [groups]
+    [groups, houseShareIds]
   );
 
-  const totalCount = useMemo(
+  const vaultCount = useMemo(
     () => groupRows.reduce((sum, group) => sum + group.rows.length, 0),
     [groupRows]
   );
+  const totalCount = vaultCount + houseRows.length;
 
   const activeGroups = useMemo(
     () => groupRows.filter((group) => group.rows.length > 0),
@@ -280,10 +411,35 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
     [groupRows]
   );
 
-  const scrollToGroup = (key: GroupKey) => {
+  const scrollToGroup = (key: GroupKey | 'house') => {
     document.getElementById(`release-catalog-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     const node = document.getElementById(`release-catalog-${key}`) as HTMLDetailsElement | null;
     if (node) node.open = true;
+  };
+
+  const setHouseOnHome = async (shareId: string, visible: boolean) => {
+    setHouseHomeBusy(shareId);
+    try {
+      const config = await fetchArtistHomeConfig();
+      const prev = [...(config.featured.hiddenHouseReleaseShareIds || [])];
+      const next = visible ? prev.filter((id) => id !== shareId) : [...new Set([...prev, shareId])];
+      if (!next.length) delete config.featured.hiddenHouseReleaseShareIds;
+      else config.featured.hiddenHouseReleaseShareIds = next;
+      await saveArtistHomeConfigClient(config);
+      setHiddenHouseIds(next);
+      toast({
+        title: visible ? 'Showing on Artist Home' : 'Hidden from Artist Home',
+        description: 'Members keep this House release in Library either way.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not update Artist Home',
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setHouseHomeBusy('');
+    }
   };
 
   const renderRows = (key: GroupKey, rows: Row[]) => (
@@ -367,7 +523,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       key={key}
       id={`release-catalog-${key}`}
       className={cn(
-        'group scroll-mt-3 overflow-hidden rounded-xl border shadow-sm',
+        'group h-fit scroll-mt-3 self-start overflow-hidden rounded-xl border shadow-sm',
         style.border,
         style.surface,
         rows.length === 0 && opts?.compactEmpty && 'opacity-70'
@@ -397,6 +553,90 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
     </details>
   );
 
+  const renderHouseCard = () => (
+    <details
+      id="release-catalog-house"
+      className="group h-fit scroll-mt-3 self-start overflow-hidden rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-500/[0.14] via-cyan-950/25 to-black/30 shadow-sm"
+      open
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/15 text-cyan-200">
+          <Gift className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold uppercase tracking-wide text-foreground">House catalog · linked to you</span>
+          <span className="block text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            Free Library releases credited to your page. Update ones in your vault, or show/hide linked ones on Artist Home.
+          </span>
+        </span>
+        <span className="rounded-full border border-cyan-400/35 bg-cyan-400/15 px-2 py-1 font-code text-xs font-bold text-cyan-100">
+          {houseRows.length}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <ul className="space-y-2 border-t border-white/10 p-2.5">
+        {houseRows.map((row) => {
+          const vault = row.vault;
+          const album = vault?.album;
+          const track = vault?.track;
+          const onHome = isHouseReleaseVisibleOnHome(row.shareId, hiddenHouseIds);
+          const href = row.type === 'album' ? `/share/${row.shareId}` : pressedSongHref(row.shareId);
+          return (
+            <li key={row.shareId} className="rounded-lg border border-cyan-400/20 bg-slate-950/75 p-2.5">
+              <div className="flex min-w-0 items-start gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-bold">{row.title}</span>
+                  <span className="block truncate font-code text-[11px] uppercase tracking-wider text-muted-foreground sm:text-xs">
+                    House · Free
+                    {row.type === 'album' ? ` · Album · ${row.trackCount || 0} tracks` : row.albumTitle ? ` · ${row.albumTitle}` : ' · Single'}
+                    {row.releaseLive ? ' · live' : ' · Library only'}
+                    {album ? '' : ' · Linked to your page'}
+                  </span>
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <Button asChild size="sm" variant="secondary" className="h-9 text-xs font-bold uppercase">
+                  <Link href={href}><ExternalLink className="mr-1 h-3 w-3" /> Open release</Link>
+                </Button>
+                {album ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 text-xs font-bold uppercase"
+                      onClick={() => openFirstDropLathe({
+                        albumId: album.id,
+                        ...(track ? { trackId: track.id } : { mode: 'album' as const }),
+                      })}
+                    >
+                      <Settings2 className="mr-1 h-3 w-3" /> Update
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300"
+                      onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}
+                    >
+                      <Unlink className="mr-1 h-3 w-3" /> Take offline
+                    </Button>
+                  </>
+                ) : null}
+                <label className="ml-auto inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/25 bg-cyan-500/10 px-2.5 text-[10px] font-bold uppercase tracking-wide text-cyan-100">
+                  <span>{onHome ? 'On your page' : 'Hidden on page'}</span>
+                  <Switch
+                    checked={onHome}
+                    disabled={houseHomeBusy === row.shareId}
+                    onCheckedChange={(checked) => void setHouseOnHome(row.shareId, checked === true)}
+                  />
+                </label>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  );
+
   return (
     <section className={cn('min-w-0 space-y-4', className)} aria-label="Release catalog contents">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -414,7 +654,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
             <>
               <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 <span className="font-bold text-foreground">{totalCount}</span> item{totalCount === 1 ? '' : 's'} across{' '}
-                <span className="font-bold text-foreground">{activeGroups.length}</span> section{activeGroups.length === 1 ? '' : 's'}.
+                <span className="font-bold text-foreground">{activeGroups.length + (houseRows.length ? 1 : 0)}</span> section{activeGroups.length + (houseRows.length ? 1 : 0) === 1 ? '' : 's'}.
                 Jump below or expand a colored group.
               </p>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-cyan-100/75 sm:text-sm">
@@ -444,6 +684,15 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
+            {houseRows.length ? (
+              <button
+                type="button"
+                onClick={() => scrollToGroup('house')}
+                className="rounded-full border border-cyan-400/40 bg-cyan-500/15 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-cyan-100 transition-colors hover:bg-cyan-500/25 sm:text-xs"
+              >
+                House · {houseRows.length}
+              </button>
+            ) : null}
             {activeGroups.map((group) => (
               <button
                 key={group.key}
@@ -459,7 +708,8 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
             ))}
           </div>
 
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid items-start gap-2 lg:grid-cols-2">
+            {houseRows.length ? renderHouseCard() : null}
             {activeGroups.map((group) => renderGroupCard(group))}
           </div>
 
@@ -476,7 +726,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showEmptySections && 'rotate-180')} />
               </button>
               {showEmptySections ? (
-                <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                <div className="mt-3 grid items-start gap-2 lg:grid-cols-2">
                   {emptyGroups.map((group) => renderGroupCard(group, { compactEmpty: true }))}
                 </div>
               ) : null}

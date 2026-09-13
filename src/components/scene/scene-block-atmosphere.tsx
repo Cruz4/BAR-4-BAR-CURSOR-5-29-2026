@@ -362,6 +362,10 @@ export function SceneBlockAtmosphere({
   const [viewportH, setViewportH] = useState(() =>
     typeof window !== 'undefined' ? window.innerHeight : 800
   );
+  const [skyMounted, setSkyMounted] = useState(false);
+  useEffect(() => {
+    setSkyMounted(true);
+  }, []);
   const moon = moonPhaseAt(skyNow);
   const shower = activeMeteorShower(skyNow);
   const eclipse = activeEclipse(skyNow, lat, lon, phase);
@@ -474,6 +478,20 @@ export function SceneBlockAtmosphere({
     }, 2600);
     return () => window.clearTimeout(timer);
   }, [pulseKey, litWindows]);
+
+  if (!skyMounted) {
+    return (
+      <div
+        className={cn(
+          'scene-block pointer-events-none fixed inset-0 z-[1] overflow-hidden',
+          className
+        )}
+        aria-hidden
+      >
+        <div className="scene-block-sky absolute inset-0" />
+      </div>
+    );
+  }
 
   return (
     <>

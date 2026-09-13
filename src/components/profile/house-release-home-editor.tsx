@@ -6,18 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { ArtistHomeConfig } from '@/lib/profile/modules';
-import { isHouseReleaseVisibleOnHome } from '@/lib/house-artist-link';
+import { isHouseReleaseVisibleOnHome, type LinkedHouseRelease } from '@/lib/house-artist-link';
 
 type UpdateFn = (mutate: (draft: ArtistHomeConfig) => void) => void;
-
-type LinkedHouseRelease = {
-  shareId: string;
-  title: string;
-  type: 'album' | 'track';
-  albumTitle?: string;
-  trackCount?: number;
-  releaseLive?: boolean;
-};
 
 export function HouseReleaseHomeEditor({
   userId,

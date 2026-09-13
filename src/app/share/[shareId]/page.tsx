@@ -17,7 +17,6 @@ import {
     Sparkles,
     Import,
     Eye,
-    Zap,
     Clock,
     LogIn,
     EyeOff,
@@ -26,6 +25,7 @@ import {
     ChevronLeft,
     Pencil,
     Disc3,
+    FileText,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
 import { ShareCoverImage } from '@/components/share-cover-image';
@@ -97,12 +97,14 @@ export default function SharedProjectPage() {
     useEffect(() => {
         const fetchShare = async () => {
             if (!authReady) return;
-            const docRef = doc(db, 'shares', shareId);
-            const [snap, visibilityResponse] = await Promise.all([
-                getDoc(docRef),
-                fetch(`/api/dna/manage?shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' }),
-            ]);
-            if (snap.exists()) {
+            try {
+                const docRef = doc(db, 'shares', shareId);
+                const snap = await getDoc(docRef);
+                if (!snap.exists()) {
+                    setShare(null);
+                    return;
+                }
+                const visibilityResponse = await fetch(`/api/dna/manage?shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' });
                 const data = snap.data() as ProjectShare;
                 const visibility = visibilityResponse.ok
                     ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
@@ -124,8 +126,11 @@ export default function SharedProjectPage() {
                         updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
                     }
                 }
+            } catch {
+                setShare(null);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         void fetchShare();
     }, [shareId, authReady, user, isCloudSyncActive, router]);
@@ -343,16 +348,26 @@ export default function SharedProjectPage() {
 
     if (!share || !project) {
         return (
-            <div className="h-screen flex items-center justify-center p-4">
-                <Card className="max-w-md text-center border-2">
-                    <CardHeader>
-                        <Zap className="h-12 w-12 text-primary mx-auto mb-4" />
-                        <CardTitle className="font-headline text-3xl">VAULT CLOSED</CardTitle>
-                        <CardDescription>This project share is no longer live or the link is invalid.</CardDescription>
+            <div className="flex min-h-[70vh] items-center justify-center p-4">
+                <Card className="max-w-sm border-white/15 bg-card/90 text-center shadow-2xl">
+                    <CardHeader className="space-y-3">
+                        <FileText className="mx-auto h-8 w-8 text-fuchsia-200" />
+                        <CardTitle className="font-headline text-2xl uppercase tracking-tight">
+                            No Lyrics DNA attached
+                        </CardTitle>
+                        <CardDescription className="text-sm leading-relaxed">
+                            This song doesn&apos;t have a public lyric DNA Drop. The music release, if any, lives on its song page.
+                        </CardDescription>
                     </CardHeader>
-                    <CardFooter className="justify-center">
-                        <Button className="w-full" onClick={() => router.push('/login')}>
-                            Go to AKAsheet
+                    <CardFooter className="flex flex-col gap-2 sm:flex-row">
+                        <Button variant="outline" className="w-full font-bold uppercase" onClick={() => {
+                            if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+                            else router.push('/');
+                        }}>
+                            Back
+                        </Button>
+                        <Button className="w-full font-bold uppercase" asChild>
+                            <Link href="/discover">Discover</Link>
                         </Button>
                     </CardFooter>
                 </Card>

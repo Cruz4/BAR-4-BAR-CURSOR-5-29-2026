@@ -14,7 +14,7 @@ import {
   getAlbumFirstDropTrack,
   getAlbumLiveDnaShareId,
 } from '@/lib/track-live-flags';
-import { releaseShareIdOf } from '@/lib/release-management';
+import { releaseShareIdOf, dnaStatusOf, hasLiveDnaDrop } from '@/lib/release-management';
 
 function CompleteLiveIndicator({
   variant = 'compact',
@@ -78,12 +78,15 @@ export function TrackLiveIndicators({
   releaseLive?: boolean;
 }) {
   const releaseId = releaseShareIdOf(track);
+  const dnaLive = hasLiveDnaDrop(track);
   return (
     <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
       <DnaDropLiveIndicator
         shareId={track.shareId}
+        dnaStatus={dnaStatusOf(track)}
         variant={variant}
-        href={linkLivePages && track.shareId ? `/share/${track.shareId}` : undefined}
+        showMissing={linkLivePages && !dnaLive}
+        href={linkLivePages && dnaLive && track.shareId ? `/share/${track.shareId}` : undefined}
       />
       <FirstDropLiveIndicator
         track={track}

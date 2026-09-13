@@ -38,11 +38,14 @@ type PublicProfileSearchRow = {
 type PublicDropSearchRow = {
   resultId: string;
   shareId: string;
+  shareType: 'album' | 'track';
+  trackId?: string;
   ownerId?: string;
   ownerName: string;
   ownerSlug?: string;
   title: string;
   pressed: boolean;
+  houseRelease?: boolean;
   identity?: ArtistHomeSoundIdentity;
   metadata: PublicMusicMetadata;
   updatedAt: string;
@@ -105,6 +108,16 @@ function includesFacet(values: Array<string | undefined>, query: string): boolea
   return values.some((value) => String(value || '').toLocaleLowerCase().includes(needle));
 }
 
+function vibeSearchFacets(value: Record<string, unknown>): string[] {
+  const vibe = value.vibe && typeof value.vibe === 'object' && !Array.isArray(value.vibe)
+    ? value.vibe as Record<string, unknown>
+    : {};
+  const feelings = Array.isArray(vibe.feeling)
+    ? vibe.feeling.map((item) => clean(item, 40)).filter(Boolean)
+    : [];
+  return [clean(vibe.genre, 50), ...feelings].filter(Boolean);
+}
+
 function matchesFilters(
   kind: DiscoverySearchKind,
   identity: ArtistHomeSoundIdentity | undefined,
@@ -121,12 +134,12 @@ function matchesFilters(
   const genres = kind === 'person'
     ? identity?.genres || []
     : kind === 'drop'
-      ? music?.genreStyles || []
+      ? [...(music?.genreStyles || []), music?.albumTitle, publicText]
       : [publicText];
   const moods = kind === 'person'
     ? identity?.moods || []
     : kind === 'drop'
-      ? music?.moods || []
+      ? [...(music?.moods || []), publicText]
       : [publicText];
   if (!includesFacet(genres, filters.genre)) return false;
   if (!includesFacet(moods, filters.mood)) return false;
@@ -186,19 +199,27 @@ function hasPressedAudio(type: string, data: Record<string, unknown>, payload: R
 
 async function buildCatalog(): Promise<SearchCatalog> {
   const db = await getDb();
-  const [profileSnap, shareSnap, postSnap] = await Promise.all([
+  const [profileSnap, shareSnap, postSnap, houseSnap] = await Promise.all([
     db.collection('publicProfiles').orderBy('updatedAt', 'desc').limit(CATALOG_LIMIT).get(),
     db.collection('shares').orderBy('updatedAt', 'desc').limit(CATALOG_LIMIT).get(),
     db.collection('posts').limit(CATALOG_LIMIT).get(),
+    db.collection('shares').where('houseRelease', '==', true).get().catch((error) => {
+      console.error('[discovery-search] house catalog', error);
+      return { docs: [] as QueryDocumentSnapshot[] };
+    }),
   ]);
+  const shareDocs = new Map<string, QueryDocumentSnapshot>();
+  for (const snap of shareSnap.docs) shareDocs.set(snap.id, snap);
+  for (const snap of houseSnap.docs) shareDocs.set(snap.id, snap);
   const profiles = profileRows(profileSnap.docs);
   const profileByUser = new Map(profiles.map((profile) => [profile.userId, profile]));
+  const catalogShareDocs = [...shareDocs.values()];
   const canonicalDnaIds = canonicalDnaShareIds(
-    shareSnap.docs.map((snap) => ({ id: snap.id, data: snap.data() as Record<string, unknown> }))
+    catalogShareDocs.map((snap) => ({ id: snap.id, data: snap.data() as Record<string, unknown> }))
   );
 
   const drops: PublicDropSearchRow[] = [];
-  for (const snap of shareSnap.docs) {
+  for (const snap of catalogShareDocs) {
     const data = snap.data() as Record<string, unknown>;
     const visibility = shareDocumentVisibility(data);
     const dnaLive = visibility.dnaLive && canonicalDnaIds.has(snap.id);
@@ -210,39 +231,57 @@ async function buildCatalog(): Promise<SearchCatalog> {
     const owner = ownerId ? profileByUser.get(ownerId) : undefined;
     const ownerName = clean(data.ownerName, 120) || owner?.displayName || 'Music maker';
     const title = clean(payload.title, 120) || (data.type === 'album' ? 'Untitled album' : 'Untitled track');
-    const nestedTrackMetadata = Array.isArray(payload.tracks)
-      ? payload.tracks.slice(0, 80).map(publicMusicMetadataFromTrack)
+    const nestedTracks = Array.isArray(payload.tracks)
+      ? payload.tracks.slice(0, 80).filter((row): row is Record<string, unknown> => Boolean(row && typeof row === 'object'))
       : [];
-    const metadata = data.type === 'album'
-      ? combinePublicMusicMetadata(nestedTrackMetadata, title)
+    const nestedTrackMetadata = nestedTracks.map(publicMusicMetadataFromTrack);
+    const houseRelease = data.houseRelease === true;
+    const shareType = data.type === 'album' ? 'album' as const : 'track' as const;
+    const metadata = shareType === 'album'
+      ? { ...combinePublicMusicMetadata(nestedTrackMetadata, title), albumShareId: snap.id }
       : publicMusicMetadataFromTrack(payload);
-    const albumTheme = data.type === 'album' ? clean(payload.theme, 120) : '';
-    const publicText = [publicMusicMetadataSearchText(metadata), albumTheme].filter(Boolean).join(' ');
+    const albumTheme = shareType === 'album' ? clean(payload.theme, 120) : '';
+    const nestedFacets = nestedTracks.flatMap(vibeSearchFacets).join(' ');
+    const publicText = [
+      publicMusicMetadataSearchText(metadata),
+      albumTheme,
+      nestedFacets,
+      ...vibeSearchFacets(payload),
+    ].filter(Boolean).join(' ');
     const baseRow: PublicDropSearchRow = {
       resultId: snap.id,
       shareId: snap.id,
+      shareType,
       ...(ownerId ? { ownerId } : {}),
       ownerName,
       ...(owner?.slug ? { ownerSlug: owner.slug } : {}),
       title,
       pressed: visibility.releaseLive && hasPressedAudio(String(data.type || 'track'), data, payload),
+      ...(houseRelease ? { houseRelease: true } : {}),
       ...(owner?.identity ? { identity: owner.identity } : {}),
       metadata,
       updatedAt: clean(data.updatedAt || data.createdAt, 40),
-      haystack: [title, ownerName, data.type === 'album' ? 'album DNA drop' : 'track song DNA drop', publicText]
-        .join(' ')
-        .toLocaleLowerCase(),
+      haystack: [
+        title,
+        ownerName,
+        shareType === 'album' ? 'album DNA drop' : 'track song DNA drop',
+        houseRelease ? 'house album house release' : '',
+        publicText,
+      ].join(' ').toLocaleLowerCase(),
       publicText,
     };
     drops.push(baseRow);
-    if (data.type === 'album' && Array.isArray(payload.tracks)) {
-      for (const [trackIndex, rawTrack] of payload.tracks.slice(0, 80).entries()) {
-        if (!rawTrack || typeof rawTrack !== 'object') continue;
-        const track = rawTrack as Record<string, unknown>;
+    if (shareType === 'album') {
+      for (const [trackIndex, track] of nestedTracks.entries()) {
         const trackTitle = clean(track.title, 120);
         if (!trackTitle) continue;
-        const trackMetadata = publicMusicMetadataFromTrack(track);
-        const trackPublicText = publicMusicMetadataSearchText(trackMetadata);
+        const trackId = clean(track.id, 120);
+        const trackMetadata = {
+          ...publicMusicMetadataFromTrack(track),
+          albumTitle: title,
+          albumShareId: snap.id,
+        };
+        const trackPublicText = [publicMusicMetadataSearchText(trackMetadata), ...vibeSearchFacets(track)].filter(Boolean).join(' ');
         const trackAudio = track.dropAudio;
         const pressed = visibility.releaseLive && Boolean(
           trackAudio &&
@@ -251,7 +290,9 @@ async function buildCatalog(): Promise<SearchCatalog> {
         );
         drops.push({
           ...baseRow,
-          resultId: `${snap.id}-track-${clean(track.id, 120) || trackIndex}`,
+          resultId: `${snap.id}-track-${trackId || trackIndex}`,
+          shareType: 'track',
+          ...(trackId ? { trackId } : {}),
           title: trackTitle,
           pressed,
           metadata: trackMetadata,
@@ -260,6 +301,7 @@ async function buildCatalog(): Promise<SearchCatalog> {
             title,
             ownerName,
             'album track song DNA drop',
+            houseRelease ? 'house album house release' : '',
             trackPublicText,
           ].join(' ').toLocaleLowerCase(),
           publicText: trackPublicText,
@@ -387,23 +429,38 @@ export async function searchPublicMusicNetwork(input: {
   }
 
   for (const drop of data.drops) {
-    if (input.excludeUserId && drop.ownerId === input.excludeUserId) continue;
     if (!matchesFilters('drop', drop.identity, drop.publicText, drop.metadata, filters)) continue;
     const textScore = query.length >= 2 ? queryScore(query, drop.title, drop.haystack) : 1;
     if (!textScore) continue;
     const match = buildDiscoveryMatch(input.viewerIdentity, drop.identity, 'taste');
+    const kindLabel = drop.houseRelease
+      ? drop.shareType === 'album' ? 'House album' : 'House release'
+      : drop.shareType === 'album'
+        ? drop.pressed ? 'Album release' : 'Album DNA Drop'
+        : drop.pressed ? 'Music release' : 'DNA Drop';
+    const href = drop.shareType === 'album'
+      ? `/share/${drop.shareId}`
+      : drop.pressed
+        ? drop.trackId
+          ? `/song/${drop.shareId}?trackId=${encodeURIComponent(drop.trackId)}`
+          : `/song/${drop.shareId}`
+        : `/share/${drop.shareId}`;
     scored.push({
-      score: textScore + match.score * 0.5,
+      score: textScore + match.score * 0.5 + (drop.houseRelease ? 12 : 0) + (drop.shareType === 'album' ? 6 : 0),
       hit: {
         kind: 'drop',
         id: drop.resultId,
         title: drop.title,
-        subtitle: `${drop.pressed ? 'Music release' : 'DNA Drop'} · ${drop.ownerName}`,
-        href: drop.pressed ? `/song/${drop.shareId}` : `/share/${drop.shareId}`,
+        subtitle: `${kindLabel} · ${drop.ownerName}`,
+        href,
         ...(drop.ownerId ? { ownerId: drop.ownerId } : {}),
         ownerName: drop.ownerName,
         ...(drop.ownerSlug ? { ownerSlug: drop.ownerSlug } : {}),
-        tags: [drop.pressed ? 'Release' : 'DNA Drop', ...drop.metadata.genreStyles, ...drop.metadata.moods].slice(0, 4),
+        tags: [
+          drop.houseRelease ? 'House' : drop.pressed ? 'Release' : 'DNA Drop',
+          ...drop.metadata.genreStyles,
+          ...drop.metadata.moods,
+        ].slice(0, 4),
         ...(match.score ? { match } : {}),
         updatedAt: drop.updatedAt,
       },

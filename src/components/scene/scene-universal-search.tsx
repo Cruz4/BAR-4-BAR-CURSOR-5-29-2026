@@ -412,7 +412,7 @@ export function SceneUniversalSearch({
             </div>
           ) : (
             <p className="px-4 py-8 text-center text-xs text-muted-foreground">
-              No public people, songs, DNA Drops, or posts match {cleanQuery ? `“${cleanQuery}”` : 'these filters'}.
+              No public people, songs, House albums, DNA Drops, or posts match {cleanQuery ? `“${cleanQuery}”` : 'these filters'}.
             </p>
           )}
           {!loading && variant === 'dropdown' && (result.hasMore || result.total > visibleHits.length) ? (

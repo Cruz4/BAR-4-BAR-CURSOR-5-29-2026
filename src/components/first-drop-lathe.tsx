@@ -50,7 +50,8 @@ import { cn } from '@/lib/utils';
 import type { Album, Track, TrackSection } from '@/lib/types';
 import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
 import { getPrivateReleaseAudio, manageRelease, pingHouseRelease } from '@/lib/release-management-client';
-import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { hasLiveDnaDrop, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { NoLyricsDnaHint } from '@/components/no-lyrics-dna-hint';
 import { Textarea } from '@/components/ui/textarea';
 
 type Picked = { album: Album; track: Track };
@@ -436,6 +437,12 @@ export function FirstDropLatheHost() {
   const houseRelease = Boolean(mode === 'album' ? selectedAlbum?.houseRelease : track?.houseRelease);
   const houseLibraryNotice = Boolean(
     mode === 'album' ? selectedAlbum?.houseLibraryNotice : track?.houseLibraryNotice
+  );
+  const songMissingDna = Boolean(track && !hasLiveDnaDrop(track));
+  const albumMissingDna = Boolean(
+    selectedAlbum &&
+    !hasLiveDnaDrop(selectedAlbum) &&
+    !(selectedAlbum.tracks || []).some((row) => hasLiveDnaDrop(row))
   );
   const pickedReleasePlacement = livePicked ? songReleasePlacement(livePicked) : null;
   const pickedOfflinePlacement = livePicked ? offlineReleasePlacement(livePicked) : null;
@@ -1122,6 +1129,9 @@ export function FirstDropLatheHost() {
                             <span className={cn('block break-all font-code text-[9px]', audio ? 'text-emerald-400' : 'text-muted-foreground')}>
                               {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics (optional)'}
                             </span>
+                            {audio && !hasLiveDnaDrop(row) ? (
+                              <span className="mt-1 block"><NoLyricsDnaHint variant="chip" /></span>
+                            ) : null}
                           </span>
                           {audio ? (
                             <Button
@@ -1268,6 +1278,8 @@ export function FirstDropLatheHost() {
                   I have the rights to {houseRelease ? 'distribute' : 'sell'} every recording included in this album.
                 </Label>
               </div>
+
+              {albumMissingDna ? <NoLyricsDnaHint /> : null}
 
               <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {selectedAlbumIsLive ? (
@@ -1642,6 +1654,8 @@ export function FirstDropLatheHost() {
                 I have the rights to {houseRelease ? 'distribute' : 'sell'} this recording.
               </Label>
             </div>
+
+            {songMissingDna ? <NoLyricsDnaHint /> : null}
 
             <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pickedReleasePlacement && album && track ? (
