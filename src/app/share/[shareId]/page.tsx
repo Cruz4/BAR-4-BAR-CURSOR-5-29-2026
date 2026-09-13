@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
 import type { ProjectShare, Album, Track } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,7 +25,6 @@ import {
     ChevronLeft,
     Pencil,
     Disc3,
-    FileText,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
 import { ShareCoverImage } from '@/components/share-cover-image';
@@ -77,6 +76,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { manageRelease } from '@/lib/release-management-client';
+import { shareDocumentVisibility } from '@/lib/release-management';
 
 export default function SharedProjectPage() {
     const params = useParams();
@@ -102,19 +102,31 @@ export default function SharedProjectPage() {
                 const snap = await getDoc(docRef);
                 if (!snap.exists()) {
                     setShare(null);
+                    router.replace('/discover');
                     return;
                 }
                 const visibilityResponse = await fetch(`/api/dna/manage?shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' });
                 const data = snap.data() as ProjectShare;
-                const visibility = visibilityResponse.ok
+                const fromShare = shareDocumentVisibility(data as unknown as Record<string, unknown>);
+                const fromApi = visibilityResponse.ok
                     ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
                     : null;
+                const visibility = {
+                    dnaLive: Boolean(fromApi?.dnaLive ?? fromShare.dnaLive),
+                    releaseLive: Boolean(fromApi?.releaseLive ?? fromShare.releaseLive),
+                };
                 const isOwner = user?.id === data.ownerId;
                 const isPublic = Boolean(visibility?.dnaLive || visibility?.releaseLive);
                 const musicPublic = Boolean(visibility?.releaseLive);
                 const canViewDna = isOwner || isCloudSyncActive;
+                if (data.type !== 'album' && musicPublic && !visibility?.dnaLive) {
+                    router.replace(`/song/${encodeURIComponent(shareId)}`);
+                    return;
+                }
                 if (!isPublic && !isOwner) {
                     setShare(null);
+                    router.replace('/discover');
+                    return;
                 } else if (!canViewDna && !musicPublic) {
                     setShare(null);
                     setDnaAccessRedirecting(true);
@@ -128,6 +140,7 @@ export default function SharedProjectPage() {
                 }
             } catch {
                 setShare(null);
+                router.replace('/discover');
             } finally {
                 setLoading(false);
             }
@@ -348,30 +361,11 @@ export default function SharedProjectPage() {
 
     if (!share || !project) {
         return (
-            <div className="flex min-h-[70vh] items-center justify-center p-4">
-                <Card className="max-w-sm border-white/15 bg-card/90 text-center shadow-2xl">
-                    <CardHeader className="space-y-3">
-                        <FileText className="mx-auto h-8 w-8 text-fuchsia-200" />
-                        <CardTitle className="font-headline text-2xl uppercase tracking-tight">
-                            No Lyrics DNA attached
-                        </CardTitle>
-                        <CardDescription className="text-sm leading-relaxed">
-                            This song doesn&apos;t have a public lyric DNA Drop. The music release, if any, lives on its song page.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardFooter className="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" className="w-full font-bold uppercase" onClick={() => {
-                            if (typeof window !== 'undefined' && window.history.length > 1) router.back();
-                            else router.push('/');
-                        }}>
-                            Back
-                        </Button>
-                        <Button className="w-full font-bold uppercase" asChild>
-                            <Link href="/discover">Discover</Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </div>
+          <StudioLoader
+            size="lg"
+            fullscreen
+            message="Opening release…"
+          />
         );
     }
 
@@ -602,6 +596,7 @@ export default function SharedProjectPage() {
                       purchaseCount={share.purchaseCount}
                       firstBuyerName={share.firstBuyerName}
                       hasAudio={hasFirstDropAudio}
+                      isAlbum={isAlbum}
                       ownerName={share.ownerName}
                     />
                     <Card className="border-2 overflow-hidden bg-card/80">

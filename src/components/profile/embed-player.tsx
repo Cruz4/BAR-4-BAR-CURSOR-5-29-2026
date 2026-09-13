@@ -39,12 +39,29 @@ const OPEN_LABELS: Record<EmbedProvider, string> = {
   facebook: 'Open on Facebook',
 };
 
-function firstDropShareId(raw: string): string | null {
-  return songShareIdFromHref(raw);
+function firstDropTarget(raw: string): { shareId: string; trackId?: string } | null {
+  const shareId = songShareIdFromHref(raw);
+  if (!shareId) return null;
+  const href = normalizeInlineHref(raw) || raw;
+  try {
+    const url = new URL(href.startsWith('/') ? href : href, 'https://akasheet.com');
+    const trackId = url.searchParams.get('trackId')?.trim() || undefined;
+    return { shareId, ...(trackId ? { trackId } : {}) };
+  } catch {
+    return { shareId };
+  }
 }
 
 /** Native First Drop media inside a wall/feed post. Entitlements stay server-authoritative. */
-function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; referralPostId?: string }) {
+function FirstDropFeedPlayer({
+  shareId,
+  trackId,
+  referralPostId,
+}: {
+  shareId: string;
+  trackId?: string;
+  referralPostId?: string;
+}) {
   const { user, authReady } = useAuth();
   const [song, setSong] = useState<PressedSongSummary | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -56,7 +73,8 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
     setUnavailable(false);
     void (async () => {
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/songs/${encodeURIComponent(shareId)}`, {
+      const params = trackId ? `?trackId=${encodeURIComponent(trackId)}` : '';
+      const response = await fetch(`/api/songs/${encodeURIComponent(shareId)}${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         cache: 'no-store',
       });
@@ -66,7 +84,7 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
       else setUnavailable(true);
     })().catch(() => { if (!cancelled) setUnavailable(true); });
     return () => { cancelled = true; };
-  }, [authReady, shareId, user?.id]);
+  }, [authReady, shareId, trackId, user?.id]);
 
   if (!song && !unavailable) {
     return <div className="h-24 animate-pulse rounded-xl border border-fuchsia-500/25 bg-fuchsia-500/10" />;
@@ -94,10 +112,15 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
   }
 
   const artistHref = profileHref(song.artist.slug);
+  const albumPost = song.scope === 'album';
+  const detailsHref = albumPost
+    ? `/share/${encodeURIComponent(shareId)}${referralPostId ? `?refPost=${encodeURIComponent(referralPostId)}` : ''}`
+    : pressedSongHref(shareId, { trackId: song.trackId || trackId, referralPostId });
   return (
     <Suspense fallback={null}>
       <DropListenPanel
         shareId={shareId}
+        trackId={song.trackId || trackId}
         source="artist_home"
         title={song.title}
         artistName={song.artist.name}
@@ -106,7 +129,8 @@ function FirstDropFeedPlayer({ shareId, referralPostId }: { shareId: string; ref
         hasAudio
         houseRelease={song.houseRelease}
         referralPostId={referralPostId}
-        detailsHref={pressedSongHref(shareId, { referralPostId })}
+        detailsHref={detailsHref}
+        checkoutDestination={albumPost ? 'share' : 'song'}
         artistAttribution={{
           ...(artistHref ? { href: artistHref } : {}),
           ...(song.artist.avatarUrl ? { avatarUrl: song.artist.avatarUrl } : {}),
@@ -193,8 +217,8 @@ export function EmbedPlayer({
   viewportBounded?: boolean;
 }) {
   const normalized = normalizeInlineHref(url) || url;
-  const dropShareId = firstDropShareId(normalized);
-  if (dropShareId) return <FirstDropFeedPlayer shareId={dropShareId} referralPostId={referralPostId} />;
+  const drop = firstDropTarget(normalized);
+  if (drop) return <FirstDropFeedPlayer shareId={drop.shareId} trackId={drop.trackId} referralPostId={referralPostId} />;
 
   const parsed = parseEmbedUrl(normalized);
 

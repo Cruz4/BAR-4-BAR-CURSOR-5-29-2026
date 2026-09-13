@@ -1,3 +1,5 @@
+import { normalizeReleaseDiscoveryMetadata } from '@/lib/release-discovery';
+
 export type PublicMusicMetadata = {
   genreStyles: string[];
   moods: string[];
@@ -34,14 +36,29 @@ function cleanList(value: unknown, maxItems: number, maxLength: number): string[
   return result;
 }
 
-/** Extract only intentional public Track Vibe fields from a release snapshot. */
+function uniqueLabels(values: Array<string | undefined>, limit: number): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of values) {
+    const item = clean(raw, 50);
+    const key = item?.toLocaleLowerCase();
+    if (!item || !key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
+/** Extract public genre / mood tags from Track Vibe and New Release discovery fields. */
 export function publicMusicMetadataFromTrack(value: unknown): PublicMusicMetadata {
   const track = record(value) || {};
   const vibe = record(track.vibe) || {};
   const context = record(track.sharedAlbumContext) || {};
+  const discovery = normalizeReleaseDiscoveryMetadata(track.releaseDiscovery ?? track.discovery);
   const vibeOn = vibe.enabled !== false;
-  const genre = vibeOn ? clean(vibe.genre, 50) : undefined;
-  const moods = vibeOn ? cleanList(vibe.feeling, 8, 40) : [];
+  const vibeGenre = vibeOn ? clean(vibe.genre, 50) : undefined;
+  const vibeMoods = vibeOn ? cleanList(vibe.feeling, 8, 40) : [];
   const bpmValue = Number(vibe.tempoBPM);
   const bpm = vibeOn && Number.isFinite(bpmValue) && bpmValue >= 30 && bpmValue <= 300
     ? Math.round(bpmValue)
@@ -50,8 +67,11 @@ export function publicMusicMetadataFromTrack(value: unknown): PublicMusicMetadat
   const albumTitle = clean(context.title, 120);
   const albumShareId = clean(context.shareId, 160);
   return {
-    genreStyles: genre && genre.toLocaleLowerCase() !== 'general' ? [genre] : [],
-    moods,
+    genreStyles: uniqueLabels([
+      vibeGenre && vibeGenre.toLocaleLowerCase() !== 'general' ? vibeGenre : undefined,
+      ...(discovery.genres || []),
+    ], 12),
+    moods: uniqueLabels([...vibeMoods, ...(discovery.moods || [])], 16),
     ...(bpm ? { bpm } : {}),
     ...(instrumentation ? { instrumentation } : {}),
     ...(albumTitle ? { albumTitle } : {}),
@@ -73,18 +93,14 @@ export function combinePublicMusicMetadata(
   entries: PublicMusicMetadata[],
   albumTitle?: string
 ): PublicMusicMetadata {
-  const unique = (values: string[], limit: number) => {
-    const seen = new Set<string>();
-    return values.filter((value) => {
-      const key = value.toLocaleLowerCase();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, limit);
-  };
+  const first = entries[0];
+  const title = clean(albumTitle, 120) || first?.albumTitle;
   return {
-    genreStyles: unique(entries.flatMap((entry) => entry.genreStyles), 12),
-    moods: unique(entries.flatMap((entry) => entry.moods), 16),
-    ...(clean(albumTitle, 120) ? { albumTitle: clean(albumTitle, 120) } : {}),
+    genreStyles: uniqueLabels(entries.flatMap((entry) => entry.genreStyles), 12),
+    moods: uniqueLabels(entries.flatMap((entry) => entry.moods), 16),
+    ...(title ? { albumTitle: title } : {}),
+    ...(first?.bpm ? { bpm: first.bpm } : {}),
+    ...(first?.instrumentation ? { instrumentation: first.instrumentation } : {}),
+    ...(first?.albumShareId ? { albumShareId: first.albumShareId } : {}),
   };
 }

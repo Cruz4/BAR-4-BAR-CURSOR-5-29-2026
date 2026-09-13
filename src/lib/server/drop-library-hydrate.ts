@@ -4,8 +4,72 @@ import { normalizeDropAudio, type DropLibraryEntry } from '@/lib/drop-commerce';
 import type { DropLibraryItem, DropLibraryTrack } from '@/lib/drop-library';
 import { isHouseReleaseDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { albumTrackOrderIds, orderAlbumTracks } from '@/lib/album-track-order';
+import { resolveHouseArtistId } from '@/lib/house-artist-link';
+import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
+import { libraryAlbumHref } from '@/lib/drop-library';
 
 type OrderedPayloadTrack = Record<string, unknown> & { id: string; createdAt: string };
+
+function creditedArtistUserId(share: Record<string, unknown> | undefined, ownerId: string): string {
+  if (!share) return ownerId;
+  return resolveHouseArtistId({
+    houseRelease: share.houseRelease === true,
+    houseArtistId: share.houseArtistId,
+    ownerId: typeof share.ownerId === 'string' ? share.ownerId : ownerId,
+  }) || ownerId;
+}
+
+async function publicProfileMetaByUserId(
+  db: Firestore,
+  userIds: string[]
+): Promise<Map<string, { slug: string; name?: string }>> {
+  const result = new Map<string, { slug: string; name?: string; updatedAt: string }>();
+  const unique = [...new Set(userIds.filter(Boolean))];
+  for (let index = 0; index < unique.length; index += 30) {
+    const chunk = unique.slice(index, index + 30);
+    if (!chunk.length) continue;
+    const snap = await db.collection('publicProfiles').where('userId', 'in', chunk).get();
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const userId = typeof data.userId === 'string' ? data.userId : '';
+      if (!userId || needsVanitySlugUpgrade(doc.id, userId)) continue;
+      const updatedAt = typeof data.updatedAt === 'string' ? data.updatedAt : '';
+      const current = result.get(userId);
+      if (current && current.updatedAt > updatedAt) continue;
+      const name = typeof data.displayName === 'string' && data.displayName.trim()
+        ? data.displayName.trim()
+        : undefined;
+      result.set(userId, { slug: doc.id, ...(name ? { name } : {}), updatedAt });
+    }
+  }
+  return new Map([...result.entries()].map(([userId, meta]) => [userId, {
+    slug: meta.slug,
+    ...(meta.name ? { name: meta.name } : {}),
+  }]));
+}
+
+async function attachArtistHomes(
+  db: Firestore,
+  items: DropLibraryItem[],
+  shareById: Map<string, Record<string, unknown>>
+): Promise<DropLibraryItem[]> {
+  if (!items.length) return items;
+  const userIds = items.map((item) => creditedArtistUserId(shareById.get(item.shareId), item.ownerId));
+  const profiles = await publicProfileMetaByUserId(db, userIds);
+  return items.map((item) => {
+    const share = shareById.get(item.shareId);
+    const credited = creditedArtistUserId(share, item.ownerId);
+    const profile = profiles.get(credited);
+    const albumHref = libraryAlbumHref(item);
+    const artistName = item.houseRelease && profile?.name ? profile.name : item.artistName || profile?.name;
+    return {
+      ...item,
+      ...(artistName ? { artistName } : {}),
+      ...(profile?.slug ? { artistSlug: profile.slug } : {}),
+      ...(albumHref ? { albumHref } : {}),
+    };
+  });
+}
 
 function publicCoverUrl(url?: string): string | undefined {
   const u = url?.trim();
@@ -99,7 +163,7 @@ export async function hydrateDropLibraryItems(
   const byId = new Map(snaps.map((snap) => [snap.id, snap]));
   const albumOrders = await loadAlbumOrders(db, snaps);
 
-  return items.map((item) => {
+  const hydrated = items.map((item) => {
     const snap = byId.get(item.shareId);
     if (!snap?.exists) return item;
     const data = snap.data() as Record<string, unknown> | undefined;
@@ -139,15 +203,22 @@ export async function hydrateDropLibraryItems(
       (tracks.length
         ? tracks.reduce((sum, track) => sum + (track.durationSec || 0), 0) || undefined
         : undefined);
-    const hydrated: DropLibraryItem = { ...item };
-    if (artistName) hydrated.artistName = artistName;
+    const next: DropLibraryItem = { ...item };
+    if (artistName) next.artistName = artistName;
     const cover = publicCoverUrl(rawCover);
-    if (cover) hydrated.coverArtUrl = cover;
-    if (durationSec) hydrated.durationSec = durationSec;
-    if (tracks.length) hydrated.tracks = tracks;
-    if (item.own) hydrated.own = true;
-    return hydrated;
+    if (cover) next.coverArtUrl = cover;
+    if (durationSec) next.durationSec = durationSec;
+    if (tracks.length) next.tracks = tracks;
+    if (item.own) next.own = true;
+    return next;
   });
+  const shareById = new Map(
+    snaps.flatMap((snap) => {
+      if (!snap.exists) return [];
+      return [[snap.id, snap.data() as Record<string, unknown>] as const];
+    })
+  );
+  return attachArtistHomes(db, hydrated, shareById);
 }
 
 function sharePurchasedAt(data: Record<string, unknown>): string {
@@ -276,7 +347,7 @@ export async function listOwnerPressedLibraryItems(db: Firestore, userId: string
   if (!userId) return [];
   const snap = await db.collection('shares').where('ownerId', '==', userId).get();
   const orders = await loadAlbumOrders(db, snap.docs);
-  return snap.docs
+  const items = snap.docs
     .map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       return libraryItemFromShare(doc, {
@@ -286,6 +357,8 @@ export async function listOwnerPressedLibraryItems(db: Firestore, userId: string
     })
     .filter((item): item is DropLibraryItem => Boolean(item))
     .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
+  const shareById = new Map(snap.docs.map((doc) => [doc.id, doc.data() as Record<string, unknown>]));
+  return attachArtistHomes(db, items, shareById);
 }
 
 /** Admin-selected live releases shared into every current and future member Library. */
@@ -293,7 +366,7 @@ export async function listHouseReleaseLibraryItems(db: Firestore): Promise<DropL
   const snap = await db.collection('shares').where('houseRelease', '==', true).get();
   const houseDocs = snap.docs.filter((doc) => isHouseReleaseDocument(doc.data() as Record<string, unknown>));
   const orders = await loadAlbumOrders(db, houseDocs);
-  return houseDocs
+  const items = houseDocs
     .map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       return libraryItemFromShare(doc, {
@@ -303,4 +376,6 @@ export async function listHouseReleaseLibraryItems(db: Firestore): Promise<DropL
     })
     .filter((item): item is DropLibraryItem => Boolean(item))
     .sort((a, b) => (b.purchasedAt || '').localeCompare(a.purchasedAt || ''));
+  const shareById = new Map(houseDocs.map((doc) => [doc.id, doc.data() as Record<string, unknown>]));
+  return attachArtistHomes(db, items, shareById);
 }

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
-import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
+import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { orderAlbumTracks } from '@/lib/album-track-order';
 import { pressedSongHref } from '@/lib/pressed-song';
 import { resolveDnaDropHref } from '@/lib/dna-drop-access';
@@ -187,7 +187,10 @@ export function DnaDropAlbumHub({
                     </div>
                   )}
                   <MusicDiscoveryTags
-                    metadata={publicMusicMetadataFromTrack(track)}
+                    metadata={combinePublicMusicMetadata([
+                      publicMusicMetadataFromTrack(track),
+                      publicMusicMetadataFromTrack(album),
+                    ], album.title)}
                     compact
                     className="mt-2 px-1"
                   />

@@ -2,11 +2,11 @@ import 'server-only';
 
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
-import { isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import { audioForPlay, isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
-import { publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
+import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { shareDocumentVisibility } from '@/lib/release-management';
 
 function nonnegative(value: unknown): number {
@@ -69,8 +69,10 @@ export async function getPressedSongSummary(
 ): Promise<PressedSongSummary | null> {
   const share = await loadShare(db, shareId);
   if (!share) return null;
+  const albumLevel = share.type === 'album' && !trackId;
   const priced = priceFromShare(share, trackId);
-  if (!priced.audio) return null;
+  const audio = priced.audio || audioForPlay(share, trackId);
+  if (!audio) return null;
   const shareSnap = await db.collection('shares').doc(shareId).get();
   const shareRaw = shareSnap.data() || {};
   const houseArtistId =
@@ -87,7 +89,7 @@ export async function getPressedSongSummary(
     (typeof creditedData.displayName === 'string' && creditedData.displayName.trim()) ||
     share.ownerName ||
     'Artist';
-  const releasedAt = timestamp(priced.audio.uploadedAt || shareRaw.createdAt);
+  const releasedAt = timestamp(audio.uploadedAt || shareRaw.createdAt);
 
   const albumTracks = share.type === 'album' && Array.isArray(share.data?.tracks)
     ? share.data.tracks as Array<Record<string, unknown>>
@@ -97,12 +99,16 @@ export async function getPressedSongSummary(
     shareId,
     ...(trackId ? { trackId } : {}),
     ...(share.type === 'album' && typeof share.data?.title === 'string' ? { albumTitle: share.data.title } : {}),
+    ...(albumLevel ? { scope: 'album' as const } : { scope: 'track' as const }),
     ownerId: share.ownerId,
     title: priced.title,
     hasAudio: true,
     releaseLive: isReleaseShareLive(share),
     houseRelease: share.houseRelease === true,
-    metadata: publicMusicMetadataFromTrack(selectedTrack || share.data),
+    metadata: combinePublicMusicMetadata([
+      publicMusicMetadataFromTrack(selectedTrack || share.data),
+      ...(share.type === 'album' && selectedTrack ? [publicMusicMetadataFromTrack(share.data)] : []),
+    ]),
     price: normalizeDropPrice(priced.price),
     releasedAt,
     artist: {

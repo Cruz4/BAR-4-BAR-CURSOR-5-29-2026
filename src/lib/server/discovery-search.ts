@@ -102,10 +102,19 @@ function identityStrings(identity?: ArtistHomeSoundIdentity): string[] {
   ].filter(Boolean);
 }
 
+function normalizeFacet(value: string): string {
+  return value.toLocaleLowerCase().replace(/[-_/]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function includesFacet(values: Array<string | undefined>, query: string): boolean {
-  const needle = query.trim().toLocaleLowerCase();
+  const needle = normalizeFacet(query);
   if (!needle) return true;
-  return values.some((value) => String(value || '').toLocaleLowerCase().includes(needle));
+  return values.some((value) => {
+    const hay = normalizeFacet(String(value || ''));
+    if (!hay) return false;
+    if (hay === needle || hay.includes(needle)) return true;
+    return needle.length >= 4 && hay.length >= 4 && needle.includes(hay);
+  });
 }
 
 function vibeSearchFacets(value: Record<string, unknown>): string[] {
@@ -237,9 +246,10 @@ async function buildCatalog(): Promise<SearchCatalog> {
     const nestedTrackMetadata = nestedTracks.map(publicMusicMetadataFromTrack);
     const houseRelease = data.houseRelease === true;
     const shareType = data.type === 'album' ? 'album' as const : 'track' as const;
+    const albumDiscovery = publicMusicMetadataFromTrack(payload);
     const metadata = shareType === 'album'
-      ? { ...combinePublicMusicMetadata(nestedTrackMetadata, title), albumShareId: snap.id }
-      : publicMusicMetadataFromTrack(payload);
+      ? { ...combinePublicMusicMetadata([...nestedTrackMetadata, albumDiscovery], title), albumShareId: snap.id }
+      : albumDiscovery;
     const albumTheme = shareType === 'album' ? clean(payload.theme, 120) : '';
     const nestedFacets = nestedTracks.flatMap(vibeSearchFacets).join(' ');
     const publicText = [
@@ -276,11 +286,10 @@ async function buildCatalog(): Promise<SearchCatalog> {
         const trackTitle = clean(track.title, 120);
         if (!trackTitle) continue;
         const trackId = clean(track.id, 120);
-        const trackMetadata = {
-          ...publicMusicMetadataFromTrack(track),
-          albumTitle: title,
-          albumShareId: snap.id,
-        };
+        const trackMetadata = combinePublicMusicMetadata([
+          publicMusicMetadataFromTrack(track),
+          albumDiscovery,
+        ], title);
         const trackPublicText = [publicMusicMetadataSearchText(trackMetadata), ...vibeSearchFacets(track)].filter(Boolean).join(' ');
         const trackAudio = track.dropAudio;
         const pressed = visibility.releaseLive && Boolean(
@@ -295,7 +304,11 @@ async function buildCatalog(): Promise<SearchCatalog> {
           ...(trackId ? { trackId } : {}),
           title: trackTitle,
           pressed,
-          metadata: trackMetadata,
+          metadata: {
+            ...trackMetadata,
+            albumTitle: title,
+            albumShareId: snap.id,
+          },
           haystack: [
             trackTitle,
             title,

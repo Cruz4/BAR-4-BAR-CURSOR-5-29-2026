@@ -17,12 +17,15 @@ export type DropLibraryTrack = {
 
 export type DropLibraryItem = DropLibraryEntry & {
   artistName?: string;
+  artistSlug?: string;
   coverArtUrl?: string;
   durationSec?: number;
   tracks?: DropLibraryTrack[];
   /** Artist's own pressed song (not a purchase). */
   own?: boolean;
   albumId?: string;
+  /** Public album hub when this entitlement is an album pressing. */
+  albumHref?: string;
 };
 
 export type DeckSort = 'release' | 'fresh' | 'az' | 'artist' | 'paid' | 'played';
@@ -35,11 +38,13 @@ export type DeckPlayable = {
   trackId?: string;
   title: string;
   artistName: string;
+  artistSlug?: string;
   coverArtUrl?: string;
   durationSec?: number;
   scope: 'album' | 'track';
   albumTitle?: string;
   albumId?: string;
+  albumHref?: string;
   trackNumber?: number;
   detailsHref: string;
   purchasedAt: string;
@@ -101,10 +106,17 @@ export function deckHue(seed: string): number {
   return 168 + (h >>> 0) % 172;
 }
 
+export function libraryAlbumHref(item: Pick<DropLibraryItem, 'scope' | 'shareId' | 'albumHref'>): string | undefined {
+  if (item.albumHref) return item.albumHref;
+  if (item.scope === 'album' && item.shareId) return `/share/${encodeURIComponent(item.shareId)}`;
+  return undefined;
+}
+
 export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
   const out: DeckPlayable[] = [];
   for (const item of items) {
     const artistName = item.artistName?.trim() || 'Unknown artist';
+    const albumHref = libraryAlbumHref(item);
     const albumTracks =
       item.scope === 'album' && Array.isArray(item.tracks) && item.tracks.length > 0
         ? item.tracks
@@ -117,11 +129,13 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
           trackId: track.id,
           title: track.title,
           artistName,
+          ...(item.artistSlug ? { artistSlug: item.artistSlug } : {}),
           coverArtUrl: item.coverArtUrl,
           durationSec: track.durationSec ?? item.durationSec,
           scope: 'album',
           albumTitle: item.title,
           albumId: item.projectId,
+          ...(albumHref ? { albumHref } : {}),
           trackNumber: trackIndex + 1,
           detailsHref: track.releaseShareId
             ? `/song/${encodeURIComponent(track.releaseShareId)}`
@@ -144,10 +158,12 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       trackId: item.trackIds?.[0],
       title: item.title,
       artistName,
+      ...(item.artistSlug ? { artistSlug: item.artistSlug } : {}),
       coverArtUrl: item.coverArtUrl,
       durationSec: item.durationSec,
       scope: item.scope,
       albumId: item.albumId,
+      ...(albumHref ? { albumHref } : {}),
       detailsHref: `/song/${encodeURIComponent(item.shareId)}`,
       purchasedAt: item.purchasedAt,
       amountCents: item.amountCents,

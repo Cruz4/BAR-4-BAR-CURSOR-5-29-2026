@@ -1162,7 +1162,7 @@ export function PostCard({
                 disabled={busy}
               />
             ) : null}
-            <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
               <div className={cn('shrink-0', reverbVoice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
                 <VoiceNoteComposer clip={reverbVoice} onClipChange={setReverbVoice} disabled={busy} compact />
               </div>

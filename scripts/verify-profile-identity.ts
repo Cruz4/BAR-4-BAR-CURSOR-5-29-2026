@@ -54,6 +54,13 @@ assert.equal(trackMetadata.bpm, 88);
 assert.match(publicMusicMetadataSearchText(trackMetadata), /Fog Music Melodic Nocturnal 88 BPM/);
 assert.doesNotMatch(publicMusicMetadataSearchText(trackMetadata), /Private workstation direction/);
 
+const houseMetadata = publicMusicMetadataFromTrack({
+  vibe: { enabled: false, genre: 'General', feeling: [] },
+  releaseDiscovery: { genres: ['Fog Music', 'Melodic Rap'], moods: ['Melodic', 'Night'] },
+});
+assert.deepEqual(houseMetadata.genreStyles, ['Fog Music', 'Melodic Rap']);
+assert.deepEqual(houseMetadata.moods, ['Melodic', 'Night']);
+
 const migrated = normalizeArtistHomeConfig({
   version: 1,
   featured: { tagline: 'Legacy profile' },

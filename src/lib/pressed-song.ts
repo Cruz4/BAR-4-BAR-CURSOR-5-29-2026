@@ -29,6 +29,8 @@ export type PressedSongSummary = {
   shareId: string;
   trackId?: string;
   albumTitle?: string;
+  /** Album hub post (no specific track in the URL) still returns a playable first track. */
+  scope?: 'album' | 'track';
   ownerId: string;
   title: string;
   hasAudio: true;

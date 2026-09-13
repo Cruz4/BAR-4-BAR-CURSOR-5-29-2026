@@ -89,6 +89,7 @@ import {
   type DropCrate,
   type DropLibraryItem,
 } from '@/lib/drop-library';
+import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
 import { DropVisualizer } from '@/components/library/drop-visualizer';
 import { LibraryPressingBackground } from '@/components/library/library-pressing-background';
@@ -144,6 +145,72 @@ const DECK_GROUP_OPTIONS: Array<{
   { value: 'month', label: 'Month added', detail: 'A timeline of your Library', icon: CalendarDays },
   { value: 'none', label: 'No sections', detail: 'One uninterrupted stack', icon: ListMusic },
 ];
+
+const creditLinkClass =
+  'font-code uppercase tracking-wide text-muted-foreground transition-colors hover:text-fuchsia-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-300/60';
+
+function deckAccessExtra(item: DeckPlayable): React.ReactNode {
+  const access = item.own
+    ? ' · Yours'
+    : item.houseRelease
+      ? ' · House · Free'
+      : item.free
+        ? ' · Free'
+        : ` · ${centsToUsdLabel(item.amountCents)}`;
+  return (
+    <>
+      {!item.albumTitle ? ` · ${item.scope}` : null}
+      {access}
+    </>
+  );
+}
+
+function DeckCreditLinks({
+  item,
+  extra,
+  className,
+}: {
+  item: DeckPlayable;
+  extra?: React.ReactNode;
+  className?: string;
+}) {
+  const artistHref = profileHref(item.artistSlug);
+  const albumHref = item.albumHref;
+  return (
+    <span className={cn('block min-w-0 truncate font-code text-[10px] uppercase tracking-wide text-muted-foreground', className)}>
+      {artistHref ? (
+        <Link
+          href={artistHref}
+          className={creditLinkClass}
+          title={`Open ${item.artistName}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {item.artistName}
+        </Link>
+      ) : (
+        <span>{item.artistName}</span>
+      )}
+      {item.albumTitle ? (
+        <>
+          {' · '}
+          {albumHref ? (
+            <Link
+              href={albumHref}
+              className={creditLinkClass}
+              title={`Open ${item.albumTitle}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {item.albumTitle}
+            </Link>
+          ) : (
+            <span>{item.albumTitle}</span>
+          )}
+        </>
+      ) : null}
+      {extra}
+    </span>
+  );
+}
 
 function PressingPlate({
   item,
@@ -861,11 +928,13 @@ export function DropDeck({
               ) : (
                 <p className="truncate font-headline text-2xl font-bold uppercase">Nothing on the plate</p>
               )}
-              <p className="truncate font-code text-xs uppercase tracking-wide text-muted-foreground">
-                {current
-                  ? `${current.artistName}${current.albumTitle ? ` · ${current.albumTitle}` : ''}`
-                  : 'Pick a drop from your crate'}
-              </p>
+              {current ? (
+                <DeckCreditLinks item={current} className="text-xs" />
+              ) : (
+                <p className="truncate font-code text-xs uppercase tracking-wide text-muted-foreground">
+                  Pick a drop from your crate
+                </p>
+              )}
             </div>
             <div className="mt-3 flex items-center gap-3">
               <span className="w-10 font-code text-[10px] text-muted-foreground">{formatDeckTime(elapsed)}</span>
@@ -959,57 +1028,95 @@ export function DropDeck({
               <div className="box-border min-w-0 max-w-full p-2 sm:p-3">
                 {browseArtists.map((artist) => {
                   const artistOpen = expandedArtists[artist.id] ?? true;
+                  const artistHref = profileHref(artist.albums[0]?.items[0]?.artistSlug);
                   return (
                     <div key={artist.id} className="mb-3 min-w-0 max-w-full overflow-hidden rounded-xl border border-white/10 bg-black/20">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedArtists((prev) => ({ ...prev, [artist.id]: !artistOpen }))
-                        }
-                        className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-3 py-2.5 text-left hover:bg-white/5"
-                      >
-                        <span className="inline-flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                      <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedArtists((prev) => ({ ...prev, [artist.id]: !artistOpen }))
+                          }
+                          className="inline-flex shrink-0 items-center rounded-md p-0.5 hover:bg-white/5"
+                          aria-expanded={artistOpen}
+                          aria-label={artistOpen ? `Collapse ${artist.label}` : `Expand ${artist.label}`}
+                        >
                           {artistOpen ? (
                             <ChevronDown className="h-4 w-4 shrink-0 text-cyan-300" />
                           ) : (
                             <ChevronRight className="h-4 w-4 shrink-0 text-cyan-300" />
                           )}
-                          <span className="truncate font-headline text-sm font-bold uppercase text-cyan-100">
+                        </button>
+                        {artistHref ? (
+                          <Link
+                            href={artistHref}
+                            className="min-w-0 flex-1 truncate font-headline text-sm font-bold uppercase text-cyan-100 hover:text-fuchsia-300 hover:underline"
+                            title={`Open ${artist.label}`}
+                          >
                             {artist.label}
-                          </span>
-                        </span>
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedArtists((prev) => ({ ...prev, [artist.id]: !artistOpen }))
+                            }
+                            className="min-w-0 flex-1 truncate text-left font-headline text-sm font-bold uppercase text-cyan-100"
+                          >
+                            {artist.label}
+                          </button>
+                        )}
                         <span className="shrink-0 pl-2 font-code text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                           {artist.trackCount} tracks
                         </span>
-                      </button>
+                      </div>
                       {artistOpen ? (
                         <div className="box-border min-w-0 max-w-full border-t border-white/10 bg-black/20 p-2">
                           {artist.albums.map((album) => {
                             const albumKey = `${artist.id}:${album.id}`;
                             const albumOpen = expandedAlbums[albumKey] ?? true;
+                            const albumHref = album.items[0]?.albumHref;
                             return (
                               <div key={album.id} className="mb-2 min-w-0 max-w-full overflow-hidden rounded-lg border border-white/10 bg-black/20">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setExpandedAlbums((prev) => ({ ...prev, [albumKey]: !albumOpen }))
-                                  }
-                                  className="flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden px-3 py-2 text-left hover:bg-white/5"
-                                >
-                                  <span className="inline-flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                                <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden px-3 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedAlbums((prev) => ({ ...prev, [albumKey]: !albumOpen }))
+                                    }
+                                    className="inline-flex shrink-0 items-center rounded-md p-0.5 hover:bg-white/5"
+                                    aria-expanded={albumOpen}
+                                    aria-label={albumOpen ? `Collapse ${album.label}` : `Expand ${album.label}`}
+                                  >
                                     {albumOpen ? (
                                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-fuchsia-300" />
                                     ) : (
                                       <ChevronRight className="h-3.5 w-3.5 shrink-0 text-fuchsia-300" />
                                     )}
-                                    <span className="truncate font-code text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/90">
+                                  </button>
+                                  {albumHref ? (
+                                    <Link
+                                      href={albumHref}
+                                      className="min-w-0 flex-1 truncate font-code text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/90 hover:text-fuchsia-300 hover:underline"
+                                      title={`Open ${album.label}`}
+                                    >
                                       {album.label}
-                                    </span>
-                                  </span>
+                                    </Link>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setExpandedAlbums((prev) => ({ ...prev, [albumKey]: !albumOpen }))
+                                      }
+                                      className="min-w-0 flex-1 truncate text-left font-code text-[11px] font-bold uppercase tracking-[0.14em] text-fuchsia-100/90"
+                                    >
+                                      {album.label}
+                                    </button>
+                                  )}
                                   <span className="shrink-0 pl-2 font-code text-[10px] text-muted-foreground">
                                     {album.items.length}
                                   </span>
-                                </button>
+                                </div>
                                 {albumOpen ? (
                                   <ul className="box-border min-w-0 max-w-full border-t border-white/10 px-1 py-1 sm:px-2">
                                     {album.items.map((item) => {
@@ -1024,14 +1131,16 @@ export function DropDeck({
                                                 : 'hover:bg-white/5'
                                             )}
                                           >
-                                            <button
-                                              type="button"
-                                              className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left sm:gap-3"
-                                              onClick={() => {
-                                                if (active) togglePlay();
-                                                else playItem(item);
-                                              }}
-                                            >
+                                            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
+                                              <button
+                                                type="button"
+                                                className="flex shrink-0 items-center gap-2"
+                                                onClick={() => {
+                                                  if (active) togglePlay();
+                                                  else playItem(item);
+                                                }}
+                                                aria-label={active && playing ? `Pause ${item.title}` : `Play ${item.title}`}
+                                              >
                                               {item.trackNumber ? (
                                                 <span className="w-5 shrink-0 text-right font-code text-[10px] font-bold tabular-nums text-cyan-200/70">
                                                   {String(item.trackNumber).padStart(2, '0')}
@@ -1051,26 +1160,24 @@ export function DropDeck({
                                                   <Play className="h-3.5 w-3.5" />
                                                 )}
                                               </span>
+                                              </button>
                                               <span className="min-w-0 flex-1 overflow-hidden">
-                                                <span className="block truncate font-headline text-sm font-bold uppercase">
+                                                <button
+                                                  type="button"
+                                                  className="block w-full truncate text-left font-headline text-sm font-bold uppercase"
+                                                  onClick={() => {
+                                                    if (active) togglePlay();
+                                                    else playItem(item);
+                                                  }}
+                                                >
                                                   {item.title}
-                                                </span>
-                                                <span className="block truncate font-code text-[10px] uppercase text-muted-foreground">
-                                                  {item.artistName}
-                                                  {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
-                                                  {item.own
-                                                    ? ' · Yours'
-                                                    : item.houseRelease
-                                                      ? ' · House · Free'
-                                                    : item.free
-                                                      ? ' · Free'
-                                                      : ` · ${centsToUsdLabel(item.amountCents)}`}
-                                                </span>
+                                                </button>
+                                                <DeckCreditLinks item={item} extra={deckAccessExtra(item)} />
                                               </span>
                                               <span className="hidden shrink-0 font-code text-[10px] text-muted-foreground sm:block">
                                                 {item.durationSec ? formatDeckTime(item.durationSec) : ''}
                                               </span>
-                                            </button>
+                                            </div>
                                             <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
                                                 <Button
@@ -1202,14 +1309,16 @@ export function DropDeck({
                                   : 'hover:bg-white/5'
                               )}
                             >
-                              <button
-                                type="button"
-                                className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-left sm:gap-3"
-                                onClick={() => {
-                                  if (active) togglePlay();
-                                  else playItem(item);
-                                }}
-                              >
+                              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
+                                <button
+                                  type="button"
+                                  className="flex shrink-0 items-center gap-2"
+                                  onClick={() => {
+                                    if (active) togglePlay();
+                                    else playItem(item);
+                                  }}
+                                  aria-label={active && playing ? `Pause ${item.title}` : `Play ${item.title}`}
+                                >
                                 {item.trackNumber ? (
                                   <span className="w-5 shrink-0 text-right font-code text-[10px] font-bold tabular-nums text-cyan-200/70">
                                     {String(item.trackNumber).padStart(2, '0')}
@@ -1229,26 +1338,24 @@ export function DropDeck({
                                     <Play className="h-3.5 w-3.5" />
                                   )}
                                 </span>
+                                </button>
                                 <span className="min-w-0 flex-1 overflow-hidden">
-                                  <span className="block truncate font-headline text-sm font-bold uppercase">
+                                  <button
+                                    type="button"
+                                    className="block w-full truncate text-left font-headline text-sm font-bold uppercase"
+                                    onClick={() => {
+                                      if (active) togglePlay();
+                                      else playItem(item);
+                                    }}
+                                  >
                                     {item.title}
-                                  </span>
-                                  <span className="block truncate font-code text-[10px] uppercase text-muted-foreground">
-                                    {item.artistName}
-                                    {item.albumTitle ? ` · ${item.albumTitle}` : ` · ${item.scope}`}
-                                    {item.own
-                                      ? ' · Yours'
-                                      : item.houseRelease
-                                        ? ' · House · Free'
-                                      : item.free
-                                        ? ' · Free'
-                                        : ` · ${centsToUsdLabel(item.amountCents)}`}
-                                  </span>
+                                  </button>
+                                  <DeckCreditLinks item={item} extra={deckAccessExtra(item)} />
                                 </span>
                                 <span className="hidden shrink-0 font-code text-[10px] text-muted-foreground sm:block">
                                   {item.durationSec ? formatDeckTime(item.durationSec) : ''}
                                 </span>
-                              </button>
+                              </div>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button

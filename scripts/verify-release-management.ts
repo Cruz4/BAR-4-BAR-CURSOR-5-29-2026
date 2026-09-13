@@ -202,7 +202,7 @@ assert.deepEqual(legacyOrderedAlbumTracks.map((track) => track.id), ['first', 's
 const albumDeck = flattenLibraryItems([{
   shareId: 'HOUSE-ALBUM', ownerId: 'admin', scope: 'album', projectId: 'mirror', title: 'Mirror',
   trackIds: ['one', 'two'], amountCents: 0, purchasedAt: new Date(0).toISOString(), free: true,
-  houseRelease: true, artistName: 'Neomaiya Sol', tracks: [
+  houseRelease: true, artistName: 'Neomaiya Sol', artistSlug: 'neomaiya_sol', tracks: [
     { id: 'one', title: 'Z Opening', releaseShareId: 'SONG-ONE' },
     { id: 'two', title: 'A Closing' },
   ],
@@ -210,6 +210,8 @@ const albumDeck = flattenLibraryItems([{
 assert.deepEqual(albumDeck.map((track) => track.trackNumber), [1, 2]);
 assert.equal(albumDeck[0]?.detailsHref, '/song/SONG-ONE');
 assert.equal(albumDeck[1]?.detailsHref, '/song/HOUSE-ALBUM?trackId=two');
+assert.equal(albumDeck[0]?.albumHref, '/share/HOUSE-ALBUM');
+assert.equal(albumDeck[0]?.artistSlug, 'neomaiya_sol');
 const alphabetizedDeck = sortPlayables(albumDeck, 'az', {});
 assert.deepEqual(
   buildBrowseArtists(alphabetizedDeck)[0]?.albums[0]?.items.map((track) => track.title),
@@ -254,6 +256,22 @@ assert.match(libraryDeck, /Organize Library/);
 assert.match(libraryDeck, /Saved automatically on this device/);
 assert.match(libraryDeck, /LIBRARY_PREFERENCES_KEY/);
 assert.match(libraryDeck, /href=\{current\.detailsHref\}/, 'the Library now-playing title must open its song or release page');
+assert.match(libraryDeck, /DeckCreditLinks/, 'Library credits must be clickable artist and album names');
+assert.match(libraryDeck, /profileHref\(item\.artistSlug\)/, 'Library artist names must open Artist Home');
+assert.match(libraryDeck, /item\.albumHref/, 'Library album names must open the album page');
+
+const pressedSong = readFileSync(new URL('../src/lib/server/pressed-song.ts', import.meta.url), 'utf8');
+const embedPlayer = readFileSync(new URL('../src/components/profile/embed-player.tsx', import.meta.url), 'utf8');
+const dropSocial = readFileSync(new URL('../src/components/drop-social-panel.tsx', import.meta.url), 'utf8');
+assert.match(pressedSong, /audioForPlay\(share, trackId\)/, 'album share posts must resolve playable album audio');
+assert.match(pressedSong, /albumLevel \? \{ scope: 'album'/, 'album posts must keep album scope for the feed player');
+assert.match(embedPlayer, /song\.scope === 'album'/, 'feed album posts must open the album page');
+assert.match(dropSocial, /isAlbum \|\| !hasAudio \? `\/share\/\$\{shareId\}`/, 'album Reverbs must attach the album page');
+assert.match(dropSocial, /VoiceNoteComposer/, 'Quote Reverb must include rec');
+assert.match(dropSocial, /ImageAttachComposer/, 'Quote Reverb must include camera and photo');
+assert.match(dropSocial, /EmojiPickerButton/, 'Quote Reverb must include emoji');
+assert.match(dropSocial, /<BarChart3 className="h-3.5 w-3.5" \/> Poll/, 'Quote Reverb must include poll');
+assert.match(dropSocial, /Imprint/, 'Quote Reverb must include Imprint');
 
 const housePingRoute = readFileSync(new URL('../src/app/api/admin/house-release-ping/route.ts', import.meta.url), 'utf8');
 const housePingLib = readFileSync(new URL('../src/lib/house-release-ping.ts', import.meta.url), 'utf8');
