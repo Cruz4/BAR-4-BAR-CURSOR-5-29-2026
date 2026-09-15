@@ -160,7 +160,11 @@ export function DropListenPanel({
   const firstPressEdition =
     typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
   const trackDetailsHref =
-    detailsHref || pressedSongHref(shareId, { referralPostId: effectiveReferralPostId });
+    detailsHref ||
+    pressedSongHref(shareId, {
+      ...(effectiveTrackId ? { trackId: effectiveTrackId } : {}),
+      ...(effectiveReferralPostId ? { referralPostId: effectiveReferralPostId } : {}),
+    });
   const houseJoinHref = `/login?mode=signup&next=${encodeURIComponent(trackDetailsHref)}`;
 
   useEffect(() => {
@@ -672,40 +676,6 @@ export function DropListenPanel({
 
       {hasAudio && !purchaseOnly ? (
         <>
-          {presentation === 'song' ? (
-            <dl className="grid grid-cols-2 gap-2 border-y border-white/10 py-3 sm:grid-cols-4">
-              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
-                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Format</dt>
-                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
-                  {songMetadata?.albumTitle ? 'Album track' : 'Single release'}
-                </dd>
-              </div>
-              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
-                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Runtime</dt>
-                <dd className="mt-1 font-code text-[11px] font-bold tabular-nums text-white/85">
-                  {formatPlaybackTime(displayedDurationSec)}
-                </dd>
-              </div>
-              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
-                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Access</dt>
-                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
-                  {previewCapped ? '30-sec preview' : isOwner ? 'Artist copy' : 'Full stream'}
-                </dd>
-              </div>
-              <div className="min-w-0 rounded-lg bg-white/[0.025] px-2.5 py-2">
-                <dt className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Release</dt>
-                <dd className="mt-1 truncate text-[11px] font-bold text-white/85">
-                  {isHouseRelease
-                    ? 'House · free'
-                    : artistFreeRelease
-                      ? 'Free'
-                      : normalized.mode === 'pwyw'
-                        ? 'Pay your way'
-                        : 'Buy once'}
-                </dd>
-              </div>
-            </dl>
-          ) : null}
           <div className={cn('flex min-w-0 items-center gap-2', compactPresentation ? 'pl-[44px]' : 'pl-[52px]')}>
             <span className="w-9 shrink-0 font-code text-[9px] tabular-nums text-muted-foreground">
               {formatPlaybackTime(displayedPositionSec)}

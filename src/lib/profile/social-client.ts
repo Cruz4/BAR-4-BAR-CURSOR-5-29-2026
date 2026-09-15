@@ -453,6 +453,50 @@ export async function createPost(input: {
   return post;
 }
 
+function normalizeDropReverbShareId(shareId: string): string {
+  return shareId.trim().toUpperCase();
+}
+
+export async function fetchDropReverbWallPostId(shareId: string): Promise<string | null> {
+  const user = auth.currentUser;
+  const id = normalizeDropReverbShareId(shareId);
+  if (!user || !id) return null;
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid, 'dropReverbs', id));
+    const wallPostId = snap.data()?.wallPostId;
+    return typeof wallPostId === 'string' && wallPostId ? wallPostId : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setDropReverbPointer(shareId: string, wallPostId: string): Promise<void> {
+  const user = requireUser();
+  const id = normalizeDropReverbShareId(shareId);
+  await setDoc(doc(db, 'users', user.uid, 'dropReverbs', id), {
+    wallPostId,
+    shareId: id,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+async function clearDropReverbPointer(shareId: string): Promise<void> {
+  const user = requireUser();
+  const id = normalizeDropReverbShareId(shareId);
+  await deleteDoc(doc(db, 'users', user.uid, 'dropReverbs', id)).catch(() => undefined);
+}
+
+export async function undoDropReverb(shareId: string): Promise<void> {
+  const wallPostId = await fetchDropReverbWallPostId(shareId);
+  if (!wallPostId) return;
+  await deletePost(wallPostId);
+  await clearDropReverbPointer(shareId);
+}
+
+export async function recordDropReverb(shareId: string, wallPostId: string): Promise<void> {
+  await setDropReverbPointer(shareId, wallPostId);
+}
+
 export async function deletePost(postId: string): Promise<void> {
   const user = requireUser();
   try {

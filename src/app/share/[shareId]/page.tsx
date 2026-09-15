@@ -73,6 +73,7 @@ import {
   dnaDropSharePath,
   resolveDnaDropImportPath,
 } from '@/lib/dna-drop-access';
+import { pressedSongHref } from '@/lib/pressed-song';
 import {
   Tooltip,
   TooltipContent,
@@ -107,30 +108,63 @@ function SharedProjectPageInner() {
             if (authBooting) return;
             if (user && !authReady) return;
             try {
-                const docRef = doc(db, 'shares', shareId);
-                const snap = await getDoc(docRef);
-                if (!snap.exists()) {
+                const normalizedShareId = shareId.trim().toUpperCase();
+                let data: ProjectShare | null = null;
+                let visibilityFromPublicApi: { dnaLive?: boolean; releaseLive?: boolean } | null =
+                    null;
+
+                if (user) {
+                    try {
+                        const docRef = doc(db, 'shares', normalizedShareId);
+                        const snap = await getDoc(docRef);
+                        if (snap.exists()) {
+                            data = { id: snap.id, ...(snap.data() as Omit<ProjectShare, 'id'>) };
+                        }
+                    } catch {
+                        /* guests and some sessions cannot read shares client-side */
+                    }
+                }
+
+                if (!data) {
+                    const publicRes = await fetch(
+                        `/api/shares/${encodeURIComponent(normalizedShareId)}`,
+                        { cache: 'no-store' }
+                    );
+                    if (publicRes.ok) {
+                        const payload = (await publicRes.json()) as {
+                            share: ProjectShare;
+                            visibility?: { dnaLive?: boolean; releaseLive?: boolean };
+                        };
+                        data = payload.share;
+                        visibilityFromPublicApi = payload.visibility ?? null;
+                    }
+                }
+
+                if (!data) {
                     setShare(null);
                     router.replace('/discover');
                     return;
                 }
-                const data = snap.data() as ProjectShare;
+
                 const fromShare = shareDocumentVisibility(data as unknown as Record<string, unknown>);
-                let fromApi: { dnaLive?: boolean; releaseLive?: boolean } | null = null;
-                const ac = new AbortController();
-                const timer = window.setTimeout(() => ac.abort(), 2500);
-                try {
-                    const visibilityResponse = await fetch(
-                        `/api/dna/manage?shareId=${encodeURIComponent(shareId)}`,
-                        { cache: 'no-store', signal: ac.signal }
-                    );
-                    fromApi = visibilityResponse.ok
-                        ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
-                        : null;
-                } catch {
-                    fromApi = null;
-                } finally {
-                    window.clearTimeout(timer);
+                let fromApi: { dnaLive?: boolean; releaseLive?: boolean } | null =
+                    visibilityFromPublicApi;
+                if (!fromApi) {
+                    const ac = new AbortController();
+                    const timer = window.setTimeout(() => ac.abort(), 2500);
+                    try {
+                        const visibilityResponse = await fetch(
+                            `/api/dna/manage?shareId=${encodeURIComponent(normalizedShareId)}`,
+                            { cache: 'no-store', signal: ac.signal }
+                        );
+                        fromApi = visibilityResponse.ok
+                            ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
+                            : null;
+                    } catch {
+                        fromApi = null;
+                    } finally {
+                        window.clearTimeout(timer);
+                    }
                 }
                 const visibility = {
                     dnaLive: Boolean(fromApi?.dnaLive ?? fromShare.dnaLive),
@@ -162,6 +196,7 @@ function SharedProjectPageInner() {
                 }
                 setShare(data);
                 if (canViewDna || musicPublic) {
+                    const docRef = doc(db, 'shares', normalizedShareId);
                     updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
                 }
             } catch {
@@ -644,6 +679,26 @@ function SharedProjectPageInner() {
 
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
                 <div className="lg:col-span-4 space-y-6">
+                    {snapshotTrack && isAlbum && albumPayload ? (
+                      <nav
+                        className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-black/35 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em]"
+                        aria-label="Album strand navigation"
+                      >
+                        <Link href={dnaDropSharePath(shareId)} className="text-cyan-300 hover:text-cyan-100">
+                          Album · {albumPayload.title || 'Sequence'}
+                        </Link>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="truncate text-foreground">{trackProject?.title || 'Strand'}</span>
+                        {normalizeDropAudio(trackProject?.dropAudio) ? (
+                          <Link
+                            href={pressedSongHref(shareId, { trackId: trackProject!.id })}
+                            className="ml-auto text-fuchsia-300 hover:text-fuchsia-100"
+                          >
+                            Open song page →
+                          </Link>
+                        ) : null}
+                      </nav>
+                    ) : null}
                     <Suspense fallback={null}>
                       {viewingAlbumHub && hasFirstDropAudio ? (
                         <AlbumReleasePlaylist
@@ -665,6 +720,11 @@ function SharedProjectPageInner() {
                           houseRelease={share.houseRelease === true}
                           checkoutDestination="song"
                           trackId={snapshotTrack ? trackProject.id : undefined}
+                          detailsHref={
+                            snapshotTrack
+                              ? pressedSongHref(shareId, { trackId: trackProject.id })
+                              : undefined
+                          }
                         />
                       ) : null}
                     </Suspense>

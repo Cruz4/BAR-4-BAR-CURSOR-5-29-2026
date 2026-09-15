@@ -82,6 +82,7 @@ import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import type { QuotePressConfig } from '@/lib/profile/quote-press';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ModerationReportDialog } from '@/components/moderation-report-dialog';
 import { MentionField } from '@/components/profile/mention-suggestions';
 import { MentionText } from '@/components/profile/mention-text';
 import { PostPollCard } from '@/components/profile/post-poll';
@@ -380,6 +381,7 @@ export function PostCard({
   const [busy, setBusy] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [reverbed, setReverbed] = useState(false);
   const [reverbComposerOpen, setReverbComposerOpen] = useState(false);
   const [reverbQuote, setReverbQuote] = useState('');
@@ -1009,6 +1011,9 @@ export function PostCard({
           <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
             <DropdownMenuItem onSelect={() => void handleReverb()}>{reverbed ? 'Undo Reverb' : 'Reverb'}</DropdownMenuItem>
             <DropdownMenuItem onSelect={openReverbComposer}>{viewerHasQuoteContent ? 'Edit Quote' : 'Quote'}</DropdownMenuItem>
+            {user && user.id !== post.ownerId ? (
+              <DropdownMenuItem onSelect={() => setReportOpen(true)}>Report post</DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
           </DropdownMenu>
         ) : (
@@ -1242,6 +1247,15 @@ export function PostCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ModerationReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetKind="post"
+        targetId={post.id}
+        targetUserId={post.ownerId}
+        targetUserName={post.ownerName}
+      />
 
       {commentsOpen && (
         <PostCommentThread

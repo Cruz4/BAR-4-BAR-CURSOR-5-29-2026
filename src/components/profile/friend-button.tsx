@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Ban, Check, Clock, UserMinus, UserPlus, X } from 'lucide-react';
+import { Ban, Check, Clock, Flag, UserMinus, UserPlus, X } from 'lucide-react';
+import { ModerationReportDialog } from '@/components/moderation-report-dialog';
 import { Button } from '@/components/ui/button';
 import { Hint } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +50,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
   const [blocked, setBlocked] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.id || user.id === targetUserId) {
@@ -139,6 +141,19 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
     );
   }
 
+  const reportAction = (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-9 gap-1 font-bold uppercase text-muted-foreground"
+      disabled={busy}
+      title="Report this profile"
+      onClick={() => setReportOpen(true)}
+    >
+      <Flag className="h-3.5 w-3.5" />
+    </Button>
+  );
+
   const blockAction = (
     <Button
       size="sm"
@@ -158,6 +173,17 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
     >
       <Ban className="h-3.5 w-3.5" />
     </Button>
+  );
+
+  const moderationDialog = (
+    <ModerationReportDialog
+      open={reportOpen}
+      onOpenChange={setReportOpen}
+      targetKind="user"
+      targetId={targetUserId}
+      targetUserId={targetUserId}
+      targetUserName={targetName}
+    />
   );
 
   if (!friendship) {
@@ -189,7 +215,9 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             <UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add friend</span>
           </Button>
         </Hint>
+        {reportAction}
         {blockAction}
+        {moderationDialog}
       </div>
     );
   }
@@ -217,7 +245,9 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             <UserMinus className="hidden h-3 w-3 opacity-60 sm:block" />
           </Button>
         </Hint>
+        {reportAction}
         {blockAction}
+        {moderationDialog}
       </div>
     );
   }
@@ -243,7 +273,9 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             <Clock className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Requested</span>
           </Button>
         </Hint>
+        {reportAction}
         {blockAction}
+        {moderationDialog}
       </div>
     );
   }
@@ -281,7 +313,9 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
       >
         <X className="h-3.5 w-3.5" />
       </Button>
+      {reportAction}
       {blockAction}
+      {moderationDialog}
     </div>
   );
 }

@@ -254,6 +254,16 @@ export function ArtistHome({
   );
   const showFirstDropsStorefront = saleDrops.length > 0;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash.replace(/^#/, '');
+    if (parseActivityPostHash(window.location.hash)) return;
+    if (hash.startsWith('artist-home-')) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [profile.slug]);
+
   // Deep-link from Activity Open → #post-{id}[:comments|:c-{commentId}]
   useEffect(() => {
     if (typeof window === 'undefined') return;

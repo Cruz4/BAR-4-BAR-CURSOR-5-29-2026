@@ -154,19 +154,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     authEpochRef.current += 1;
     profileUnsubRef.current?.();
     profileUnsubRef.current = null;
-    flushSync(() => {
-      setUser(null);
-      setAuthReady(false);
-      setOfflineAuth(false);
-      setIsRedirecting(false);
-    });
-    saveLastAuthUserId(null);
-    if (uid) clearCachedUserProfile(uid);
     try {
       await endCurrentDeviceSession().catch(() => undefined);
       clearCurrentDeviceSessionIdentity();
       await prepareFirestoreForSignOut();
       await signOut(auth);
+      saveLastAuthUserId(null);
+      if (uid) clearCachedUserProfile(uid);
+      flushSync(() => {
+        setUser(null);
+        setAuthReady(false);
+        setOfflineAuth(false);
+        setIsRedirecting(false);
+      });
       router.replace(redirectTo);
     } finally {
       signingOutRef.current = false;
@@ -228,6 +228,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setAuthReady(false);
         setOfflineAuth(false);
+        finishLoading();
+        return;
+      }
+
+      if (signingOutRef.current) {
         finishLoading();
         return;
       }

@@ -7,7 +7,14 @@ import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
-import { createPost } from '@/lib/profile/social-client';
+import {
+  createPost,
+  fetchDropReverbWallPostId,
+  recordDropReverb,
+  undoDropReverb,
+} from '@/lib/profile/social-client';
+import { profileHref } from '@/lib/profile/profile-slug';
+import { ToastAction } from '@/components/ui/toast';
 import { buildLoginUrl } from '@/lib/login-links';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import {
@@ -83,6 +90,7 @@ export function DropSocialPanel({
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [walled, setWalled] = useState(false);
+  const [reverbPostId, setReverbPostId] = useState<string | null>(null);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteText, setQuoteText] = useState('');
   const [quoteVoice, setQuoteVoice] = useState<RecordedVoiceClip | null>(null);
@@ -129,6 +137,23 @@ export function DropSocialPanel({
       setLiked(loved);
       setCommentCount(replies);
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shareId, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setWalled(false);
+      setReverbPostId(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchDropReverbWallPostId(shareId).then((postId) => {
+      if (cancelled) return;
+      setReverbPostId(postId);
+      setWalled(Boolean(postId));
+    });
     return () => {
       cancelled = true;
     };
@@ -210,19 +235,35 @@ export function DropSocialPanel({
     resetImprint();
   };
 
-  const postToWall = async (quoted = false) => {
+  const showReverbToast = (quoted: boolean, postId: string) => {
+    const href = profileHref(summary.profileSlug, `post-${postId}`);
+    toast({
+      title: quoted ? 'Quote Reverb posted' : 'Reverbed',
+      action: href ? (
+        <ToastAction altText="View on Scene" onClick={() => router.push(href)}>
+          View on Scene
+        </ToastAction>
+      ) : undefined,
+    });
+  };
+
+  const toggleReverb = async () => {
     if (!user) {
       needAuth();
       return;
     }
-    if (walled) return;
-    if (quoted && !quoteComposerReady) return;
     setBusy(true);
     try {
+      if (walled && reverbPostId) {
+        await undoDropReverb(shareId);
+        setWalled(false);
+        setReverbPostId(null);
+        toast({ title: 'Reverb removed' });
+        return;
+      }
       const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Song' : 'Lyrics DNA Drop';
-      await createPost({
+      const post = await createPost({
         text: [
-          quoted ? quoteText.trim() : '',
           `${kindLabel} · ${title}`,
           ownerName ? `Original · ${ownerName}` : '',
         ].filter(Boolean).join('\n'),
@@ -230,18 +271,56 @@ export function DropSocialPanel({
         sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
         ownerSlug: summary.profileSlug,
-        ...(quoted && quoteVoice ? { voice: quoteVoice } : {}),
-        ...(quoted && quoteImage ? { image: quoteImage } : {}),
-        ...(quoted && quoteClip ? { video: quoteClip } : {}),
-        ...(quoted && quotePollOpen
+      });
+      await recordDropReverb(shareId, post.id);
+      setWalled(true);
+      setReverbPostId(post.id);
+      showReverbToast(false, post.id);
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not Reverb',
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const postQuoteReverb = async () => {
+    if (!user) {
+      needAuth();
+      return;
+    }
+    if (walled) return;
+    if (!quoteComposerReady) return;
+    setBusy(true);
+    try {
+      const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Song' : 'Lyrics DNA Drop';
+      const post = await createPost({
+        text: [
+          quoteText.trim(),
+          `${kindLabel} · ${title}`,
+          ownerName ? `Original · ${ownerName}` : '',
+        ].filter(Boolean).join('\n'),
+        embedUrl: dropPath,
+        sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
+        ownerName: user.displayName || 'Artist',
+        ownerSlug: summary.profileSlug,
+        ...(quoteVoice ? { voice: quoteVoice } : {}),
+        ...(quoteImage ? { image: quoteImage } : {}),
+        ...(quoteClip ? { video: quoteClip } : {}),
+        ...(quotePollOpen
           ? { poll: { options: quotePollOptions, resultsVisibility: quotePollVisibility } }
           : {}),
-        ...(quoted ? imprintPayload : {}),
+        ...imprintPayload,
       });
+      await recordDropReverb(shareId, post.id);
       setWalled(true);
+      setReverbPostId(post.id);
       setQuoteOpen(false);
       resetQuoteComposer();
-      toast({ title: quoted ? 'Quote Reverb live' : 'Reverb live', description: 'The original artist and album stay attached.' });
+      showReverbToast(true, post.id);
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -281,17 +360,35 @@ export function DropSocialPanel({
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" disabled={busy || walled} className={cn('flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors', walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300')} title="Reverb this release">
-              <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} /> {walled ? 'Reverbed' : 'Reverb'}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={() => void postToWall()}>Reverb</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setQuoteOpen(true)}>Quote</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void toggleReverb()}
+          className={cn(
+            'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
+            walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300'
+          )}
+          title={walled ? 'Undo Reverb' : 'Reverb this release'}
+        >
+          <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} />
+          {walled ? 'Reverbed' : 'Reverb'}
+        </button>
+        {!walled ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                disabled={busy}
+                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-violet-300"
+              >
+                Quote
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => setQuoteOpen(true)}>Quote Reverb</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
         <button
           type="button"
           onClick={() => void nativeShare()}
@@ -484,7 +581,7 @@ export function DropSocialPanel({
             <Button
               type="button"
               disabled={busy || !quoteComposerReady}
-              onClick={() => void postToWall(true)}
+              onClick={() => void postQuoteReverb()}
               className="gap-1.5 bg-violet-500 font-bold uppercase text-white hover:bg-violet-400"
             >
               <MessageCircle className="h-3.5 w-3.5" /> Quote + Reverb

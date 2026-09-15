@@ -98,6 +98,7 @@ export function ArtistHomeLink({
     return (
       <Link
         href={href}
+        scroll
         className={className}
         onClick={(e) => {
           e.stopPropagation();

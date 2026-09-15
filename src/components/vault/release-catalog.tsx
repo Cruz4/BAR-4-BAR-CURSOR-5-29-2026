@@ -479,7 +479,13 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
               ) : null}
               {releaseId && status === 'live' ? (
                 <Button asChild size="sm" variant="secondary" className="h-9 text-xs font-bold uppercase">
-                  <Link href={track ? `/song/${releaseId}` : `/share/${releaseId}`}>
+                  <Link
+                    href={
+                      track
+                        ? pressedSongHref(releaseId, { trackId: track.id })
+                        : `/share/${releaseId}`
+                    }
+                  >
                     <ExternalLink className="mr-1 h-3 w-3" /> Open release
                   </Link>
                 </Button>
@@ -726,7 +732,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
             ))}
           </div>
 
-          <div className="grid items-start gap-2 lg:grid-cols-2">
+          <div className="flex flex-col gap-2">
             {houseRows.length ? renderHouseCard() : null}
             {activeGroups.map((group) => renderGroupCard(group))}
           </div>
@@ -744,7 +750,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', showEmptySections && 'rotate-180')} />
               </button>
               {showEmptySections ? (
-                <div className="mt-3 grid items-start gap-2 lg:grid-cols-2">
+                <div className="mt-3 flex flex-col gap-2">
                   {emptyGroups.map((group) => renderGroupCard(group, { compactEmpty: true }))}
                 </div>
               ) : null}
