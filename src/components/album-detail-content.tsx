@@ -171,7 +171,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { PressStageControl } from '@/components/press-stage-control';
 import { AddBlankSheetsDialog } from '@/components/add-blank-sheets-dialog';
-import { VaultChamberAtmosphere } from '@/components/vault-chamber-atmosphere';
+import { AlbumPageAtmosphere } from '@/components/album-page-atmosphere';
 import {
   albumTrackSearchHaystack,
   readPressTrackingPref,
@@ -601,7 +601,7 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
             setImagePreview(dataUrl);
             toast({
                 title: 'Cover optimized',
-                description: `Saved as ${COVER_ART_EXPORT_SIZE}×${COVER_ART_EXPORT_SIZE} for sharp vault & DNA Drop display.`,
+                description: `Saved as ${COVER_ART_EXPORT_SIZE}×${COVER_ART_EXPORT_SIZE} for sharp vault & Lyrics DNA Drop display.`,
             });
         } catch (e) {
             toast({
@@ -623,7 +623,7 @@ function EditCoverArtDialog({ album, onOpenChange }: { album: Album, onOpenChang
                 <DialogHeader>
                     <DialogTitle className="font-headline">Edit Album Cover</DialogTitle>
                     <DialogDescription className="text-xs uppercase tracking-tight font-code">
-                        Square cover, min {COVER_ART_MIN_DIMENSION}px per side — we export {COVER_ART_EXPORT_SIZE}×{COVER_ART_EXPORT_SIZE} for vault vinyls and DNA Drops.
+                        Square cover, min {COVER_ART_MIN_DIMENSION}px per side — we export {COVER_ART_EXPORT_SIZE}×{COVER_ART_EXPORT_SIZE} for vault vinyls and Lyrics DNA Drops.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -738,7 +738,12 @@ function LooseTracksSidebar({
                   >
                     <div className="h-10 w-10 shrink-0 rounded-lg border border-border bg-muted/50 overflow-hidden flex items-center justify-center dark:border-white/10 dark:bg-neutral-900">
                       {targetAlbum.coverArtUrl ? (
-                        <Image src={targetAlbum.coverArtUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                        isDataUrl(targetAlbum.coverArtUrl) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={targetAlbum.coverArtUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <Image src={targetAlbum.coverArtUrl} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                        )
                       ) : (
                         <ListMusic className="h-4 w-4 text-muted-foreground/50" />
                       )}
@@ -1250,7 +1255,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   return (
     <TooltipProvider>
       <div className="relative min-h-screen w-full selection:bg-primary/30 overflow-x-hidden font-code" data-album-shell>
-        <VaultChamberAtmosphere />
+        <AlbumPageAtmosphere />
 
         <div className="relative z-20 container mx-auto px-3 sm:px-6 py-6 sm:py-10 min-w-0 md:pl-32">
             <Button variant="ghost" size="sm" onClick={() => router.push(vaultHref())} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
@@ -1418,17 +1423,17 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 {!isUnassignedVault && (
                                   isPro ? (
                                     <Button variant="outline" size="sm" className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 md:w-auto md:flex-none md:px-4" onClick={() => setShareDialogOpen(true)}>
-                                      <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> DNA Drop
+                                      <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Lyrics DNA Drop
                                     </Button>
                                   ) : (
                                     <LockedProFeatureButton
-                                      feature="DNA Drop"
-                                      benefit="Publish, view, download, and import lyric DNA Drops — Pro only."
-                                      ctaLabel="Publish DNA Drop — Go Pro"
+                                      feature="Lyrics DNA Drop"
+                                      benefit="Publish, view, download, and import Lyrics DNA Drops — Pro only."
+                                      ctaLabel="Publish Lyrics DNA Drop — Go Pro"
                                       ctaHref="/usage?tab=cloud&highlight=dna-drop"
                                       icon={Globe}
                                       iconClassName="text-primary"
-                                      label="DNA Drop"
+                                      label="Lyrics DNA Drop"
                                       variant="outline"
                                       className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 bg-primary/5 text-primary md:w-auto md:flex-none md:px-4"
                                     />

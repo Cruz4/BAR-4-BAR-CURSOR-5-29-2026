@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Release a song — publish audio without opening DNA Drop.
+ * Release a song — publish audio without opening Lyrics DNA Drop.
  * Pick a vault track, upload the song, set a price, go live.
  * The public page still carries lyrics; this is the sell desk.
  */
@@ -49,7 +49,7 @@ import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { cn } from '@/lib/utils';
 import type { Album, Track, TrackSection } from '@/lib/types';
 import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
-import { getPrivateReleaseAudio, manageRelease, pingHouseRelease } from '@/lib/release-management-client';
+import { getPrivateReleaseAudio, manageRelease, pingHouseRelease, fetchHouseWorkspace, saveHouseWorkspace } from '@/lib/release-management-client';
 import { hasLiveDnaDrop, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 import { NoLyricsDnaHint } from '@/components/no-lyrics-dna-hint';
 import { Textarea } from '@/components/ui/textarea';
@@ -229,7 +229,7 @@ export function FirstDropLatheHost() {
   const guided = releaseComposer === 'guided';
   const { user } = useAuth();
   const { toast } = useToast();
-  const { albums, addTrack, updateAlbum, updateTrack, deleteTrack, flushCloudNow } = useContext(DataContext);
+  const { albums: vaultAlbums, addTrack: vaultAddTrack, updateAlbum: vaultUpdateAlbum, updateTrack: vaultUpdateTrack, deleteTrack: vaultDeleteTrack, flushCloudNow } = useContext(DataContext);
   const isAdmin = user?.role === 'admin';
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
@@ -239,6 +239,74 @@ export function FirstDropLatheHost() {
   const [query, setQuery] = useState('');
   const [albumScope, setAlbumScope] = useState<string | undefined>();
   const [picked, setPicked] = useState<Picked | null>(null);
+  const [linkedAlbum, setLinkedAlbum] = useState<Album | null>(null);
+  const [linkedShareId, setLinkedShareId] = useState<string | null>(null);
+  const [deletedLinkedTrackIds, setDeletedLinkedTrackIds] = useState<string[]>([]);
+  const albums = useMemo(
+    () => (linkedAlbum ? [linkedAlbum] : vaultAlbums),
+    [linkedAlbum, vaultAlbums]
+  );
+
+  const updateAlbum = (albumId: string, patch: Partial<Album>) => {
+    if (linkedAlbum && linkedAlbum.id === albumId) {
+      setLinkedAlbum((current) => (current ? { ...current, ...patch } : current));
+      return;
+    }
+    vaultUpdateAlbum(albumId, patch);
+  };
+
+  const updateTrack = (albumId: string, trackId: string, patch: Partial<Track>) => {
+    if (linkedAlbum && linkedAlbum.id === albumId) {
+      setLinkedAlbum((current) =>
+        current
+          ? { ...current, tracks: current.tracks.map((row) => (row.id === trackId ? { ...row, ...patch } : row)) }
+          : current
+      );
+      return;
+    }
+    vaultUpdateTrack(albumId, trackId, patch);
+  };
+
+  const addTrack = (albumId: string, track: Omit<Track, 'id'> & { id?: string }) => {
+    if (linkedAlbum && linkedAlbum.id === albumId) {
+      const id = track.id || `track-${Date.now()}`;
+      const next = { ...track, id, albumId, ownerId: linkedAlbum.ownerId } as Track;
+      setLinkedAlbum((current) => (current ? { ...current, tracks: [...current.tracks, next] } : current));
+      return next;
+    }
+    return vaultAddTrack(albumId, track);
+  };
+
+  const deleteTrack = (albumId: string, trackId: string) => {
+    if (linkedAlbum && linkedAlbum.id === albumId) {
+      setDeletedLinkedTrackIds((current) => [...current, trackId]);
+      setLinkedAlbum((current) =>
+        current ? { ...current, tracks: current.tracks.filter((row) => row.id !== trackId) } : current
+      );
+      return;
+    }
+    vaultDeleteTrack(albumId, trackId);
+  };
+
+  const persistWorkspace = async () => {
+    if (linkedShareId && linkedAlbum) {
+      const saved = await saveHouseWorkspace({
+        shareId: linkedShareId,
+        album: linkedAlbum,
+        deletedTrackIds: deletedLinkedTrackIds,
+      });
+      setLinkedAlbum(saved.album);
+      setDeletedLinkedTrackIds([]);
+      return;
+    }
+    await flushCloudNow();
+  };
+
+  const manageWorkingRelease = (input: Parameters<typeof manageRelease>[0]) =>
+    manageRelease({
+      ...input,
+      ...(linkedShareId ? { shareId: linkedShareId } : {}),
+    });
   const [uploading, setUploading] = useState(false);
   const [albumUploadTrackId, setAlbumUploadTrackId] = useState<string | null>(null);
   const [pressing, setPressing] = useState(false);
@@ -387,16 +455,25 @@ export function FirstDropLatheHost() {
     ].filter((section) => section.rows.length > 0);
   }, [filtered]);
 
+  const clearLinkedWorkspace = () => {
+    setLinkedAlbum(null);
+    setLinkedShareId(null);
+    setDeletedLinkedTrackIds([]);
+  };
+
   const applyDetail = useCallback(
     (detail: FirstDropLatheDetail) => {
       setMode(detail.mode === 'album' ? 'album' : 'song');
       setAlbumScope(detail.albumId);
       if (detail.trackId) {
-        const hit = catalog.find(
-          (row) =>
-            row.track.id === detail.trackId &&
-            (!detail.albumId || row.album.id === detail.albumId)
-        );
+        const source = linkedAlbum ? [linkedAlbum] : vaultAlbums;
+        const hit = source
+          .flatMap((album) => (album.tracks || []).map((track) => ({ album, track })))
+          .find(
+            (row) =>
+              row.track.id === detail.trackId &&
+              (!detail.albumId || row.album.id === detail.albumId)
+          );
         setPicked(hit || null);
       } else {
         setPicked(null);
@@ -408,17 +485,51 @@ export function FirstDropLatheHost() {
       setPrivateAudioUrl('');
       setOpen(true);
     },
-    [catalog]
+    [linkedAlbum, vaultAlbums]
   );
 
   useEffect(() => {
     const onOpen = (event: Event) => {
       const detail = (event as CustomEvent<FirstDropLatheDetail>).detail || {};
-      applyDetail(detail);
+      void (async () => {
+        if (detail.shareId) {
+          try {
+            const workspace = await fetchHouseWorkspace(detail.shareId);
+            setLinkedAlbum(workspace.album);
+            setLinkedShareId(detail.shareId);
+            setDeletedLinkedTrackIds([]);
+            const albumMode = detail.mode === 'album' || workspace.kind === 'album';
+            setMode(albumMode ? 'album' : 'song');
+            setAlbumScope(workspace.album.id);
+            if (!albumMode && workspace.trackId) {
+              const track = workspace.album.tracks.find((row) => row.id === workspace.trackId);
+              setPicked(track ? { album: workspace.album, track } : null);
+            } else {
+              setPicked(null);
+            }
+            setQuery('');
+            setNewCatalogTitle('');
+            setAlbumUploadTrackId(null);
+            setRightsChecked(false);
+            setPrivateAudioUrl('');
+            setOpen(true);
+          } catch (error) {
+            clearLinkedWorkspace();
+            toast({
+              variant: 'destructive',
+              title: 'Could not open this House release',
+              description: error instanceof Error ? error.message : undefined,
+            });
+          }
+          return;
+        }
+        clearLinkedWorkspace();
+        applyDetail(detail);
+      })();
     };
     window.addEventListener(OPEN_FIRST_DROP_LATHE, onOpen);
     return () => window.removeEventListener(OPEN_FIRST_DROP_LATHE, onOpen);
-  }, [applyDetail]);
+  }, [applyDetail, toast]);
 
   if (!firstDropsOn || !user) return null;
 
@@ -630,8 +741,8 @@ export function FirstDropLatheHost() {
     updateTrack(album.id, track.id, pressUpdates);
     setPressing(true);
     try {
-      await flushCloudNow();
-      const result = await manageRelease({
+      await persistWorkspace();
+      const result = await manageWorkingRelease({
         kind: 'track',
         action: 'publish',
         albumId: album.id,
@@ -699,8 +810,8 @@ export function FirstDropLatheHost() {
 
     setPressing(true);
     try {
-      await flushCloudNow();
-      const result = await manageRelease({
+      await persistWorkspace();
+      const result = await manageWorkingRelease({
         kind: 'album',
         action: 'publish',
         albumId: selectedAlbum.id,
@@ -788,8 +899,8 @@ export function FirstDropLatheHost() {
 
     setPressing(true);
     try {
-      await flushCloudNow();
-      const result = await manageRelease({
+      await persistWorkspace();
+      const result = await manageWorkingRelease({
         kind,
         action: 'unpublish',
         albumId: targetAlbum.id,
@@ -829,8 +940,8 @@ export function FirstDropLatheHost() {
 
     setPressing(true);
     try {
-      await flushCloudNow();
-      await manageRelease({
+      await persistWorkspace();
+      await manageWorkingRelease({
         kind,
         action: 'remove',
         albumId: targetAlbum.id,
@@ -865,8 +976,8 @@ export function FirstDropLatheHost() {
     setPressing(true);
     try {
       updateTrack(album.id, track.id, { releaseStatus: 'draft' });
-      await flushCloudNow();
-      await manageRelease({
+      await persistWorkspace();
+      await manageWorkingRelease({
         kind: 'track',
         action: 'save-draft',
         albumId: album.id,
@@ -886,8 +997,8 @@ export function FirstDropLatheHost() {
     if (!track || !album) return;
     setTestingAudio(true);
     try {
-      await flushCloudNow();
-      const result = await getPrivateReleaseAudio(album.id, track.id);
+      await persistWorkspace();
+      const result = await getPrivateReleaseAudio(album.id, track.id, linkedShareId ? { shareId: linkedShareId } : undefined);
       setPrivateAudioUrl(result.url);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not test recording', description: error instanceof Error ? error.message : undefined });
@@ -900,8 +1011,8 @@ export function FirstDropLatheHost() {
     if (!selectedAlbum) return;
     setTestingAudio(true);
     try {
-      await flushCloudNow();
-      const result = await getPrivateReleaseAudio(selectedAlbum.id, trackId);
+      await persistWorkspace();
+      const result = await getPrivateReleaseAudio(selectedAlbum.id, trackId, linkedShareId ? { shareId: linkedShareId } : undefined);
       setPrivateAudioUrl(result.url);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not test recording', description: error instanceof Error ? error.message : undefined });
@@ -915,8 +1026,8 @@ export function FirstDropLatheHost() {
     setPressing(true);
     try {
       updateAlbum(selectedAlbum.id, { releaseStatus: 'draft' });
-      await flushCloudNow();
-      await manageRelease({
+      await persistWorkspace();
+      await manageWorkingRelease({
         kind: 'album',
         action: 'save-draft',
         albumId: selectedAlbum.id,
@@ -936,7 +1047,10 @@ export function FirstDropLatheHost() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setRightsChecked(false);
+        if (!next) {
+          setRightsChecked(false);
+          clearLinkedWorkspace();
+        }
       }}
     >
       <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden border-fuchsia-500/35 bg-card">
@@ -946,7 +1060,7 @@ export function FirstDropLatheHost() {
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             {guided
-              ? 'Follow the checklist. Upload, price, confirm rights, then publish. Lyrics and cover are optional. Free on every signed-in account — DNA Drop lyric links stay Pro.'
+              ? 'Follow the checklist. Upload, price, confirm rights, then publish. Lyrics and cover are optional. Free on every signed-in account — Lyrics DNA Drop links stay Pro.'
               : houseRelease
               ? mode === 'album'
                 ? 'Upload the included recordings and publish them as a House album. Every member receives the full album free in Library.'
@@ -955,7 +1069,7 @@ export function FirstDropLatheHost() {
                   {mode === 'album'
                     ? 'Upload audio for the included tracks and set one bundle price. Lyrics and completed sheets are optional. One purchase unlocks every included recording.'
                     : 'Pick a track, upload the recording, and set its price. Written lyrics and a completed sheet are optional.'}{' '}
-                  Free to press live — Pro is not required. DNA Drop is the separate Pro lyric page. You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
+                  Free to press live — Pro is not required. Lyrics DNA Drop is the separate Pro lyric page. You keep the rights — we take a small fee on the sale. {firstDropsFeeCashoutLine()}
                 </>}
           </DialogDescription>
         </DialogHeader>
@@ -1402,7 +1516,7 @@ export function FirstDropLatheHost() {
               <p className="rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-sm text-muted-foreground">
                 {albumScope
                   ? 'No tracks in this album yet. Write one, then release it here.'
-                  : 'No tracks in the vault yet. Write one, then release it here—DNA Drop is only for the separate lyric page.'}
+                  : 'No tracks in the vault yet. Write one, then release it here—Lyrics DNA Drop is only for the separate lyric page.'}
               </p>
             ) : (
               <div className="space-y-4">

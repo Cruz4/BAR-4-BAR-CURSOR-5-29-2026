@@ -903,7 +903,7 @@ export function ArtistHome({
         <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
           <DialogHeader>
             <DialogTitle className="font-headline text-xl uppercase tracking-tight">
-              {showFirstDropsStorefront ? 'Lyric DNA Drops' : 'Live Lyric DNA Drops'}
+              {showFirstDropsStorefront ? 'Lyrics DNA Drops' : 'Live Lyrics DNA Drops'}
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto pr-1">

@@ -253,7 +253,7 @@ function EditPageCheatSheet({ firstDropsOn }: { firstDropsOn: boolean }) {
           <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2">
             <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-emerald-200">Not a sale</p>
             <p className="mt-1 text-[11px] leading-snug text-foreground/90">
-              DNA Drop is how you publish lyrics publicly (Studio Pro). Listen / buy is the audio release on Artist Home, The Scene, and the release link.
+              Lyrics DNA Drop is how you publish lyrics publicly (Studio Pro). Listen / buy is the audio release on Artist Home, The Scene, and the release link.
             </p>
           </div>
         </>
@@ -2088,7 +2088,7 @@ export function PressDesk() {
           />
           {config.featured.barOfWeekShareId && (
             <p className="text-[10px] uppercase tracking-widest text-emerald-400/90">
-              Linked to its live DNA Drop
+              Linked to its live Lyrics DNA Drop
             </p>
           )}
           {!vaultLoading && (
@@ -2217,7 +2217,7 @@ export function PressDesk() {
       <DeskSection
         icon={LayoutGrid}
         title="The Board"
-        hint="Pin 1–5 bars visitors can read, copy, open a DNA Drop, and leave a short reply under. No guessing games."
+        hint="Pin 1–5 bars visitors can read, copy, open a Lyrics DNA Drop, and leave a short reply under. No guessing games."
       >
         <div className="space-y-4">
           {(config.featured.barBoard?.pins?.length || 0) > 0 && (
@@ -2367,15 +2367,15 @@ export function PressDesk() {
       </DeskSection>
       ) : null}
 
-      {/* 8. Live Lyric DNA Drops — manage + auto on Artist Home */}
+      {/* 8. Live Lyrics DNA Drops — manage + auto on Artist Home */}
       <DeskSection
         id="artist-home-releases"
         icon={Dna}
         title="Releases on Artist Home"
         hint={
           firstDropsOn
-            ? `Music is published through New release or Release Catalog—not inside DNA Drop. Live releases show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a release, the Vault, or Earnings.`
-            : 'Any album or track with an active DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live Lyric DNA Drops module. Open Manage to jump to a drop or the vault.'
+            ? `Music is published through New release or Release Catalog—not inside Lyrics DNA Drop. Live releases show on your Artist Home automatically. ${firstDropsFeeCashoutLine()} Open Manage to jump to a release, the Vault, or Earnings.`
+            : 'Any album or track with an active Lyrics DNA Drop shows on your Artist Home automatically — as a count under your bio and in the Live Lyrics DNA Drops module. Open Manage to jump to a drop or the vault.'
         }
       >
         <LiveDnaDropsManage />

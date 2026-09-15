@@ -6,6 +6,7 @@ import {
   parseVaultBackup,
   prepareVaultImport,
 } from '../src/lib/vault-backup';
+import { dataUrlToBlob, isDataUrl } from '../src/lib/cover-art';
 import {
   buildVaultArchiveZip,
   jsonArchiveEntry,
@@ -56,6 +57,11 @@ const legacy = parseVaultBackup(current);
 assert.equal(legacy.sourceVersion, 0, 'legacy array backups must remain supported');
 assert.equal(legacy.albums.length, 1);
 assert.equal(legacy.looseTracks.length, 1);
+
+const jpegBlob = dataUrlToBlob('data:image/jpeg;base64,YQ==');
+assert.equal(isDataUrl('data:image/jpeg;base64,YQ=='), true);
+assert.equal(jpegBlob.type, 'image/jpeg');
+assert.equal(jpegBlob.size, 1, 'base64 cover data URLs must decode without fetch()');
 
 assert.throws(
   () => parseVaultBackup({ schema: VAULT_BACKUP_SCHEMA, version: 99, data: { albums: [] } }),

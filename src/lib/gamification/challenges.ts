@@ -83,8 +83,8 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   },
   {
     id: 'dna_import_1',
-    label: 'Import a DNA Drop',
-    description: 'Pull another artist’s DNA Drop into your vault this week.',
+    label: 'Import a Lyrics DNA Drop',
+    description: 'Pull another artist’s Lyrics DNA Drop into your vault this week.',
     target: 1,
     scale: 'weekly',
     tier: 'epic',
@@ -110,8 +110,8 @@ export const WEEKLY_CHALLENGES: ChallengeDef[] = [
   },
   {
     id: 'share_drop_1',
-    label: 'DNA Drop 1 project',
-    description: 'Publish one shareable DNA Drop this week (Pro).',
+    label: 'Lyrics DNA Drop 1 project',
+    description: 'Publish one shareable Lyrics DNA Drop this week (Pro).',
     target: 1,
     scale: 'weekly',
     tier: 'epic',
@@ -324,7 +324,7 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_dna_imports_5',
     label: 'Strain Archive',
-    description: 'Import five foreign DNA Drops into your vault.',
+    description: 'Import five foreign Lyrics DNA Drops into your vault.',
     target: 5,
     scale: 'lifetime',
     tier: 'epic',
@@ -333,7 +333,7 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_dna_imports_15',
     label: 'Cross-Vault Library',
-    description: 'Fifteen artist DNA Drops collected lifetime.',
+    description: 'Fifteen artist Lyrics DNA Drops collected lifetime.',
     target: 15,
     scale: 'lifetime',
     tier: 'legendary',
@@ -360,7 +360,7 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_shares_5',
     label: 'Five Drops Live',
-    description: 'Publish five DNA Drops lifetime.',
+    description: 'Publish five Lyrics DNA Drops lifetime.',
     target: 5,
     scale: 'lifetime',
     tier: 'epic',
@@ -369,7 +369,7 @@ export const LIFETIME_MILESTONES: ChallengeDef[] = [
   {
     id: 'life_resonance_10',
     label: 'Signal Strong',
-    description: 'Ten imports of your DNA Drops by other artists.',
+    description: 'Ten imports of your Lyrics DNA Drops by other artists.',
     target: 10,
     scale: 'lifetime',
     tier: 'legendary',

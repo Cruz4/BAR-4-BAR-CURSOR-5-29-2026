@@ -21,7 +21,7 @@ export type ReleaseDiscoveryMetadata = {
   credits?: ReleaseDiscoveryCredit[];
 };
 
-/** Minimal Live DNA Drop / share row shape used by counter helpers. */
+/** Minimal Live Lyrics DNA Drop / share row shape used by counter helpers. */
 export type ReleaseDiscoveryRow = {
   shareId?: string;
   type?: 'album' | 'track' | string;

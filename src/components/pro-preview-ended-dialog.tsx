@@ -112,7 +112,7 @@ export function ProPreviewEndedDialog() {
             <ul className="space-y-1.5 text-muted-foreground list-disc pl-4">
               <li>Custom DNA / Vibe / Style vault saves</li>
               <li>Export (PDF / TXT / vault JSON) &amp; import</li>
-              <li>Performance Mode, Freestyle, DNA Drop lyric links</li>
+              <li>Performance Mode, Freestyle, Lyrics DNA Drop links</li>
               <li>Unlimited albums &amp; tracks</li>
             </ul>
           </div>

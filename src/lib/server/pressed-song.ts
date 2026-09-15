@@ -8,6 +8,7 @@ import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-son
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { shareDocumentVisibility } from '@/lib/release-management';
+import { canManageReleaseShare } from '@/lib/house-artist-link';
 
 function nonnegative(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
@@ -95,10 +96,21 @@ export async function getPressedSongSummary(
     ? share.data.tracks as Array<Record<string, unknown>>
     : [];
   const selectedTrack = trackId ? albumTracks.find((row) => row.id === trackId) : undefined;
+  const trackDnaShareId =
+    typeof selectedTrack?.shareId === 'string' &&
+    selectedTrack.shareId.trim() &&
+    selectedTrack.dnaStatus !== 'unlisted'
+      ? selectedTrack.shareId.trim()
+      : undefined;
+  const shareDnaLive = shareDocumentVisibility(shareRaw).dnaLive;
+  const dnaShareId =
+    trackDnaShareId ||
+    (share.type === 'track' && shareDnaLive ? shareId : undefined);
   const base: PressedSongSummary = {
     shareId,
     ...(trackId ? { trackId } : {}),
     ...(share.type === 'album' && typeof share.data?.title === 'string' ? { albumTitle: share.data.title } : {}),
+    ...(dnaShareId ? { dnaShareId } : {}),
     ...(albumLevel ? { scope: 'album' as const } : { scope: 'track' as const }),
     ownerId: share.ownerId,
     title: priced.title,
@@ -242,18 +254,16 @@ export async function getPressedSongSummary(
         }
       : {}),
   };
-  if (viewerId === share.ownerId && share.type === 'track') {
-    const albumId = typeof share.data?.albumId === 'string' ? share.data.albumId : '';
-    if (albumId) {
-      base.ownerControls = {
-        albumId,
-        trackId: share.projectId,
-        releaseStatus:
-          share.releaseStatus === 'draft' || share.releaseStatus === 'unlisted'
-            ? share.releaseStatus
-            : 'live',
-      };
-    }
+  if (canManageReleaseShare(shareRaw, viewerId) && share.type === 'track') {
+    const albumId = typeof share.data?.albumId === 'string' ? share.data.albumId.trim() : '';
+    base.ownerControls = {
+      albumId,
+      trackId: share.projectId,
+      releaseStatus:
+        share.releaseStatus === 'draft' || share.releaseStatus === 'unlisted'
+          ? share.releaseStatus
+          : 'live',
+    };
   }
   return base;
 }

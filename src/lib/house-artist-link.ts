@@ -10,6 +10,16 @@ export type LinkedHouseRelease = {
   albumShareId?: string;
   trackCount?: number;
   releaseLive?: boolean;
+  vaultOwnerId?: string;
+  albumId?: string;
+  trackId?: string;
+};
+
+export type HouseReleaseVaultRef = {
+  ownerId: string;
+  albumId: string;
+  kind: 'album' | 'track';
+  trackId?: string;
 };
 
 export function resolveHouseArtistId(share: {
@@ -38,6 +48,44 @@ export function isHouseReleaseCreditedToUser(
   return resolveHouseArtistId(share) === id || ownerId === id;
 }
 
+/** Owner or the artist a House release is linked to. */
+export function canManageReleaseShare(
+  share: {
+    houseRelease?: boolean;
+    houseArtistId?: unknown;
+    ownerId?: unknown;
+  },
+  userId: string
+): boolean {
+  const id = userId.trim();
+  if (!id) return false;
+  const ownerId = typeof share.ownerId === 'string' ? share.ownerId.trim() : '';
+  return ownerId === id || isHouseReleaseCreditedToUser(share, id);
+}
+
+export function houseReleaseVaultRef(share: {
+  type?: unknown;
+  ownerId?: unknown;
+  projectId?: unknown;
+  data?: unknown;
+}): HouseReleaseVaultRef | null {
+  const ownerId = typeof share.ownerId === 'string' ? share.ownerId.trim() : '';
+  const projectId = typeof share.projectId === 'string' ? share.projectId.trim() : '';
+  if (!ownerId || !projectId) return null;
+  const payload = share.data && typeof share.data === 'object'
+    ? (share.data as Record<string, unknown>)
+    : {};
+  if (share.type === 'album') {
+    return { ownerId, albumId: projectId, kind: 'album' };
+  }
+  const albumId =
+    typeof payload.albumId === 'string' && payload.albumId.trim()
+      ? payload.albumId.trim()
+      : '';
+  if (!albumId) return null;
+  return { ownerId, albumId, kind: 'track', trackId: projectId };
+}
+
 export function toLinkedHouseRelease(
   shareId: string,
   share: Record<string, unknown>
@@ -61,6 +109,7 @@ export function toLinkedHouseRelease(
         ? payload.releaseShareId.trim()
         : '';
   const tracks = Array.isArray(payload.tracks) ? payload.tracks : [];
+  const vault = houseReleaseVaultRef({ ...share, data: payload });
   return {
     shareId,
     title,
@@ -69,6 +118,13 @@ export function toLinkedHouseRelease(
     ...(albumShareId ? { albumShareId } : {}),
     ...(type === 'album' ? { trackCount: tracks.length } : {}),
     releaseLive: shareDocumentVisibility(share).releaseLive,
+    ...(vault
+      ? {
+          vaultOwnerId: vault.ownerId,
+          albumId: vault.albumId,
+          ...(vault.trackId ? { trackId: vault.trackId } : {}),
+        }
+      : {}),
   };
 }
 

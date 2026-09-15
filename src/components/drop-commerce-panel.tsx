@@ -346,7 +346,7 @@ export function DropCommercePanel({
 
       {type === 'album' && (
         <p className="text-[10px] text-muted-foreground">
-          Upload audio on each song&apos;s DNA Drop. Album price unlocks every track that has audio.
+          Upload audio on each song&apos;s Lyrics DNA Drop. Album price unlocks every track that has audio.
         </p>
       )}
 

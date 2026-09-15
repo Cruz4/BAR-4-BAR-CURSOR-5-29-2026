@@ -100,15 +100,15 @@ export type GamificationSummary = {
   generateNextLineWeekCount: number;
   dnaFilledWeekCount: number;
   tracksCompletedWeekCount: number;
-  /** Foreign DNA Drops imported into this vault (lifetime). */
+  /** Foreign Lyrics DNA Drops imported into this vault (lifetime). */
   lifetimeDnaImports: number;
   /** Accepted friendships sealed by this user (lifetime). */
   lifetimeFriendshipsAccepted: number;
   /** Public wall posts published (lifetime). */
   lifetimeWallPosts: number;
-  /** DNA Drops this artist published (lifetime). */
+  /** Lyrics DNA Drops this artist published (lifetime). */
   lifetimeSharesCreated: number;
-  /** Times other artists imported this user's DNA Drops. */
+  /** Times other artists imported this user's Lyrics DNA Drops. */
   lifetimeDnaImportsReceived: number;
   /** Loves received on wall posts and replies (lifetime). */
   lifetimeLovesReceived?: number;

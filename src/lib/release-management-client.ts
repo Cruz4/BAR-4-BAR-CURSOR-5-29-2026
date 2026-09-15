@@ -8,8 +8,9 @@ export const RELEASE_VISIBILITY_CHANGED_EVENT = 'b4b:release-visibility-changed'
 export type ManageReleaseInput = {
   kind: 'album' | 'track';
   action: 'save-draft' | 'publish' | 'unpublish' | 'remove';
-  albumId: string;
+  albumId?: string;
   trackId?: string;
+  shareId?: string;
   hideDna?: boolean;
   houseRelease?: boolean;
   houseLibraryNotice?: boolean;
@@ -76,16 +77,64 @@ export async function pingHouseRelease(shareId: string): Promise<{
   };
 }
 
-export async function getPrivateReleaseAudio(albumId: string, trackId: string): Promise<{ url: string; fileName: string }> {
+export async function getPrivateReleaseAudio(
+  albumId: string,
+  trackId: string,
+  opts?: { shareId?: string }
+): Promise<{ url: string; fileName: string }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Sign in to test this recording.');
-  const params = new URLSearchParams({ userId: user.uid, albumId, trackId });
+  const params = new URLSearchParams({
+    userId: user.uid,
+    albumId,
+    trackId,
+    ...(opts?.shareId ? { shareId: opts.shareId } : {}),
+  });
   const response = await fetch(`/api/releases/private-audio?${params}`, {
     headers: { Authorization: `Bearer ${await user.getIdToken()}` },
   });
   const result = (await response.json().catch(() => ({}))) as { url?: string; fileName?: string; error?: string };
   if (!response.ok || !result.url) throw new Error(result.error || 'Could not open private audio.');
   return { url: result.url, fileName: result.fileName || 'Private recording' };
+}
+
+export type HouseWorkspaceResult = {
+  shareId: string;
+  kind: 'album' | 'track';
+  album: import('@/lib/types').Album;
+  trackId?: string;
+};
+
+export async function fetchHouseWorkspace(shareId: string): Promise<HouseWorkspaceResult> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in to manage this release.');
+  const params = new URLSearchParams({ userId: user.uid, shareId });
+  const response = await fetch(`/api/releases/house-workspace?${params}`, {
+    headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+  });
+  const result = (await response.json().catch(() => ({}))) as HouseWorkspaceResult & { error?: string };
+  if (!response.ok || !result.album) throw new Error(result.error || 'Could not open this House release.');
+  return result;
+}
+
+export async function saveHouseWorkspace(input: {
+  shareId: string;
+  album: import('@/lib/types').Album;
+  deletedTrackIds?: string[];
+}): Promise<HouseWorkspaceResult> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in to manage this release.');
+  const response = await fetch('/api/releases/house-workspace', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${await user.getIdToken()}`,
+    },
+    body: JSON.stringify({ ...input, userId: user.uid }),
+  });
+  const result = (await response.json().catch(() => ({}))) as HouseWorkspaceResult & { error?: string };
+  if (!response.ok || !result.album) throw new Error(result.error || 'Could not save this House release.');
+  return result;
 }
 
 export async function attachReleaseToSheet(input: {

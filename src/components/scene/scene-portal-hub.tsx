@@ -190,7 +190,7 @@ function discoverPreviewMeta(card?: DiscoverCard): {
   if (card.kind === 'drop') {
     return {
       name: card.drop.ownerName,
-      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'Music release' : 'DNA Drop'}`,
+      detail: `${card.drop.title} · ${card.drop.hasDropAudio ? 'Music release' : 'Lyrics DNA Drop'}`,
       userId: card.drop.ownerId,
       slug: card.drop.ownerSlug,
       avatarUrl: card.drop.avatarUrl,

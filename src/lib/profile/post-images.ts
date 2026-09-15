@@ -1,5 +1,6 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getClientStorage } from '@/lib/firebase/client/firebase';
+import { dataUrlToBlob } from '@/lib/cover-art';
 import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 
 export const POST_IMAGE_MAX_INPUT_BYTES = 10 * 1024 * 1024;
@@ -141,9 +142,7 @@ export async function pendingPostImageFromDataUrl(dataUrl: string): Promise<Pend
   if (!dataUrl.startsWith('data:image/')) {
     throw new Error('Invalid image data.');
   }
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
-  return processPostImageFile(blob);
+  return processPostImageFile(dataUrlToBlob(dataUrl));
 }
 
 export async function pendingImageToDataUrl(image: PendingPostImage): Promise<string> {

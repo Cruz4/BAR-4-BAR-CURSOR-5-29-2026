@@ -293,7 +293,7 @@ export function FeatureShowcaseSection() {
               </h2>
               <p className="font-code text-amber-100/80 text-sm md:text-base leading-relaxed max-w-2xl mx-auto">
                 AKAsheet is a studio app — store bars, poems, loose lines, and half-baked hooks. Write in the vault,
-                then show up on your public music home when you are ready for listeners, supporters, friends, and DNA Drops.
+                then show up on your public music home when you are ready for listeners, supporters, friends, and Lyrics DNA Drops.
               </p>
             </div>
             <BentoGroup bands={bentoBands} startIndex={MARKETING_FEATURE_BANDS.indexOf(bentoBands[0])} />

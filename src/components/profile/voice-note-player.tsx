@@ -7,6 +7,7 @@ import { formatVoiceTime } from '@/lib/profile/voice-notes';
 import { isSafeVoiceStoragePath, voiceFileApiUrl } from '@/lib/audio-mime';
 import { auth } from '@/lib/firebase/client/firebase';
 import { hookElementDualMono, remixBlobToDualMono } from '@/lib/audio-mono';
+import { dataUrlToBlob } from '@/lib/cover-art';
 import { transcribeVoiceBlob } from '@/lib/voice-transcribe';
 
 type VoiceNotePlayerProps = {
@@ -39,6 +40,7 @@ async function waitForSignedInUser(ms = 8000): Promise<typeof auth.currentUser> 
 }
 
 async function blobFromUrl(url: string, headers?: HeadersInit): Promise<Blob> {
+  if (url.startsWith('data:')) return dataUrlToBlob(url);
   const res = await fetch(url, { headers, credentials: 'same-origin' });
   if (!res.ok) {
     const data = (await res.json().catch(() => null)) as { error?: string } | null;

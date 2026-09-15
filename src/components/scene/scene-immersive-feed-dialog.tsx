@@ -49,6 +49,8 @@ type SceneImmersiveFeedDialogProps = {
   initialItemKey?: string;
   onOpenChange: (open: boolean) => void;
   posts: ProfilePost[];
+  /** Friend Lyrics DNA / pressed songs merged into Your Block (not Discover). */
+  blockDropCards?: DiscoverCard[];
   discoverCards: DiscoverCard[];
   viewerSlug?: string;
   onPostDeleted?: (postId: string) => void;
@@ -274,6 +276,7 @@ export function SceneImmersiveFeedDialog({
   initialItemKey,
   onOpenChange,
   posts,
+  blockDropCards = [],
   discoverCards,
   viewerSlug,
   onPostDeleted,
@@ -297,15 +300,42 @@ export function SceneImmersiveFeedDialog({
   const [activeIndex, setActiveIndex] = useState(0);
   const [headerPx, setHeaderPx] = useState(118);
 
-  const items = useMemo(() => {
+  type FeedSlideItem =
+    | { meta: SlideMeta; post: ProfilePost }
+    | { meta: SlideMeta; card: DiscoverCard };
+
+  const items = useMemo((): FeedSlideItem[] => {
     if (mode === 'block') {
-      return posts.map((post) => ({ meta: blockMeta(post), post }));
+      type BlockItem =
+        | { kind: 'post'; meta: SlideMeta; post: ProfilePost; at: string }
+        | { kind: 'drop'; meta: SlideMeta; card: DiscoverCard; at: string };
+      const merged: BlockItem[] = posts.map((post) => ({
+        kind: 'post',
+        meta: blockMeta(post),
+        post,
+        at: post.createdAt || '',
+      }));
+      for (const card of blockDropCards) {
+        if (card.kind !== 'drop') continue;
+        merged.push({
+          kind: 'drop',
+          meta: discoverMeta(card, Boolean(user)),
+          card,
+          at: card.drop.updatedAt || '',
+        });
+      }
+      merged.sort((a, b) => b.at.localeCompare(a.at));
+      return merged.map((item) =>
+        item.kind === 'post'
+          ? { meta: item.meta, post: item.post }
+          : { meta: item.meta, card: item.card }
+      );
     }
     if (mode === 'discover') {
       return discoverCards.map((card) => ({ meta: discoverMeta(card, Boolean(user)), card }));
     }
     return [];
-  }, [discoverCards, mode, posts, user]);
+  }, [blockDropCards, discoverCards, mode, posts, user]);
 
   itemsLengthRef.current = items.length;
 
@@ -568,7 +598,7 @@ export function SceneImmersiveFeedDialog({
                   )}
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-[hsl(216_38%_7%)]/95 p-0.5 shadow-[0_28px_90px_rgba(0,0,0,0.55)]">
-                  {'post' in item ? (
+                  {'post' in item && item.post ? (
                     <PostCard
                       post={item.post}
                       showAuthor
@@ -578,7 +608,7 @@ export function SceneImmersiveFeedDialog({
                       immersive
                       mediaActive={index === activeIndex}
                     />
-                  ) : 'card' in item ? (
+                  ) : 'card' in item && item.card ? (
                     <SceneDiscoverCard
                       card={item.card}
                       viewerSlug={viewerSlug}

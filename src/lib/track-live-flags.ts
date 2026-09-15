@@ -47,7 +47,7 @@ export type LooseTrackFilter = 'all' | 'live' | 'dna' | 'first-drop' | 'collab' 
 export const vaultLiveFilterLabels: Record<LooseTrackFilter, string> = {
   all: 'All',
   live: 'Anything live',
-  dna: 'DNA Drop',
+  dna: 'Lyrics DNA Drop',
   'first-drop': 'Release',
   collab: 'Collab',
   complete: 'Complete',
@@ -104,7 +104,7 @@ export function matchesAlbumFilter(album: Album, filter: LooseTrackFilter): bool
   return true;
 }
 
-/** Album or any track DNA Drop share that is currently live. */
+/** Album or any track Lyrics DNA Drop share that is currently live. */
 export function getAlbumLiveDnaShareId(album: Pick<Album, 'shareId' | 'tracks'>): string | undefined {
   if (hasActiveDnaDrop(album.shareId)) return album.shareId;
   return album.tracks?.find((track) => hasActiveDnaDrop(track.shareId))?.shareId;

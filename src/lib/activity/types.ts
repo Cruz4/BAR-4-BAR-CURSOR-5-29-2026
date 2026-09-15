@@ -166,7 +166,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_imprint_saved: 'saved your Imprint',
     profile_imprint_saved: 'saved an Imprint from your Artist Home',
     mention: 'mentioned you',
-    dna_import: 'imported your DNA Drop',
+    dna_import: 'imported your Lyrics DNA Drop',
     drop_loved: 'loved your release',
     drop_reply: 'replied on your release',
     drop_unlocked: 'unlocked your release',
@@ -197,7 +197,7 @@ export function activityVerb(type: ActivityType, direction: ActivityDirection): 
     post_imprint_saved: 'you saved an Imprint by',
     profile_imprint_saved: 'you saved an Imprint from',
     mention: 'you mentioned',
-    dna_import: 'you imported a DNA Drop from',
+    dna_import: 'you imported a Lyrics DNA Drop from',
     drop_loved: 'you loved a release by',
     drop_reply: 'you replied on a release by',
     drop_unlocked: 'you unlocked a release by',
@@ -347,7 +347,7 @@ export function pushCopyForActivity(
     case 'dna_import':
       return {
         title: 'AKAsheet',
-        body: `${actorName} imported your DNA Drop`,
+        body: `${actorName} imported your Lyrics DNA Drop`,
       };
     case 'drop_loved':
       return {

@@ -10,7 +10,7 @@ const HINT = (
   <div className="max-w-[220px] space-y-0.5">
     <p className="text-[10px] font-bold uppercase">{NO_LYRICS_DNA_LABEL}</p>
     <p className="text-[10px] leading-relaxed text-muted-foreground">
-      This song is music-only. DNA Drop lyrics are a separate Pro page.
+      This song is music-only. Lyrics DNA Drop lyrics are a separate Pro page.
     </p>
   </div>
 );

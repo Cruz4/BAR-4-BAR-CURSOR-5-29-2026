@@ -21,6 +21,7 @@ import { normalizeDropAudio, type DropAudioMeta } from '@/lib/drop-commerce';
 import { completeUploadTicket, requestUploadTicket } from '@/lib/upload-ticket-client';
 import { sheetTakeStoragePath, type SheetTake } from '@/lib/sheet-takes';
 import { normalizeAudioContentType } from '@/lib/audio-mime';
+import { dataUrlToBlob, isDataUrl } from '@/lib/cover-art';
 
 type Progress = (message: string) => void;
 
@@ -84,6 +85,7 @@ async function fetchSheetTake(take: SheetTake): Promise<Blob> {
 }
 
 async function coverBlob(url: string): Promise<Blob> {
+  if (isDataUrl(url)) return dataUrlToBlob(url);
   const response = await fetch(url);
   if (!response.ok) throw new Error('Could not read one of your cover images.');
   return response.blob();

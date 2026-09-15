@@ -264,7 +264,7 @@ export function TheCatchGame({
                 href={`/share/${rewardShareId}`}
                 className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ph-accent)]/50 bg-[var(--ph-accent)]/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-accent)] hover:bg-[var(--ph-accent)]/25"
               >
-                Open the DNA Drop →
+                Open the Lyrics DNA Drop →
               </Link>
             )}
           </div>

@@ -162,7 +162,7 @@ export function ShareDialog({
           description:
             droppedCount > 0
               ? `Live-dropped ${droppedCount} track${droppedCount === 1 ? '' : 's'} and updated the album.`
-              : 'Same link — the album now points at each track’s latest live DNA Drop.',
+              : 'Same link — the album now points at each track’s latest live Lyrics DNA Drop.',
         });
       } else {
         const newShareId = await dropDNA('album', id);
@@ -172,11 +172,11 @@ export function ShareDialog({
           description:
             droppedCount > 0
               ? `Live-dropped ${droppedCount} track${droppedCount === 1 ? '' : 's'}. The album page shows song cards.`
-              : 'Public album page shows track cards — open a song for its DNA Drop.',
+              : 'Public album page shows track cards — open a song for its Lyrics DNA Drop.',
         });
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Could not publish album DNA Drop.';
+      const message = e instanceof Error ? e.message : 'Could not publish album Lyrics DNA Drop.';
       toast({ variant: 'destructive', title: 'Drop Failed', description: message });
     } finally {
       setIsWorking(false);
@@ -191,7 +191,7 @@ export function ShareDialog({
       toast({
         variant: 'destructive',
         title: 'Studio Pro Required',
-        description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
+        description: 'Lyrics DNA Drop links are Studio Pro. Publishing a song or album from New release is Free.',
       });
       router.push(DNA_DROP_UPGRADE_PATH);
       return;
@@ -217,7 +217,7 @@ export function ShareDialog({
       toast({
         variant: 'destructive',
         title: 'Studio Pro Required',
-        description: 'DNA Drop lyric links are Studio Pro. Publishing a song or album from New release is Free.',
+        description: 'Lyrics DNA Drop links are Studio Pro. Publishing a song or album from New release is Free.',
       });
       router.push(DNA_DROP_UPGRADE_PATH);
       return;
@@ -231,11 +231,11 @@ export function ShareDialog({
       const newShareId = await dropDNA(type, id, scopeOptions);
       setShareId(newShareId);
       toast({
-        title: shareId ? 'DNA Drop Updated' : 'DNA Drop Live',
+        title: shareId ? 'Lyrics DNA Drop Updated' : 'Lyrics DNA Drop Live',
         description: 'Your public link now reflects your latest saved setup.',
       });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Could not publish DNA Drop.';
+      const message = e instanceof Error ? e.message : 'Could not publish Lyrics DNA Drop.';
       toast({ variant: 'destructive', title: 'Drop Failed', description: message });
     } finally {
       setIsWorking(false);
@@ -259,7 +259,7 @@ export function ShareDialog({
         description: 'Same link — visitors and importers now see your latest saved DNA.',
       });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Could not update DNA Drop.';
+      const message = e instanceof Error ? e.message : 'Could not update Lyrics DNA Drop.';
       toast({ variant: 'destructive', title: 'Update Failed', description: message });
     } finally {
       setIsWorking(false);
@@ -273,11 +273,11 @@ export function ShareDialog({
       await revokeDNA(type, id, shareId, scopeOptions);
       setShareId('');
       toast({
-        title: 'DNA Drop offline',
+        title: 'Lyrics DNA Drop offline',
         description: 'The public link no longer works. You can publish again anytime.',
       });
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Could not take DNA Drop offline.';
+      const message = e instanceof Error ? e.message : 'Could not take Lyrics DNA Drop offline.';
       toast({ variant: 'destructive', title: 'Offline Failed', description: message });
     } finally {
       setIsWorking(false);
@@ -316,7 +316,7 @@ export function ShareDialog({
       toast({
         variant: 'destructive',
         title: 'Limit reached',
-        description: `Up to ${DNA_DROP_MEDIA_LIMIT} media links per DNA Drop.`,
+        description: `Up to ${DNA_DROP_MEDIA_LIMIT} media links per Lyrics DNA Drop.`,
       });
       return;
     }
@@ -339,8 +339,8 @@ export function ShareDialog({
       toast({
         title: shareId ? 'Media saved & snapshot updated' : 'Media saved',
         description: shareId
-          ? 'Public DNA Drop page now includes these links and embeds.'
-          : 'Links will publish with your next Confirm DNA Drop.',
+          ? 'Public Lyrics DNA Drop page now includes these links and embeds.'
+          : 'Links will publish with your next Confirm Lyrics DNA Drop.',
       });
     } catch (e: unknown) {
       toast({
@@ -355,7 +355,7 @@ export function ShareDialog({
 
   const albumReadyCopy =
     type === 'album'
-      ? 'Publishes an album page with your album DNA plus clickable cards for each song. Live tracks open their own DNA Drop (lyrics & rules). Offline tracks stay listed until you drop them.'
+      ? 'Publishes an album page with your album DNA plus clickable cards for each song. Live tracks open their own Lyrics DNA Drop (lyrics & rules). Offline tracks stay listed until you drop them.'
       : 'Publishes a snapshot of lyrics & structure plus only the rules that are toggled on right now — Creative DNA, intents, vibe, guardrails, special instructions, and Style DNA when active. Music releases are managed separately in Release Catalog.';
 
   return (
@@ -395,7 +395,7 @@ export function ShareDialog({
                   className="w-full h-12 text-sm font-bold shadow-xl gap-2"
                 >
                   {isWorking ? <Loader className="animate-spin" /> : <Share2 className="h-4 w-4" />}
-                  Confirm DNA Drop
+                  Confirm Lyrics DNA Drop
                 </Button>
               </div>
             ) : (
@@ -413,7 +413,7 @@ export function ShareDialog({
                         'flex h-10 min-w-0 flex-1 items-center truncate rounded-md border border-input bg-background/50 px-3 font-code text-xs text-primary underline-offset-2',
                         'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
                       )}
-                      title="Open DNA Drop in a new tab"
+                      title="Open Lyrics DNA Drop in a new tab"
                     >
                       {shareUrl}
                     </a>
@@ -423,7 +423,7 @@ export function ShareDialog({
                       className="h-10 w-10 shrink-0"
                       onClick={openShareInNewWindow}
                       title="Open in new window"
-                      aria-label="Open DNA Drop in new window"
+                      aria-label="Open Lyrics DNA Drop in new window"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
@@ -433,7 +433,7 @@ export function ShareDialog({
                       className="h-10 w-10 shrink-0"
                       onClick={copyToClipboard}
                       title="Copy link"
-                      aria-label="Copy DNA Drop link"
+                      aria-label="Copy Lyrics DNA Drop link"
                     >
                       {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
@@ -445,7 +445,7 @@ export function ShareDialog({
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                     <span className="text-[10px] font-bold uppercase text-green-600">
-                      {type === 'album' ? 'Album DNA Drop is live' : 'DNA Drop is live'}
+                      {type === 'album' ? 'Album Lyrics DNA Drop is live' : 'Lyrics DNA Drop is live'}
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
@@ -608,7 +608,7 @@ export function ShareDialog({
             <AlertDialogDescription className="text-sm font-code leading-relaxed space-y-3">
               <span className="block">
                 {offlineTracks.length} song{offlineTracks.length === 1 ? '' : 's'} in this album{' '}
-                {offlineTracks.length === 1 ? "isn't" : "aren't"} on a live DNA Drop yet. The album works best
+                {offlineTracks.length === 1 ? "isn't" : "aren't"} on a live Lyrics DNA Drop yet. The album works best
                 when each card opens that song&apos;s page.
               </span>
               <span className="block text-muted-foreground">

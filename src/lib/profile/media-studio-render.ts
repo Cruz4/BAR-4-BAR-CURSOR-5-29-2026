@@ -9,6 +9,7 @@ import {
   WALL_CLIP_MAX_SECONDS,
   type PendingWallClip,
 } from '@/lib/profile/wall-clips';
+import { dataUrlToBlob } from '@/lib/cover-art';
 import { processPostImageFile, type PendingPostImage } from '@/lib/profile/post-images';
 
 export type StudioSource =
@@ -83,9 +84,14 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 async function decodeAudio(ctx: AudioContext, url: string): Promise<AudioBuffer> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Could not load that music.');
-  const buf = await res.arrayBuffer();
+  let buf: ArrayBuffer;
+  if (url.startsWith('data:')) {
+    buf = await dataUrlToBlob(url).arrayBuffer();
+  } else {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Could not load that music.');
+    buf = await res.arrayBuffer();
+  }
   return ctx.decodeAudioData(buf.slice(0));
 }
 

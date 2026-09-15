@@ -830,7 +830,7 @@ export default function AdminPage() {
   const handleDeleteUser = async (targetUser: User) => {
       if (
         !confirm(
-          `ERADICATION PROTOCOL: Permanently delete ${targetUser.displayName}?\n\nThis removes their Firebase Authentication account and wipes all albums, tracks, ink balances, trophies, DNA Drops, and vault data. Any active Studio Pro subscription in Stripe will be cancelled. They are cleared from the identity registry — if they sign in again they start completely fresh (welcome Ink and full onboarding), unlike self-delete which blocks perk farming.`
+          `ERADICATION PROTOCOL: Permanently delete ${targetUser.displayName}?\n\nThis removes their Firebase Authentication account and wipes all albums, tracks, ink balances, trophies, Lyrics DNA Drops, and vault data. Any active Studio Pro subscription in Stripe will be cancelled. They are cleared from the identity registry — if they sign in again they start completely fresh (welcome Ink and full onboarding), unlike self-delete which blocks perk farming.`
         )
       ) {
         return;

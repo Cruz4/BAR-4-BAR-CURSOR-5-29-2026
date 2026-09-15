@@ -1,4 +1,4 @@
-/** Album cover art — normalized to square 1000×1000 JPEG for vault + DNA Drop display. */
+/** Album cover art — normalized to square 1000×1000 JPEG for vault + Lyrics DNA Drop display. */
 
 export const COVER_ART_EXPORT_SIZE = 1000;
 export const COVER_ART_MIN_DIMENSION = 400;
@@ -123,6 +123,30 @@ export async function processProfilePhotoFile(
 
 export function isDataUrl(src?: string | null): boolean {
   return Boolean(src?.startsWith('data:'));
+}
+
+/** Decode a data URL in-memory. `fetch(data:)` is blocked unless CSP connect-src includes `data:`. */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',');
+  if (!dataUrl.startsWith('data:') || comma < 5) {
+    throw new Error('Could not read that file.');
+  }
+  const header = dataUrl.slice(5, comma);
+  const payload = dataUrl.slice(comma + 1);
+  const parts = header.split(';');
+  const mime = (parts[0] || '').trim() || 'application/octet-stream';
+  const isBase64 = parts.some((part) => part.trim().toLowerCase() === 'base64');
+  try {
+    if (isBase64) {
+      const binary = atob(payload);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    }
+    return new Blob([decodeURIComponent(payload)], { type: mime });
+  } catch {
+    throw new Error('Could not read that file.');
+  }
 }
 
 /** Album Room door banner — center-cropped to 2:1 landscape for the wide door frame. */

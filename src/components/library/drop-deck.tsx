@@ -1014,7 +1014,7 @@ export function DropDeck({
               <div className="flex flex-col items-center gap-3 p-10 text-center">
                 <Disc3 className="h-10 w-10 text-fuchsia-400/70" />
                 <p className="text-sm text-muted-foreground">
-                  Nothing here yet. Open a live DNA Drop with audio and buy or unlock it.
+                  Nothing here yet. Open a live Lyrics DNA Drop with audio and buy or unlock it.
                 </p>
                 <Button variant="outline" asChild>
                   <Link href="/">Back to The Scene</Link>

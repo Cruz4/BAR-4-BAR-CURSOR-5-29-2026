@@ -21,7 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Mail, Lock, User as UserIcon, Zap, Import, ShieldCheck, Disc3 } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, Zap, ShieldCheck, Disc3 } from 'lucide-react';
 import { BUY_ME_COFFEE_URL, SUPPORT_MAILTO } from '@/lib/support';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
@@ -101,8 +101,6 @@ function LoginForm() {
   const [displayName, setDisplayName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const importIntent = searchParams.get('intent') === 'dna-import';
-  const dnaDropIntent = searchParams.get('intent') === 'dna-drop' || importIntent;
   const dropBuyIntent = searchParams.get('intent') === 'drop-buy';
   const guestTryIntent = searchParams.get('intent') === 'guest_try';
   const safeNext = getSafeNextPath(searchParams.get('next'));
@@ -457,21 +455,6 @@ function LoginForm() {
                     . Your selected price stays with you through signup.
                     {' '}
                     <strong className="text-foreground">Import Setup</strong> is separate: that copies lyrics &amp; Creative DNA into your vault, not the recording.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            )}
-
-            {dnaDropIntent && (
-              <Card className="w-full border-primary/30 bg-primary/10 backdrop-blur-md relative z-50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-primary">
-                    <Import className="h-4 w-4" /> DNA Drops (Lyrics) — Studio Pro
-                  </CardTitle>
-                  <CardDescription className="text-[11px] font-code leading-relaxed text-left">
-                    You must be Studio Pro to download, view, or import DNA Drops. Sign in to check your tier or upgrade, or create an account.
-                    After you sign in, Pro members return to the lyric snapshot; Visitor members go to Studio Tier with the DNA Drop perk highlighted.
-                    {' '}Listen / buy music releases stay Free — this gate is lyrics only.
                   </CardDescription>
                 </CardHeader>
               </Card>

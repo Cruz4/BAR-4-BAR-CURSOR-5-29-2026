@@ -774,7 +774,7 @@ function ActivityPageInner() {
                 <Bell className="h-6 w-6 text-emerald-400" /> Activity
               </CardTitle>
               <CardDescription className="mt-1 text-sm leading-relaxed">
-                Loves, replies, friend and contact requests, and DNA Drop imports — received and sent.
+                Loves, replies, friend and contact requests, and Lyrics DNA Drop imports — received and sent.
               </CardDescription>
             </div>
             <InboxBulkReadToggle
@@ -831,7 +831,7 @@ function ActivityPageInner() {
                     <EmptyState
                       icon={Bell}
                       title="Nothing yet"
-                      body="When someone loves your post, replies, friends you, or imports your DNA Drop, it lands here."
+                      body="When someone loves your post, replies, friends you, or imports your Lyrics DNA Drop, it lands here."
                     />
                   ) : null}
                   {inbox.map((event) => (

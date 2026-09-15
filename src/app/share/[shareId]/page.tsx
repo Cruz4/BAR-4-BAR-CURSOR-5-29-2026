@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useContext, useMemo, useCallback, Suspense } from 'react';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
@@ -14,10 +14,8 @@ import {
     Globe,
     Compass,
     Target,
-    Sparkles,
     Import,
     Eye,
-    Clock,
     LogIn,
     EyeOff,
     ExternalLink,
@@ -25,8 +23,11 @@ import {
     ChevronLeft,
     Pencil,
     Disc3,
+    Dna,
 } from 'lucide-react';
 import { StudioLoader } from '@/components/studio-loader';
+import { DnaDropAtmosphere } from '@/components/dna-drop-atmosphere';
+import { DnaDropLyricSheet } from '@/components/dna-drop-lyric-sheet';
 import { ShareCoverImage } from '@/components/share-cover-image';
 import { format } from 'date-fns';
 import {
@@ -38,6 +39,7 @@ import {
   type DnaDropTrackPayload,
   type DnaDropAlbumPayload,
 } from '@/lib/dna-drop';
+import { orderAlbumTracks } from '@/lib/album-track-order';
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
 import { DropListenPanel } from '@/components/drop-listen-panel';
@@ -49,7 +51,7 @@ import { parseEmbedUrl } from '@/lib/profile/embeds';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { recordShareImport } from '@/lib/share-import-client';
-import { HighlightedText } from '@/components/highlighted-text';
+import { cn } from '@/lib/utils';
 import { buildClientRhymeGroups } from '@/lib/lyrics-analysis/client-rhyme-groups';
 import { vaultHref } from '@/lib/scene-home';
 import {
@@ -65,8 +67,10 @@ import {
 import Link from 'next/link';
 import { buildDropBuyLoginPath } from '@/lib/checkout-intent';
 import {
+  DNA_DROP_SNAPSHOT_TRACK_PARAM,
   DNA_DROP_UPGRADE_PATH,
   buildDnaDropLoginPath,
+  dnaDropSharePath,
   resolveDnaDropImportPath,
 } from '@/lib/dna-drop-access';
 import {
@@ -77,13 +81,16 @@ import {
 } from '@/components/ui/tooltip';
 import { manageRelease } from '@/lib/release-management-client';
 import { shareDocumentVisibility } from '@/lib/release-management';
+import { canManageReleaseShare } from '@/lib/house-artist-link';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 
-export default function SharedProjectPage() {
+function SharedProjectPageInner() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const shareId = params.shareId as string;
     const router = useRouter();
     const { toast } = useToast();
-    const { user, authReady } = useAuth();
+    const { user, authReady, loading: authBooting } = useAuth();
     const { mergeData, isCloudSyncActive, getAlbumById, albums, revokeDNA } = useContext(DataContext);
 
     const [share, setShare] = useState<ProjectShare | null>(null);
@@ -96,7 +103,9 @@ export default function SharedProjectPage() {
 
     useEffect(() => {
         const fetchShare = async () => {
-            if (!authReady) return;
+            // Guests settle with authReady=false; waiting on authReady hangs the share page forever.
+            if (authBooting) return;
+            if (user && !authReady) return;
             try {
                 const docRef = doc(db, 'shares', shareId);
                 const snap = await getDoc(docRef);
@@ -105,17 +114,29 @@ export default function SharedProjectPage() {
                     router.replace('/discover');
                     return;
                 }
-                const visibilityResponse = await fetch(`/api/dna/manage?shareId=${encodeURIComponent(shareId)}`, { cache: 'no-store' });
                 const data = snap.data() as ProjectShare;
                 const fromShare = shareDocumentVisibility(data as unknown as Record<string, unknown>);
-                const fromApi = visibilityResponse.ok
-                    ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
-                    : null;
+                let fromApi: { dnaLive?: boolean; releaseLive?: boolean } | null = null;
+                const ac = new AbortController();
+                const timer = window.setTimeout(() => ac.abort(), 2500);
+                try {
+                    const visibilityResponse = await fetch(
+                        `/api/dna/manage?shareId=${encodeURIComponent(shareId)}`,
+                        { cache: 'no-store', signal: ac.signal }
+                    );
+                    fromApi = visibilityResponse.ok
+                        ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
+                        : null;
+                } catch {
+                    fromApi = null;
+                } finally {
+                    window.clearTimeout(timer);
+                }
                 const visibility = {
                     dnaLive: Boolean(fromApi?.dnaLive ?? fromShare.dnaLive),
                     releaseLive: Boolean(fromApi?.releaseLive ?? fromShare.releaseLive),
                 };
-                const isOwner = user?.id === data.ownerId;
+                const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
                 const isPublic = Boolean(visibility?.dnaLive || visibility?.releaseLive);
                 const musicPublic = Boolean(visibility?.releaseLive);
                 const canViewDna = isOwner || isCloudSyncActive;
@@ -127,16 +148,21 @@ export default function SharedProjectPage() {
                     setShare(null);
                     router.replace('/discover');
                     return;
-                } else if (!canViewDna && !musicPublic) {
-                    setShare(null);
+                }
+                if (!canViewDna && !musicPublic) {
+                    const dest = user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view');
                     setDnaAccessRedirecting(true);
-                    router.replace(user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view'));
+                    router.replace(dest);
+                    window.setTimeout(() => {
+                        if (window.location.pathname.startsWith('/share/')) {
+                            window.location.assign(dest);
+                        }
+                    }, 1200);
                     return;
-                } else {
-                    setShare(data);
-                    if (canViewDna || musicPublic) {
-                        updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
-                    }
+                }
+                setShare(data);
+                if (canViewDna || musicPublic) {
+                    updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
                 }
             } catch {
                 setShare(null);
@@ -146,7 +172,7 @@ export default function SharedProjectPage() {
             }
         };
         void fetchShare();
-    }, [shareId, authReady, user, isCloudSyncActive, router]);
+    }, [shareId, authBooting, authReady, user, isCloudSyncActive, router]);
 
     const formattedShareDate = useMemo(() => {
         if (!share?.updatedAt && !share?.createdAt) return 'Recent';
@@ -156,16 +182,27 @@ export default function SharedProjectPage() {
 
     const project = share?.data as DnaDropAlbumPayload | DnaDropTrackPayload | undefined;
     const isAlbum = share?.type === 'album';
-    const trackProject = !isAlbum ? (project as DnaDropTrackPayload | undefined) : undefined;
-    const direction = project ? resolveSharedDirection(project) : undefined;
+    const albumPayload = isAlbum ? (project as DnaDropAlbumPayload | undefined) : undefined;
+    const snapshotTrackId = (searchParams.get(DNA_DROP_SNAPSHOT_TRACK_PARAM) || '').trim();
+    const snapshotTrack = useMemo((): DnaDropTrackPayload | undefined => {
+        if (!albumPayload || !snapshotTrackId) return undefined;
+        const ordered = orderAlbumTracks(albumPayload.tracks ?? [], albumPayload);
+        return ordered.find((track) => track.id === snapshotTrackId)
+          ?? albumPayload.tracks?.find((track) => track.id === snapshotTrackId);
+    }, [albumPayload, snapshotTrackId]);
+    const viewingAlbumHub = Boolean(isAlbum && !snapshotTrack);
+    const trackProject: DnaDropTrackPayload | undefined =
+      snapshotTrack || (!isAlbum ? (project as DnaDropTrackPayload | undefined) : undefined);
+    const direction = (snapshotTrack || project) ? resolveSharedDirection(snapshotTrack || project!) : undefined;
     const displayIntents = useMemo(() => {
+        if (trackProject) return sharedTrackIntents(trackProject);
         if (!project) return [] as string[];
         if (isAlbum) return (project as DnaDropAlbumPayload).thingsToSay ?? [];
         return sharedTrackIntents(project as DnaDropTrackPayload);
-    }, [project, isAlbum]);
+    }, [project, isAlbum, trackProject]);
     const dropMedia = useMemo(
-      () => normalizeDnaDropMedia(project?.dnaDropMedia),
-      [project]
+      () => normalizeDnaDropMedia((snapshotTrack || project)?.dnaDropMedia),
+      [project, snapshotTrack]
     );
     const hasFirstDropAudio = useMemo(() => {
       if (!project) return false;
@@ -177,6 +214,7 @@ export default function SharedProjectPage() {
       return Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
     }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
+    const canManageShare = Boolean(user && share && canManageReleaseShare(share, user.id));
     const canViewDnaLyrics = isOwnShare || isCloudSyncActive;
     const isReleaseShare = Boolean(
       project && hasFirstDropAudio && (
@@ -187,45 +225,52 @@ export default function SharedProjectPage() {
     );
 
     const vaultTrack = useMemo(() => {
-        if (!project || isAlbum) return null;
-        return findTrackInVault(albums, project.id);
-    }, [project, isAlbum, albums]);
+        if (!trackProject) return null;
+        return findTrackInVault(albums, trackProject.id);
+    }, [trackProject, albums]);
 
     /** Track art first; else album cover from snapshot context (or vault for older drops). */
     const coverArtSrc = useMemo(() => {
+        if (snapshotTrack && albumPayload) {
+            return resolveDnaDropCoverArt(snapshotTrack, albumPayload.coverArtUrl);
+        }
         if (!project) return undefined;
-        if (isAlbum) return (project as DnaDropAlbumPayload).coverArtUrl;
+        if (viewingAlbumHub) return (project as DnaDropAlbumPayload).coverArtUrl;
         const vaultAlbum = vaultTrack?.album;
         const vaultAlbumCover =
           vaultAlbum && !isLooseTrackAlbum(vaultAlbum) ? vaultAlbum.coverArtUrl : undefined;
         return resolveDnaDropCoverArt(project as DnaDropTrackPayload, vaultAlbumCover);
-    }, [project, isAlbum, vaultTrack]);
+    }, [project, viewingAlbumHub, snapshotTrack, albumPayload, vaultTrack]);
 
     /** Rhyme Pulse–style end-word highlighting for the shared lyrics sheet (track drops only). */
     const rhymeGroups = useMemo(() => {
-        if (!project || isAlbum) return [];
+        if (!trackProject) return [];
         const lines: string[] = [];
-        for (const sec of (project as DnaDropTrackPayload).sections || []) {
+        for (const sec of trackProject.sections || []) {
             for (const bar of sec.bars || []) {
                 if (bar.text?.trim()) lines.push(bar.text);
             }
         }
         return buildClientRhymeGroups(lines);
-    }, [project, isAlbum]);
+    }, [trackProject]);
 
     const alreadyInVault = useMemo(() => {
         if (!project || !isOwnShare) return false;
+        if (snapshotTrack) return Boolean(vaultTrack);
         if (isAlbum) return Boolean(getAlbumById(project.id));
         return Boolean(vaultTrack);
-    }, [project, isOwnShare, isAlbum, getAlbumById, vaultTrack]);
+    }, [project, isOwnShare, isAlbum, getAlbumById, vaultTrack, snapshotTrack]);
 
     const editHref = useMemo(() => {
         if (!project) return null;
+        if (snapshotTrack) {
+            return `/albums/${albumPayload?.id ?? vaultTrack?.album.id ?? 'unassigned'}/tracks/${snapshotTrack.id}`;
+        }
         if (isAlbum) return `/albums/${project.id}`;
         return `/albums/${vaultTrack?.album.id ?? 'unassigned'}/tracks/${project.id}`;
-    }, [project, isAlbum, vaultTrack]);
+    }, [project, isAlbum, vaultTrack, snapshotTrack, albumPayload]);
 
-    const ownerEditLabel = isAlbum ? 'Open album' : 'Edit track sheet';
+    const ownerEditLabel = snapshotTrack || !isAlbum ? 'Edit track sheet' : 'Open album';
 
     const openInVault = useCallback(() => {
         if (!editHref) return;
@@ -235,15 +280,19 @@ export default function SharedProjectPage() {
     const homeHref = user ? vaultHref() : '/';
 
     const handleLeavePage = useCallback(() => {
+        if (snapshotTrack) {
+            router.push(dnaDropSharePath(shareId));
+            return;
+        }
         if (typeof window !== 'undefined' && window.history.length > 1) {
             router.back();
             return;
         }
         router.push(homeHref);
-    }, [router, homeHref]);
+    }, [router, homeHref, snapshotTrack, shareId]);
 
     const handleImportClick = () => {
-        if (!authReady) return;
+        if (authBooting) return;
 
         if (!user || !isCloudSyncActive) {
             router.push(resolveDnaDropImportPath(shareId, {
@@ -271,25 +320,26 @@ export default function SharedProjectPage() {
         setConfirmOpen(false);
         setIsImporting(true);
         try {
-            const data = share.data;
-            if (share.type === 'album') await mergeData([data as Album], []);
+            const data = snapshotTrack || share.data;
+            if (!snapshotTrack && share.type === 'album') await mergeData([data as Album], []);
             else await mergeData([], [data as Track]);
 
             await recordShareImport(shareId);
 
             toast({
                 title: 'DNA Imported',
-                description: `"${project.title}" was merged into your vault. You can edit it anytime.`,
+                description: `"${(snapshotTrack || project).title}" was merged into your vault. You can edit it anytime.`,
             });
 
-            if (isAlbum) router.push(`/albums/${(data as Album).id}`);
+            if (snapshotTrack) router.push(editHref ?? `/albums/unassigned/tracks/${snapshotTrack.id}`);
+            else if (isAlbum) router.push(`/albums/${(data as Album).id}`);
             else router.push(`/albums/unassigned/tracks/${(data as Track).id}`);
         } catch (e) {
             console.error('Import failed', e);
             toast({
                 variant: 'destructive',
                 title: 'Import failed',
-                description: 'Could not merge this DNA Drop. Try again in a moment.',
+                description: 'Could not merge this Lyrics DNA Drop. Try again in a moment.',
             });
         } finally {
             setIsImporting(false);
@@ -303,7 +353,7 @@ export default function SharedProjectPage() {
         try {
             await revokeDNA(share.type, project.id, shareId);
             toast({
-                title: 'DNA Drop offline',
+                title: 'Lyrics DNA Drop offline',
                 description: 'The public link no longer works.',
             });
             // Prefer the page they came from (profile, vault, etc.). Fall back to the
@@ -314,7 +364,7 @@ export default function SharedProjectPage() {
                 router.push(editHref ?? '/');
             }
         } catch (e: unknown) {
-            const message = e instanceof Error ? e.message : 'Could not take this DNA Drop offline.';
+            const message = e instanceof Error ? e.message : 'Could not take this Lyrics DNA Drop offline.';
             toast({ variant: 'destructive', title: 'Offline failed', description: message });
         } finally {
             setIsTakingOffline(false);
@@ -329,12 +379,11 @@ export default function SharedProjectPage() {
             const albumId = isAlbum
               ? project.id
               : vaultTrack?.album.id || (project as DnaDropTrackPayload).albumId;
-            if (!albumId) throw new Error('Open this release from your Vault to manage it.');
             await manageRelease({
               kind: isAlbum ? 'album' : 'track',
               action: 'unpublish',
-              albumId,
-              ...(isAlbum ? {} : { trackId: project.id }),
+              shareId,
+              ...(albumId ? { albumId, ...(isAlbum ? {} : { trackId: project.id }) } : {}),
             });
             toast({
                 title: isAlbum ? 'Album release taken offline' : 'Song release taken offline',
@@ -349,23 +398,38 @@ export default function SharedProjectPage() {
         }
     };
 
-    if (loading || dnaAccessRedirecting) {
+    if (loading || dnaAccessRedirecting || authBooting || (user && !authReady)) {
         return (
           <StudioLoader
             size="lg"
             fullscreen
-            message={dnaAccessRedirecting ? 'DNA Drops are Studio Pro…' : 'Accessing Studio Vault...'}
+            message={dnaAccessRedirecting ? 'Opening Studio Pro…' : 'Opening this drop…'}
           />
         );
     }
 
     if (!share || !project) {
         return (
-          <StudioLoader
-            size="lg"
-            fullscreen
-            message="Opening release…"
-          />
+          <div className="flex min-h-screen items-center justify-center px-6">
+            <Card className="max-w-md border-primary/25 bg-primary/5">
+                <CardContent className="space-y-4 p-6 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                        Lyrics DNA Drop
+                    </p>
+                    <p className="text-sm text-muted-foreground font-code leading-relaxed">
+                        Sign in, then choose Studio Pro to open lyrics, Creative DNA, and save strands to your vault.
+                    </p>
+                    <Button
+                        className="font-bold uppercase tracking-widest text-[10px]"
+                        onClick={() =>
+                            router.replace(user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view'))
+                        }
+                    >
+                        {user ? 'Choose a plan' : 'Sign in'}
+                    </Button>
+                </CardContent>
+            </Card>
+          </div>
         );
     }
 
@@ -382,15 +446,13 @@ export default function SharedProjectPage() {
     const guestImportHint =
       'Copies lyrics, structure, and Creative DNA into your vault — not the song. Use Pay what you want below to buy the stream.';
 
-    const OwnerEditIcon = isAlbum ? Disc3 : Pencil;
+    const OwnerEditIcon = snapshotTrack || !isAlbum ? Pencil : Disc3;
 
     return (
         <div className="min-h-screen relative selection:bg-primary/30 overflow-x-hidden font-code">
-            <div className="fixed inset-0 z-0 pointer-events-none opacity-20">
-                <div className="h-full w-full bg-[repeating-linear-gradient(theme(colors.border),theme(colors.border)_1px,transparent_1px,transparent_24px)]" />
-            </div>
+            <DnaDropAtmosphere />
 
-            <header className="sticky top-0 z-[100] min-h-14 border-b bg-background/80 backdrop-blur-md px-3 sm:px-6 py-2 relative flex items-center justify-between gap-2">
+            <header className="sticky top-0 z-[100] min-h-14 border-b border-cyan-400/20 bg-background/70 backdrop-blur-md px-3 sm:px-6 py-2 relative flex items-center justify-between gap-2">
                 <div className="relative z-10 flex shrink-0 items-center">
                     <Button
                         type="button"
@@ -398,11 +460,13 @@ export default function SharedProjectPage() {
                         size="sm"
                         onClick={handleLeavePage}
                         className="h-8 sm:h-9 shrink-0 px-2 font-bold text-muted-foreground hover:text-foreground"
-                        aria-label="Go back"
-                        title="Go back"
+                        aria-label={snapshotTrack ? 'Back to snapshot sequence' : 'Go back'}
+                        title={snapshotTrack ? 'Back to snapshot sequence' : 'Go back'}
                     >
                         <ChevronLeft className="h-4 w-4 sm:mr-1" />
-                        <span className="hidden sm:inline text-[10px] uppercase tracking-widest">Back</span>
+                        <span className="hidden sm:inline text-[10px] uppercase tracking-widest">
+                          {snapshotTrack ? 'Sequence' : 'Back'}
+                        </span>
                     </Button>
                 </div>
                 <Link
@@ -418,11 +482,13 @@ export default function SharedProjectPage() {
                             AKAsheet
                         </h1>
                         <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
-                            {hasFirstDropAudio
-                              ? isAlbum
-                                ? 'Album · preview every track · buy once'
-                                : 'Song · 30s preview · buy to stream'
-                              : 'DNA Drop Snapshot'}
+                            {snapshotTrack
+                              ? `Song Lyrics DNA Drop · ${albumPayload?.title || 'snapshot'}`
+                              : viewingAlbumHub
+                                ? 'Lyrics DNA Drop snapshot'
+                                : hasFirstDropAudio
+                                  ? 'Song · 30s preview · buy to stream'
+                                  : 'Lyrics DNA Drop Snapshot'}
                         </p>
                     </div>
                 </Link>
@@ -437,7 +503,21 @@ export default function SharedProjectPage() {
                             <span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span>
                         </div>
                     </div>
-                    {isOwnShare && (
+                    {canManageShare && isReleaseShare ? (
+                        <Button
+                            onClick={() => openFirstDropLathe({
+                              shareId,
+                              mode: isAlbum ? 'album' : 'song',
+                            })}
+                            size="sm"
+                            variant="outline"
+                            className="h-8 sm:h-9 px-2 sm:px-3 font-bold"
+                        >
+                            <Pencil className="h-3.5 w-3.5 sm:mr-1.5" />
+                            <span className="hidden sm:inline">Update</span>
+                        </Button>
+                    ) : null}
+                    {canManageShare && (
                         <Button
                             onClick={() => setOfflineConfirmOpen(true)}
                             size="sm"
@@ -508,7 +588,7 @@ export default function SharedProjectPage() {
                 </div>
             </header>
 
-            {(!user || !canViewDnaLyrics) && (
+            {(!user || !canViewDnaLyrics) && hasFirstDropAudio && (
                 <div className="container max-w-7xl mx-auto px-4 pt-4 relative z-10">
                     <Card className={hasFirstDropAudio ? 'border-fuchsia-500/40 bg-fuchsia-500/10' : 'border-primary/25 bg-primary/5'}>
                         <CardContent className="p-4 text-[11px] font-code text-muted-foreground leading-relaxed">
@@ -527,7 +607,7 @@ export default function SharedProjectPage() {
                                 ) : (
                                   <span>Listen / buy stays Free.</span>
                                 )}
-                                {` DNA Drops (lyrics) — extract, view, and import — are Studio Pro only. `}
+                                {` Lyrics DNA Drops — extract, view, and import — are Studio Pro only. `}
                                 <button
                                   type="button"
                                   className="text-primary underline underline-offset-2 font-bold"
@@ -542,7 +622,7 @@ export default function SharedProjectPage() {
                               </>
                             ) : (
                               <>
-                                DNA Drops (lyrics) — extract, view, and import — are Studio Pro only. Sign in to check your tier or upgrade, or create an account.
+                                Lyrics DNA Drops — extract, view, and import — are Studio Pro only. Sign in to check your tier or upgrade, or create an account.
                                 {' '}
                                 <button
                                   type="button"
@@ -565,7 +645,7 @@ export default function SharedProjectPage() {
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
                 <div className="lg:col-span-4 space-y-6">
                     <Suspense fallback={null}>
-                      {isAlbum ? (
+                      {viewingAlbumHub && hasFirstDropAudio ? (
                         <AlbumReleasePlaylist
                           album={project as DnaDropAlbumPayload}
                           shareId={shareId}
@@ -573,56 +653,88 @@ export default function SharedProjectPage() {
                           ownerName={share.ownerName}
                           houseRelease={share.houseRelease === true}
                         />
-                      ) : (
+                      ) : trackProject && normalizeDropAudio(trackProject.dropAudio) ? (
                         <DropListenPanel
                           shareId={shareId}
                           source="share"
-                          title={project.title || 'Untitled'}
+                          title={trackProject.title || 'Untitled'}
                           artistName={share.ownerName}
                           ownerId={share.ownerId}
-                          price={normalizeDropPrice((project as DnaDropTrackPayload).dropPrice)}
-                          hasAudio={hasFirstDropAudio}
+                          price={normalizeDropPrice(trackProject.dropPrice)}
+                          hasAudio
                           houseRelease={share.houseRelease === true}
                           checkoutDestination="song"
+                          trackId={snapshotTrack ? trackProject.id : undefined}
                         />
-                      )}
+                      ) : null}
                     </Suspense>
+                    {hasFirstDropAudio || snapshotTrack ? (
                     <DropSocialPanel
                       shareId={shareId}
-                      title={project.title || 'Untitled'}
+                      title={(snapshotTrack || project).title || 'Untitled'}
                       ownerId={share.ownerId}
                       playCount={share.playCount}
                       previewCount={share.previewCount}
                       purchaseCount={share.purchaseCount}
                       firstBuyerName={share.firstBuyerName}
-                      hasAudio={hasFirstDropAudio}
-                      isAlbum={isAlbum}
+                      hasAudio={
+                        viewingAlbumHub
+                          ? hasFirstDropAudio
+                          : Boolean(
+                              snapshotTrack
+                                ? normalizeDropAudio(snapshotTrack.dropAudio)
+                                : normalizeDropAudio((project as DnaDropTrackPayload).dropAudio)
+                            )
+                      }
+                      isAlbum={viewingAlbumHub}
+                      trackId={snapshotTrack?.id}
                       ownerName={share.ownerName}
                     />
-                    <Card className="border-2 overflow-hidden bg-card/80">
-                        <div className="aspect-square relative w-full border-b bg-neutral-950">
+                    ) : null}
+                    <Card className="border-2 border-cyan-400/20 overflow-hidden bg-card/50 backdrop-blur-md">
+                        <div className={cn(
+                          'relative w-full border-b border-cyan-400/15 bg-neutral-950',
+                          viewingAlbumHub ? 'aspect-[4/5] max-h-[28rem]' : 'aspect-square'
+                        )}>
                             <ShareCoverImage
                                 src={coverArtSrc}
-                                alt={project.title || 'Project Snapshot'}
+                                alt={(snapshotTrack || project).title || 'Project Snapshot'}
                                 priority
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-cyan-950/20 pointer-events-none" />
+                            <div className="absolute top-3 left-3">
+                              <Badge variant="outline" className="text-[8px] uppercase tracking-widest border-cyan-400/40 bg-black/50 text-cyan-200">
+                                {viewingAlbumHub ? 'Lyric sequence' : 'Song strand'}
+                              </Badge>
+                            </div>
                             <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 pointer-events-none">
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none break-words">{project.title}</h2>
-                                <p className="text-[10px] text-primary font-bold uppercase mt-2 tracking-widest flex items-center gap-2">
-                                    <Sparkles className="h-3 w-3 shrink-0" /> by {share.ownerName}
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none break-words">
+                                  {(snapshotTrack || project).title}
+                                </h2>
+                                <p className="text-[10px] text-cyan-200 font-bold uppercase mt-2 tracking-widest flex items-center gap-2">
+                                    <Dna className="h-3 w-3 shrink-0" /> by {share.ownerName}
                                 </p>
                             </div>
                         </div>
                         <CardContent className="p-4 sm:p-6 space-y-6">
-                            {canViewDnaLyrics ? (
+                            {canViewDnaLyrics && viewingAlbumHub ? (
+                                (project as DnaDropAlbumPayload)?.theme ? (
+                                    <p className="text-sm italic text-muted-foreground leading-relaxed">
+                                        &ldquo;{(project as DnaDropAlbumPayload).theme}&rdquo;
+                                    </p>
+                                ) : (
+                                    <p className="text-[11px] text-muted-foreground font-code leading-relaxed">
+                                        Open a strand on the right to read that song’s Lyrics DNA Drop.
+                                    </p>
+                                )
+                            ) : canViewDnaLyrics && trackProject ? (
                             <>
                             <div>
                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
-                                    <Globe className="h-3 w-3" /> {isAlbum ? 'Album DNA' : 'Track Theme'}
+                                    <Globe className="h-3 w-3" /> Track Theme
                                 </h4>
                                 <p className="text-sm italic text-muted-foreground leading-relaxed">
-                                    &ldquo;{isAlbum ? (project as DnaDropAlbumPayload)?.theme : (project as DnaDropTrackPayload)?.vibe?.feeling?.join(', ')}&rdquo;
+                                    &ldquo;{trackProject.vibe?.feeling?.join(', ')}&rdquo;
                                 </p>
                             </div>
                             {direction && (
@@ -643,7 +755,7 @@ export default function SharedProjectPage() {
                                     </div>
                                 </div>
                             )}
-                            {!isAlbum && trackProject?.vibe?.enabled !== false && (trackProject?.vibe?.genre || trackProject?.vibe?.instrumentation) && (
+                            {trackProject?.vibe?.enabled !== false && (trackProject?.vibe?.genre || trackProject?.vibe?.instrumentation) && (
                                 <div className="space-y-2 border-t pt-4">
                                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Vibe</h4>
                                     <p className="text-[11px] text-muted-foreground">
@@ -658,7 +770,7 @@ export default function SharedProjectPage() {
                             ) : (
                                 <div className="rounded-lg border border-primary/25 bg-primary/5 p-3 space-y-2">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                                        DNA Drop · Studio Pro
+                                        Lyrics DNA Drop · Studio Pro
                                     </p>
                                     <p className="text-[11px] text-muted-foreground leading-relaxed">
                                         Lyrics, Creative DNA, and import are Pro only. Listen / buy on this page stays Free.
@@ -698,10 +810,10 @@ export default function SharedProjectPage() {
                             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0 space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">
-                                        Your DNA Drop
+                                        Your Lyrics DNA Drop
                                     </p>
                                     <p className="text-sm text-muted-foreground">
-                                        {isAlbum
+                                        {isAlbum && !snapshotTrack
                                           ? 'Jump back into this album in your vault to edit tracks, cover, and DNA.'
                                           : 'Open the writable lyric sheet for this track in your vault.'}
                                     </p>
@@ -720,7 +832,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
-                    {canViewDnaLyrics && (
+                    {canViewDnaLyrics && Boolean(trackProject) && (
                     <Card className="border-sky-500/30 bg-sky-500/5">
                         <CardHeader className="p-4">
                             <CardTitle className="text-xs font-headline uppercase text-sky-500 flex items-center gap-2">
@@ -741,7 +853,7 @@ export default function SharedProjectPage() {
                     </Card>
                     )}
 
-                    {canViewDnaLyrics && !isAlbum && trackProject?.sharedStyle?.analysis && (
+                    {canViewDnaLyrics && trackProject?.sharedStyle?.analysis && (
                         <Card className="border-fuchsia-500/30 bg-fuchsia-500/5">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-fuchsia-400">Style DNA</CardTitle>
@@ -752,7 +864,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
-                    {canViewDnaLyrics && !isAlbum && trackProject?.specialInstructions?.trim() && (
+                    {canViewDnaLyrics && trackProject?.specialInstructions?.trim() && (
                         <Card className="border-blue-500/30 bg-blue-500/5">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-blue-400">Special Instructions</CardTitle>
@@ -763,7 +875,7 @@ export default function SharedProjectPage() {
                         </Card>
                     )}
 
-                    {canViewDnaLyrics && !isAlbum && trackProject?.guardrails?.enabled && (
+                    {canViewDnaLyrics && trackProject?.guardrails?.enabled && (
                         <Card className="border-rose-500/30 bg-rose-500/5 overflow-hidden">
                             <CardHeader className="p-4 pb-2">
                                 <CardTitle className="text-xs font-headline uppercase text-rose-400">Guardrails</CardTitle>
@@ -795,7 +907,7 @@ export default function SharedProjectPage() {
                 </div>
 
                 <div className="lg:col-span-8 space-y-8">
-                    {isAlbum ? (
+                    {viewingAlbumHub ? (
                         <DnaDropAlbumHub
                             album={project as DnaDropAlbumPayload}
                             shareId={shareId}
@@ -805,62 +917,23 @@ export default function SharedProjectPage() {
                             canViewDna={canViewDnaLyrics}
                             signedIn={Boolean(user)}
                         />
-                    ) : canViewDnaLyrics ? (
-                    <Card className="border-2 shadow-2xl relative overflow-hidden bg-notebook min-h-[60vh] md:min-h-[80vh] [--lyrics-gutter:2.75rem] md:[--lyrics-gutter:100px] [--lyrics-lh:20px] md:[--lyrics-lh:32px]">
-                        <style>{`
-                            .bg-notebook {
-                                background-image:
-                                    linear-gradient(90deg, transparent var(--lyrics-gutter), #ff000022 var(--lyrics-gutter), #ff000022 calc(var(--lyrics-gutter) + 1px), transparent calc(var(--lyrics-gutter) + 1px)),
-                                    repeating-linear-gradient(transparent, transparent calc(var(--lyrics-lh) - 1px), #ffffff05 calc(var(--lyrics-lh) - 1px), #ffffff05 var(--lyrics-lh));
-                                background-size: 100% var(--lyrics-lh);
-                                background-attachment: local;
-                            }
-                        `}</style>
-                        <CardHeader className="bg-card border-b relative z-10 px-4 py-4 sm:px-8 sm:py-6 md:p-12 md:py-8">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                                <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
-                                    Live Snapshot
-                                </Badge>
-                                <div className="flex items-center gap-2 text-[9px] text-muted-foreground uppercase font-bold">
-                                    <Clock className="h-3 w-3" /> Updated {formattedShareDate}
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-0 relative z-10">
-                                <div className="px-3 py-6 sm:px-6 sm:py-8 md:p-12 space-y-8 md:space-y-12">
-                                    {(project as DnaDropTrackPayload)?.sections?.map((sec: Track['sections'][number]) => (
-                                        <div key={sec.id} className="space-y-0">
-                                            <h4 className="text-base sm:text-xl md:text-2xl font-headline font-bold text-sky-400 uppercase mb-2 md:mb-4 pl-[calc(var(--lyrics-gutter)+0.5rem)]">{sec.type}</h4>
-                                            {sec.bars.map((bar) => (
-                                                <div
-                                                    key={bar.idx}
-                                                    className="relative flex items-start min-h-[var(--lyrics-lh)] pl-[calc(var(--lyrics-gutter)+0.5rem)] pr-2"
-                                                >
-                                                    <span className="absolute left-0 w-[var(--lyrics-gutter)] pr-1.5 text-right font-mono text-[10px] md:text-sm text-muted-foreground/40 leading-[var(--lyrics-lh)] font-bold tabular-nums">
-                                                        {String(bar.idx).padStart(2, '0')}
-                                                    </span>
-                                                    <p className="text-[14px] md:text-xl lg:text-2xl font-code font-bold leading-[var(--lyrics-lh)] tracking-tight text-foreground/90 break-words whitespace-pre-wrap min-w-0 w-full">
-                                                        {bar.text ? (
-                                                          <HighlightedText text={bar.text} rhymeGroups={rhymeGroups} />
-                                                        ) : (
-                                                          '...'
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </div>
-                        </CardContent>
-                    </Card>
+                    ) : canViewDnaLyrics && trackProject ? (
+                    <DnaDropLyricSheet
+                        title={trackProject.title || 'Untitled'}
+                        sections={trackProject.sections}
+                        rhymeGroups={rhymeGroups}
+                        updatedLabel={`Updated ${formattedShareDate}`}
+                        albumShareId={snapshotTrack ? shareId : trackProject.sharedAlbumContext?.shareId}
+                        albumTitle={snapshotTrack ? albumPayload?.title : trackProject.sharedAlbumContext?.title}
+                    />
                     ) : (
-                    <Card className="border-2 border-primary/25 bg-primary/5 min-h-[40vh] flex items-center justify-center">
+                    <Card className="border-2 border-cyan-400/25 bg-cyan-500/5 min-h-[40vh] flex items-center justify-center">
                         <CardContent className="p-8 max-w-md text-center space-y-4">
                             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-                                DNA Drops (Lyrics) · Studio Pro
+                                Lyrics DNA Drops · Studio Pro
                             </p>
                             <p className="text-sm text-muted-foreground font-code leading-relaxed">
-                                Extract, view, and import lyric DNA Drops are Pro only. Sign in to check your tier or upgrade.
+                                Extract, view, and import Lyrics DNA Drops are Pro only. Sign in to check your tier or upgrade.
                             </p>
                             <Button
                               className="font-bold uppercase tracking-widest text-[10px]"
@@ -904,7 +977,7 @@ export default function SharedProjectPage() {
                             </span>
                             {isOwnShare ? (
                                 <span className="block text-amber-200/90">
-                                    This is your own DNA Drop. Import updates the copy already in your vault (same project ID).
+                                    This is your own Lyrics DNA Drop. Import updates the copy already in your vault (same project ID).
                                 </span>
                             ) : (
                                 <span className="block">You can edit everything after import. Existing projects with the same ID will be merged.</span>
@@ -924,10 +997,10 @@ export default function SharedProjectPage() {
                 <AlertDialogContent className="bg-card border-2">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="font-headline text-2xl uppercase">
-                          {isReleaseShare ? `Take this ${isAlbum ? 'album' : 'song'} release offline?` : 'Take this DNA Drop offline?'}
+                          {isReleaseShare ? `Take this ${isAlbum ? 'album' : 'song'} release offline?` : 'Take this Lyrics DNA Drop offline?'}
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-sm font-code leading-relaxed">
-                            {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The DNA Drop snapshot will go offline immediately. Your Vault copy stays private. Signed-in Studio Pro members will no longer open this lyric page.'}
+                            {isReleaseShare ? 'New discovery and checkout will stop; existing buyers keep access.' : 'The Lyrics DNA Drop snapshot will go offline immediately. Your Vault copy stays private. Signed-in Studio Pro members will no longer open this lyric page.'}
                             You&apos;ll go back to where you came from — publish again anytime from the project.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -944,5 +1017,13 @@ export default function SharedProjectPage() {
                 </AlertDialogContent>
             </AlertDialog>
         </div>
+    );
+}
+
+export default function SharedProjectPage() {
+    return (
+        <Suspense fallback={<StudioLoader size="lg" fullscreen message="Opening this drop…" />}>
+            <SharedProjectPageInner />
+        </Suspense>
     );
 }

@@ -49,7 +49,7 @@ export function AdminFirstDropsCard() {
         title: data.enabled ? 'Music Releases live' : 'Music Releases off',
         description: data.enabled
           ? 'Audio upload, pricing, buy/stream, Library, Earnings cashout, and Release Discover cards are on.'
-          : 'Commerce is hidden. DNA Drops still work. Existing purchases and earnings stay saved if you turn it back on.',
+          : 'Commerce is hidden. Lyrics DNA Drops still work. Existing purchases and earnings stay saved if you turn it back on.',
       });
     } catch (err) {
       toast({
@@ -72,7 +72,7 @@ export function AdminFirstDropsCard() {
               Music Releases
             </CardTitle>
             <CardDescription className="mt-2 max-w-xl">
-              Buy-once audio on DNA Drops: upload, set price or pay-what-you-want, stream in-app.
+              Buy-once audio on Lyrics DNA Drops: upload, set price or pay-what-you-want, stream in-app.
               Artists cash out {dropArtistShareLabel()} on Earnings after connecting Stripe payouts.
               Toggle live — no redeploy. Emergency:{' '}
               <code className="text-foreground/80">FIRST_DROPS_FORCE_OFF=1</code>.
@@ -100,7 +100,7 @@ export function AdminFirstDropsCard() {
                   Enable Music Releases
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                  When off: no audio upload, no checkout, no Library, no Earnings cashout, and no Release labels. DNA Drop
+                  When off: no audio upload, no checkout, no Library, no Earnings cashout, and no Release labels. Lyrics DNA Drop
                   links and lyrics stay.
                 </p>
               </div>
@@ -119,7 +119,7 @@ export function AdminFirstDropsCard() {
             ) : null}
 
             <ul className="text-[11px] text-muted-foreground space-y-1.5 list-disc list-inside">
-              <li>Scene dock → New release — Free for every signed-in artist; choose a song or album, upload, price, press live (DNA Drop lyric links stay Pro)</li>
+              <li>Scene dock → New release — Free for every signed-in artist; choose a song or album, upload, price, press live (Lyrics DNA Drop links stay Pro)</li>
               <li>Public /share player + Stripe buy / pay-what-you-want</li>
               <li>Library + Discover Release cards</li>
               <li>Earnings — Connect payouts, held sales, Stripe bank cashout</li>

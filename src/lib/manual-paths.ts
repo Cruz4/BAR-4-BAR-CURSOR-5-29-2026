@@ -77,7 +77,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
   {
     id: 'press-song',
     title: 'Press a song live',
-    blurb: 'Scene → New release → upload audio → price → press live. Free. Not a DNA Drop.',
+    blurb: 'Scene → New release → upload audio → price → press live. Free. Not a Lyrics DNA Drop.',
     tier: 'free',
     group: 'do',
     steps: [
@@ -115,7 +115,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
       {
         id: 'press-live',
         title: 'Press live',
-        body: 'Publish the release. DNA Drop is the separate Pro lyric link — do not mix them up.',
+        body: 'Publish the release. Lyrics DNA Drop is the separate Pro lyric link — do not mix them up.',
         action: 'open-lathe',
         target: '#release-step-publish',
         doneEvent: RELEASE_PUBLISHED_EVENT,
@@ -250,7 +250,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
   },
   {
     id: 'dna-drop',
-    title: 'Share lyrics as a DNA Drop',
+    title: 'Share lyrics as a Lyrics DNA Drop',
     blurb: 'Pro lyric snapshot link. Not New release. Not The Pressing.',
     tier: 'pro',
     group: 'do',
@@ -258,14 +258,14 @@ export const MANUAL_PATHS: ManualPathLane[] = [
       {
         id: 'vault',
         title: 'Write the lyrics first',
-        body: 'Open a sheet in The Vault. A DNA Drop is a shareable lyric page, not audio.',
+        body: 'Open a sheet in The Vault. A Lyrics DNA Drop is a shareable lyric page, not audio.',
         href: vaultHref(),
         isDone: isVaultish,
       },
       {
         id: 'drop',
-        title: 'Open DNA Drop',
-        body: 'On the sheet, tap DNA Drop and publish the lyric snapshot link. Pro.',
+        title: 'Open Lyrics DNA Drop',
+        body: 'On the sheet, tap Lyrics DNA Drop and publish the lyric snapshot link. Pro.',
         href: `${vaultHref()}?create=track`,
         target: '[data-tour="dna-drop"]',
         isDone: isSheet,
@@ -370,7 +370,7 @@ export const MANUAL_PATHS: ManualPathLane[] = [
       {
         id: 'pricing',
         title: 'Open Pricing',
-        body: 'Ink packs and Studio Pro. Pro unlocks unlimited catalog, DNA Drop, Collab Sheet, and Freestyle.',
+        body: 'Ink packs and Studio Pro. Pro unlocks unlimited catalog, Lyrics DNA Drop, Collab Sheet, and Freestyle.',
         href: '/pricing',
         isDone: (p) => normalizePath(p) === '/pricing',
       },
@@ -481,7 +481,7 @@ export const MANUAL_PATH_GROUPS: { id: ManualPathGroup; title: string; hint: str
   { id: 'do', title: 'Do this', hint: 'A full path. Start on any step — the coach stays until you finish.' },
   { id: 'then', title: 'Then', hint: 'Public page, Library, money, and Ink.' },
   { id: 'also', title: 'Also here', hint: 'Optional rooms. Same names on phone and PC.' },
-  { id: 'words', title: 'What is what', hint: 'Tap a name to go there. Music release ≠ DNA Drop ≠ The Pressing.' },
+  { id: 'words', title: 'What is what', hint: 'Tap a name to go there. Music release ≠ Lyrics DNA Drop ≠ The Pressing.' },
 ];
 
 export function getManualPath(id: string): ManualPathLane | undefined {

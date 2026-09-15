@@ -117,8 +117,8 @@ export interface Album {
   /** Visibility of the separate DNA lyric page. */
   dnaStatus?: DnaStatus;
   /**
-   * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
-   * Included in the published snapshot; edit from the DNA Drop dialog.
+   * Links / embeds on the public Lyrics DNA Drop page (YouTube, Spotify, etc.).
+   * Included in the published snapshot; edit from the Lyrics DNA Drop dialog.
    */
   dnaDropMedia?: string[];
   /** Album bundle price for AKAsheet First Drops. */
@@ -195,8 +195,8 @@ export interface Track {
   /** Active Collab Sheet — live multi-user editing session id. */
   collabSheetId?: string;
   /**
-   * Links / embeds on the public DNA Drop page (YouTube, Spotify, etc.).
-   * Included in the published snapshot; edit from the DNA Drop dialog.
+   * Links / embeds on the public Lyrics DNA Drop page (YouTube, Spotify, etc.).
+   * Included in the published snapshot; edit from the Lyrics DNA Drop dialog.
    */
   dnaDropMedia?: string[];
   /** Private song file + 30s preview for AKAsheet First Drops. */
@@ -272,6 +272,7 @@ export interface ProjectShare {
   /** Lightweight First Drops flags for Discover / share page. */
   hasDropAudio?: boolean;
   houseRelease?: boolean;
+  houseArtistId?: string;
   houseLibraryNotice?: boolean;
   houseLibraryNoticeAt?: string;
   dropPriceSummary?: string;

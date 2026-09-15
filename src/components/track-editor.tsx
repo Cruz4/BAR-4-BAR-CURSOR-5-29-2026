@@ -824,7 +824,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
   const releaseControlCopy = {
     new: {
       label: 'New release',
-      hint: 'Free — upload a recording, set its price, and publish it for listening or purchase. DNA Drop lyric links stay Pro.',
+      hint: 'Free — upload a recording, set its price, and publish it for listening or purchase. Lyrics DNA Drop links stay Pro.',
       badge: null,
       badgeClassName: '',
     },
@@ -1097,7 +1097,7 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         onChange={(pressStage) => onUpdateTrack({ pressStage })}
                       />
                       <p className="text-[9px] text-muted-foreground leading-snug">
-                        Personal checklist — not Press live or DNA Drop. Turn off in Settings or on the album page.
+                        Personal checklist — not Press live or Lyrics DNA Drop. Turn off in Settings or on the album page.
                       </p>
                     </div>
                   ) : null}
@@ -1129,9 +1129,9 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                       )}
                     >
                       {tierLocked
-                        ? 'Free tier limit — view only. Export, Performance, and DNA Drop need Pro (or your active Pro preview).'
+                        ? 'Free tier limit — view only. Export, Performance, and Lyrics DNA Drop need Pro (or your active Pro preview).'
                         : completeLocked
-                          ? 'Track is locked. Tap Reopen Track below to edit lyrics and Co-Writer again. Export, Performance, and DNA Drop need Pro unless your preview is active.'
+                          ? 'Track is locked. Tap Reopen Track below to edit lyrics and Co-Writer again. Export, Performance, and Lyrics DNA Drop need Pro unless your preview is active.'
                           : 'Lock the track when lyrics are finished — blocks edits and counts toward weekly goals and achievements.'}
                     </p>
                     <Hint
@@ -1274,22 +1274,22 @@ function LeftPanel({ track, album, onUpdateTrack, activeSectionId, setActiveSect
                         actionSafe
                         content={
                           <p className="text-[10px] font-bold leading-snug">
-                            Publish a shareable DNA Drop link for this track’s blueprint.
+                            Publish a shareable Lyrics DNA Drop link for this track’s blueprint.
                           </p>
                         }
                       >
-                      <Button variant="secondary" size="sm" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
+                      <Button variant="secondary" size="sm" className="w-full min-w-0 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-[9px] font-bold h-9 uppercase justify-start leading-none pl-2 pr-2.5 overflow-visible" onClick={() => setShareDialogOpen(true)}><Globe className="mr-2 h-4 w-4 shrink-0" /> <span className="flex items-center justify-between gap-2 min-w-0 flex-1 overflow-visible"><span className="truncate min-w-0">Lyrics DNA Drop (Share)</span><DnaDropLiveIndicator shareId={track.shareId} variant="compact" /></span></Button>
                       </Hint>
                     ) : (
                       <LockedProFeatureButton
-                        feature="DNA Drop"
-                        benefit="Publish, view, download, and import lyric DNA Drops — Pro only."
+                        feature="Lyrics DNA Drop"
+                        benefit="Publish, view, download, and import Lyrics DNA Drops — Pro only."
                         example="Drop a link so collaborators can import your structure."
-                        ctaLabel="Publish DNA Drop — Go Pro"
+                        ctaLabel="Publish Lyrics DNA Drop — Go Pro"
                         ctaHref="/usage?tab=cloud&highlight=dna-drop"
                         icon={Globe}
                         iconClassName="text-primary"
-                        label={<span className="truncate flex items-center gap-2 min-w-0">DNA Drop (Share)</span>}
+                        label={<span className="truncate flex items-center gap-2 min-w-0">Lyrics DNA Drop (Share)</span>}
                         className="w-full min-w-0 text-[9px] font-bold h-9 uppercase px-2 bg-primary/10 text-primary border border-primary/20"
                       />
                     )}

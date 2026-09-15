@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { ChallengeDef } from '@/lib/gamification/challenges';
 import {
@@ -9,19 +8,14 @@ import {
   getChallengeProgress,
   isChallengeComplete,
   resolveChallengeTarget,
-  SCALE_LABELS,
   TIER_LABELS,
 } from '@/lib/gamification/challenges';
 import type { GamificationSummary } from '@/lib/gamification/types';
 import { CheckCircle2, Circle, Crown, Radio, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChallengeGoalFoilCard } from '@/components/gamification/challenge-goal-foil-card';
+import { ChallengeGoalFoilDialog } from '@/components/gamification/challenge-goal-foil-dialog';
 import { useAuth } from '@/hooks/use-auth';
-import { useGamification } from '@/context/gamification-context';
-import { useToast } from '@/hooks/use-toast';
-import { createPost } from '@/lib/profile/social-client';
-import { domNodeToFeedImageDataUrl } from '@/lib/gamification/feed-card-export';
 
 const TIER_STYLE: Record<ChallengeDef['tier'], string> = {
   standard: 'border-white/10 bg-black/20',
@@ -44,10 +38,7 @@ type ChallengeRowProps = {
 
 export function ChallengeRow({ challenge, summary, isPro = false, comfortable = false }: ChallengeRowProps) {
   const { user } = useAuth();
-  const { rankLabel } = useGamification();
-  const { toast } = useToast();
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [postingFeed, setPostingFeed] = useState(false);
+  const [foilOpen, setFoilOpen] = useState(false);
 
   const done = isChallengeComplete(summary, challenge, isPro);
   const progress = getChallengeProgress(summary, challenge, isPro);
@@ -63,49 +54,6 @@ export function ChallengeRow({ challenge, summary, isPro = false, comfortable = 
       : `${summary.xp.toLocaleString()} / ${challenge.target.toLocaleString()} XP`
     : `${progress}/${target}`;
 
-  const shareToFeed = async () => {
-    if (!user || !done) return;
-    flushSync(() => setPostingFeed(true));
-    try {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-      );
-      let cardEl = cardRef.current;
-      if (!cardEl) {
-        await new Promise((r) => setTimeout(r, 80));
-        cardEl = cardRef.current;
-      }
-      if (!cardEl) throw new Error('Goal card not ready — try again.');
-
-      const imageUrl = await domNodeToFeedImageDataUrl(cardEl);
-      await createPost({
-        text: [
-          `🎯 ${SCALE_LABELS[challenge.scale]} goal complete: ${challenge.label}`,
-          challenge.description.trim(),
-          challenge.tier !== 'standard' ? TIER_LABELS[challenge.tier] : '',
-          '#akasheet',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-        imageUrl,
-        ownerName: displayName,
-        ownerSlug: summary.profileSlug,
-      });
-      toast({
-        title: 'Shared to your feed',
-        description: 'Goal card posted on your wall / The Scene.',
-      });
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not share to feed',
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setPostingFeed(false);
-    }
-  };
-
   return (
     <li
       className={cn(
@@ -114,20 +62,6 @@ export function ChallengeRow({ challenge, summary, isPro = false, comfortable = 
         done ? 'border-emerald-500/30 bg-emerald-950/15' : TIER_STYLE[challenge.tier]
       )}
     >
-      {done && postingFeed && (
-        <div
-          className="pointer-events-none fixed left-[-99999px] top-0 w-[400px] opacity-0"
-          aria-hidden
-        >
-          <ChallengeGoalFoilCard
-            ref={cardRef}
-            challenge={challenge}
-            displayName={displayName}
-            rankLabel={rankLabel}
-          />
-        </div>
-      )}
-
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
         <div className="flex items-start gap-2 min-w-0 flex-1">
           {done ? (
@@ -201,17 +135,24 @@ export function ChallengeRow({ challenge, summary, isPro = false, comfortable = 
         </div>
       )}
       {done && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="h-8 w-full text-[10px] font-bold uppercase tracking-wide gap-1.5"
-          disabled={postingFeed || !user}
-          onClick={() => void shareToFeed()}
-        >
-          <Radio className="h-3.5 w-3.5" />
-          {postingFeed ? 'Posting foil…' : 'Share to feed'}
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 w-full text-[10px] font-bold uppercase tracking-wide gap-1.5"
+            disabled={!user}
+            onClick={() => setFoilOpen(true)}
+          >
+            <Radio className="h-3.5 w-3.5" />
+            Share to feed
+          </Button>
+          <ChallengeGoalFoilDialog
+            open={foilOpen}
+            onOpenChange={setFoilOpen}
+            challenge={challenge}
+          />
+        </>
       )}
     </li>
   );

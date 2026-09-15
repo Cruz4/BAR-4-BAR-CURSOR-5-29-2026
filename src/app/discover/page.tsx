@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSceneLayout } from '@/hooks/use-scene-layout';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
-import { fetchBlockedUsers } from '@/lib/profile/social-client';
+import { fetchBlockedUsers, fetchFriendships, friendProfilesOf, type Friendship } from '@/lib/profile/social-client';
 import {
   buildDiscoverCards,
   DISCOVER_ALL_MAX_CARDS,
@@ -50,6 +50,7 @@ export default function DiscoverPage() {
   const { user, loading: authLoading } = useAuth();
   const [discover, setDiscover] = useState<DiscoverData | null>(null);
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>();
   const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(0);
@@ -112,14 +113,16 @@ export default function DiscoverPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const [data, blocks] = await Promise.all([
+        const [data, blocks, friends] = await Promise.all([
           fetchDiscover(user?.id, { view: 'all' }),
           user?.id ? fetchBlockedUsers().catch(() => []) : Promise.resolve([]),
+          user?.id ? fetchFriendships(user.id).catch(() => []) : Promise.resolve([]),
         ]);
         if (cancelled) return;
         setDiscover(data);
         setMode(data.viewerGraph.hasTaste ? 'taste' : data.viewerGraph.hasCreation ? 'creation' : 'fresh');
         setBlockedIds(new Set(blocks.map((b) => b.blockedUserId)));
+        setFriendships(friends);
         setPage(0);
       } finally {
         if (!cancelled) setLoaded(true);
@@ -136,14 +139,25 @@ export default function DiscoverPage() {
     };
   }, [user?.id]);
 
+  const circleUserIds = useMemo(() => {
+    if (!user?.id) return new Set<string>();
+    return new Set(
+      friendProfilesOf(friendships, user.id, {
+        email: user.email,
+        displayName: user.displayName,
+      }).map((f) => f.userId)
+    );
+  }, [friendships, user?.id, user?.email, user?.displayName]);
+
   const cards: DiscoverCard[] = useMemo(() => {
     if (!discover) return [];
     return buildDiscoverCards(discover, {
       excludeUserIds: blockedIds,
+      circleUserIds,
       maxCards: DISCOVER_ALL_MAX_CARDS,
       mode,
     });
-  }, [discover, blockedIds, mode]);
+  }, [discover, blockedIds, circleUserIds, mode]);
 
   const pageCount = Math.max(1, Math.ceil(cards.length / DISCOVER_PAGE_SIZE) || 1);
   const safePage = Math.min(Math.max(0, page), pageCount - 1);
@@ -158,8 +172,16 @@ export default function DiscoverPage() {
     [cards]
   );
   const newestPressed = useMemo(
-    () => (discover?.drops || []).filter((drop) => drop.type === 'track' && drop.hasDropAudio).slice(0, 5),
-    [discover?.drops]
+    () =>
+      (discover?.drops || [])
+        .filter(
+          (drop) =>
+            drop.type === 'track' &&
+            drop.hasDropAudio &&
+            !(drop.ownerId && circleUserIds.has(drop.ownerId))
+        )
+        .slice(0, 5),
+    [circleUserIds, discover?.drops]
   );
   const guestPressing = !user
     ? discover?.artists.find((artist) => artist.pressing)?.pressing || discover?.drops.find((drop) => drop.pressing)?.pressing

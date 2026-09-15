@@ -290,7 +290,7 @@ export async function emitActivityEvent(input: EmitActivityInput): Promise<{ ok:
       const title =
         share.data && typeof share.data === 'object' && typeof (share.data as { title?: string }).title === 'string'
           ? (share.data as { title: string }).title
-          : 'DNA Drop';
+          : 'Lyrics DNA Drop';
       if (!preview) preview = title;
     }
   }

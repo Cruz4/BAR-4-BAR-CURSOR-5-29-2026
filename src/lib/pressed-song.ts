@@ -1,6 +1,22 @@
 import type { DropPrice } from '@/lib/drop-commerce';
+import { dnaDropSnapshotTrackPath } from '@/lib/dna-drop-access';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 import type { PressingConfig } from '@/lib/profile/pressing';
+
+/** Wall / Reverb / Share link for a release or Lyrics DNA Drop — song page vs album hub vs strand. */
+export function dropPromotePath(opts: {
+  shareId: string;
+  isAlbum?: boolean;
+  hasAudio?: boolean;
+  trackId?: string;
+}): string {
+  const shareId = opts.shareId.trim();
+  const trackId = opts.trackId?.trim();
+  if (opts.isAlbum) return `/share/${encodeURIComponent(shareId)}`;
+  if (opts.hasAudio) return pressedSongHref(shareId, { ...(trackId ? { trackId } : {}) });
+  if (trackId) return dnaDropSnapshotTrackPath(shareId, trackId);
+  return `/share/${encodeURIComponent(shareId)}`;
+}
 
 export function pressedSongHref(
   shareId: string,
@@ -29,6 +45,8 @@ export type PressedSongSummary = {
   shareId: string;
   trackId?: string;
   albumTitle?: string;
+  /** Live Lyrics DNA Drop for this song (track share), when one exists. */
+  dnaShareId?: string;
   /** Album hub post (no specific track in the URL) still returns a playable first track. */
   scope?: 'album' | 'track';
   ownerId: string;

@@ -101,7 +101,7 @@ export type ArtistHomeFeatured = {
   /** A First Drop the profile owner owns or purchased. */
   featuredTrack?: FeaturedTrackSelection;
   barOfWeek?: string;
-  /** Optional DNA Drop the featured bar lives in. */
+  /** Optional Lyrics DNA Drop the featured bar lives in. */
   barOfWeekShareId?: string;
   /** Up to 2 revealed Creative DNA lines. */
   dnaLines?: string[];
@@ -114,7 +114,7 @@ export type ArtistHomeFeatured = {
   theCatch?: unknown;
   /** @deprecated Prefer barBoard. */
   albumRooms?: AlbumRoomCard[];
-  /** @deprecated Live DNA Drops auto-list from shares; kept for older configs. */
+  /** @deprecated Live Lyrics DNA Drops auto-list from shares; kept for older configs. */
   dropShelfShareIds?: string[];
   /** Optional outbound socials — only filled ones appear under the portrait. */
   socials?: ArtistHomeSocials;
@@ -170,7 +170,7 @@ export const MODULE_META: Record<
     defaultEnabled: false,
   },
   dropShelf: {
-    label: 'Live Lyric DNA Drops',
+    label: 'Live Lyrics DNA Drops',
     description: 'Public lyric DNA previews. Songs for sale stay in the separate Listen / Buy release area.',
     defaultSize: 'L',
     defaultEnabled: true,

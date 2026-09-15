@@ -568,7 +568,7 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
 }
 
 // ---------------------------------------------------------------------------
-// Drop Shelf — all live DNA Drops (auto)
+// Drop Shelf — all live Lyrics DNA Drops (auto)
 // ---------------------------------------------------------------------------
 
 export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
@@ -583,7 +583,7 @@ export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   return (
     <ModuleShell
       icon={Dna}
-      title={hideFirstDropStrip ? 'Lyric DNA Drops' : releaseCount > 0 ? 'Listen / Buy' : 'Live Lyric DNA Drops'}
+      title={hideFirstDropStrip ? 'Lyrics DNA Drops' : releaseCount > 0 ? 'Listen / Buy' : 'Live Lyrics DNA Drops'}
       ctx={ctx}
     >
       <LiveDnaDropsGroupedList

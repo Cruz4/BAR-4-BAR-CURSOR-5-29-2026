@@ -66,7 +66,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
       'Start from The Scene, upload a finished recording, choose a fixed or pay-what-you-want price, select the public 30-second preview, and publish the release. Fans buy once and stream it in AKAsheet.',
     bullets: [
       'Listen / buy appears on your Artist Home, The Scene, and the song share link',
-      `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. DNA Drop remains your lyric-preview card; finished-song sales happen through Releases`,
+      `Fixed price or pay-what-you-want starts at ${centsToUsdLabel(DROP_PAID_MIN_CENTS)}. Lyrics DNA Drop remains your lyric-preview card; finished-song sales happen through Releases`,
       'You keep every right to your music. We keep 25% below $3, 15% from $3–$4.99, and 10% from $5 up',
       'Connect payouts in Earnings so Stripe can send the rest to your bank',
     ],
@@ -99,7 +99,7 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Collab Sheet',
     title: 'Write Together. Live.',
     description:
-      'Studio Pro opens a live editable sheet on any track — invite friends, see who\u2019s on the page (2/13 live), chat in a bottom drawer, and watch bars sync in real time. DNA Drop is a snapshot; Collab Sheet is the same room.',
+      'Studio Pro opens a live editable sheet on any track — invite friends, see who\u2019s on the page (2/13 live), chat in a bottom drawer, and watch bars sync in real time. Lyrics DNA Drop is a snapshot; Collab Sheet is the same room.',
     bullets: [
       'Pro to share as owner — collaborators edit with their account',
       'Presence chip + in-sheet chat — no pop-ups or extra windows',
@@ -169,8 +169,8 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Album Blueprint',
     title: 'Concept Arcs',
     description:
-      'Ordered tracklists, shared Album DNA, one-click DNA Drops — build albums, not one-off prompts. Live drops show on your Artist Home automatically.',
-    bullets: ['Drag-order tracklist', 'DNA inherits per track', 'DNA Drop snapshots · Collab Sheet live editing'],
+      'Ordered tracklists, shared Album DNA, one-click Lyrics DNA Drops — build albums, not one-off prompts. Live drops show on your Artist Home automatically.',
+    bullets: ['Drag-order tracklist', 'DNA inherits per track', 'Lyrics DNA Drop snapshots · Collab Sheet live editing'],
     mediaSrc: '/marketing/feature-album-blueprint.png',
     mediaType: 'image',
     mediaAlt: 'Album blueprint with tracklist and Album DNA panel',

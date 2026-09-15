@@ -190,7 +190,7 @@ export function ManualPathDeck({ onLeave }: { onLeave: () => void }) {
             <p className="mt-1 text-[11px] leading-snug text-foreground/90">Scene → New release. Audio + price.</p>
           </div>
           <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-2.5">
-            <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-emerald-200">DNA Drop</p>
+            <p className="font-code text-[8px] font-bold uppercase tracking-[0.18em] text-emerald-200">Lyrics DNA Drop</p>
             <p className="mt-1 text-[11px] leading-snug text-foreground/90">Sheet → Pro lyric link. Not a sale.</p>
           </div>
         </div>

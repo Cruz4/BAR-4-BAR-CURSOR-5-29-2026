@@ -2,12 +2,25 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAppRootSegment } from '@/lib/profile/profile-slug';
 import { matchSecurityCanaryPath } from '@/lib/security-canary-paths';
+import {
+  canonicalPublicUrl,
+  hostnameFromHostHeader,
+  shouldCanonicalizeLegacyFirebaseHost,
+} from '@/lib/app-url';
 
 const PROTECTED_PREFIXES = ['/albums', '/usage', '/admin', '/vault', '/earnings'];
 
 export function middleware(request: NextRequest) {
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? '';
+  const host = hostnameFromHostHeader(
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  );
   const proto = request.headers.get('x-forwarded-proto');
+  const { pathname, search } = request.nextUrl;
+
+  // Default Firebase Hosting URL only — never akasheet.com, localhost, or firebaseapp.com.
+  if (shouldCanonicalizeLegacyFirebaseHost(host, pathname)) {
+    return NextResponse.redirect(canonicalPublicUrl(pathname, search), 308);
+  }
 
   if (
     proto === 'http' &&
@@ -21,7 +34,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(httpsUrl, 308);
   }
 
-  const { pathname } = request.nextUrl;
   const canaryPath = matchSecurityCanaryPath(pathname);
   if (canaryPath) {
     const url = request.nextUrl.clone();
@@ -60,6 +72,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf|webmanifest)$).*)',
+    '/((?!_next/static|_next/image|__/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|ttf|otf|webmanifest)$).*)',
   ],
 };

@@ -19,7 +19,7 @@ export const TRACK_COMPLETE_TOAST = {
 export const TRACK_LOCKED_TOAST = {
   title: "That's a hit!!",
   description:
-    'Track locked — edits are off until you reopen. Export, Performance Mode, and DNA Drop still work.',
+    'Track locked — edits are off until you reopen. Export, Performance Mode, and Lyrics DNA Drop still work.',
 } as const;
 
 export const TRACK_LOCKED_BANNER =

@@ -38,6 +38,7 @@ import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/pos
 import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
 import type { RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
+import { dropPromotePath } from '@/lib/pressed-song';
 
 type DropSocialPanelProps = {
   shareId: string;
@@ -49,6 +50,8 @@ type DropSocialPanelProps = {
   firstBuyerName?: string;
   hasAudio?: boolean;
   isAlbum?: boolean;
+  /** Album-release share id + vault track id when promoting one song from an album. */
+  trackId?: string;
   ownerName?: string;
   ownerSlug?: string;
 };
@@ -63,6 +66,7 @@ export function DropSocialPanel({
   firstBuyerName,
   hasAudio = true,
   isAlbum = false,
+  trackId,
   ownerName,
 }: DropSocialPanelProps) {
   const { user } = useAuth();
@@ -103,7 +107,7 @@ export function DropSocialPanel({
   } = useImprintComposer(quoteText, isPro, summary.quotePressSlots);
 
   const pulse = formatDropPulseLine({ playCount, previewCount, purchaseCount, loveCount: likeCount });
-  const dropPath = isAlbum || !hasAudio ? `/share/${shareId}` : `/song/${shareId}`;
+  const dropPath = dropPromotePath({ shareId, isAlbum, hasAudio, trackId });
   const dropUrl = typeof window !== 'undefined' ? `${window.location.origin}${dropPath}` : dropPath;
   const quotePollReady =
     !quotePollOpen ||
@@ -215,7 +219,7 @@ export function DropSocialPanel({
     if (quoted && !quoteComposerReady) return;
     setBusy(true);
     try {
-      const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Release' : 'DNA Drop';
+      const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Song' : 'Lyrics DNA Drop';
       await createPost({
         text: [
           quoted ? quoteText.trim() : '',

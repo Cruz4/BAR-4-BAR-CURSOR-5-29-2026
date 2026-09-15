@@ -2,7 +2,7 @@
 
 /**
  * Discover cards for the Scene feed — recently live Artist Homes, public wall
- * posts, live DNA Drops, and this week's leaderboard risers.
+ * posts, live Lyrics DNA Drops, and this week's leaderboard risers.
  */
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
@@ -211,7 +211,7 @@ export function SceneDiscoverCard({
       >
         {loveBurst ? <Heart className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-20 w-20 -translate-x-1/2 -translate-y-1/2 fill-fuchsia-400 text-fuchsia-400 drop-shadow-[0_0_24px_rgba(244,114,182,.9)]" /> : null}
         <DiscoverTag
-          label={drop.houseRelease ? 'House release · free' : musicRelease ? (drop.type === 'album' ? 'Album release' : 'On sale') : 'Live DNA Drop'}
+          label={drop.houseRelease ? 'House release · free' : musicRelease ? (drop.type === 'album' ? 'Album release' : 'On sale') : 'Live Lyrics DNA Drop'}
           icon={musicRelease ? Music : Dna}
           tone={musicRelease ? 'text-fuchsia-400/90' : 'text-primary/90'}
         />

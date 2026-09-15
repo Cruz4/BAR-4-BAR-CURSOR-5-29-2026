@@ -3,7 +3,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BarChart3, CalendarDays, Disc3, Download, Gift, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy, Unlink } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, Disc3, Download, FileText, Gift, Headphones, ReceiptText, ShoppingBag, Sparkles, Trophy, Unlink } from 'lucide-react';
 import { auth } from '@/lib/firebase/client/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,8 @@ import type { MusicChartsResponse } from '@/lib/music-charts';
 import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
 import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
+import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { resolveDnaDropHref } from '@/lib/dna-drop-access';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -49,7 +51,7 @@ function SupporterRow({ supporter, showAmount }: { supporter: PressedSongSupport
 export function PressedSongPageClient({ initial }: { initial: PressedSongSummary }) {
   const router = useRouter();
   const { user, authReady } = useAuth();
-  const { updateTrack } = useContext(DataContext);
+  const { updateTrack, albums, isCloudSyncActive } = useContext(DataContext);
   const { toast } = useToast();
   const [summary, setSummary] = useState(initial);
   const [savingCredit, setSavingCredit] = useState(false);
@@ -138,8 +140,15 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     if (!controls || !window.confirm(`Take “${summary.title}” offline? New checkout and public discovery stop, while existing buyers keep access.`)) return;
     setUnpressing(true);
     try {
-      await manageRelease({ kind: 'track', action: 'unpublish', albumId: controls.albumId, trackId: controls.trackId });
-      updateTrack(controls.albumId, controls.trackId, { releaseStatus: 'unlisted', releaseShareId: summary.shareId });
+      await manageRelease({
+        kind: 'track',
+        action: 'unpublish',
+        shareId: summary.shareId,
+        ...(controls.albumId ? { albumId: controls.albumId, trackId: controls.trackId } : {}),
+      });
+      if (controls.albumId && albums.some((album) => album.id === controls.albumId)) {
+        updateTrack(controls.albumId, controls.trackId, { releaseStatus: 'unlisted', releaseShareId: summary.shareId });
+      }
       setSummary((current) => current.ownerControls ? { ...current, ownerControls: { ...current.ownerControls, releaseStatus: 'unlisted' } } : current);
       toast({ title: 'Release taken offline', description: 'It is off public surfaces. Republish from The Vault to restore this same URL.' });
     } catch (error) {
@@ -173,6 +182,13 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
             <Button variant="outline" asChild className="font-bold uppercase"><Link href="/">The Scene</Link></Button>
+            {summary.dnaShareId ? (
+              <Button variant="outline" asChild className="font-bold uppercase">
+                <Link href={resolveDnaDropHref(summary.dnaShareId, Boolean(user), isCloudSyncActive)}>
+                  <FileText className="mr-1.5 h-4 w-4" /> Lyrics DNA Drop
+                </Link>
+              </Button>
+            ) : null}
           </div>
           <Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button>
         </div>
@@ -208,9 +224,14 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
                 Owner release status · {summary.ownerControls.releaseStatus}
               </span>
               {summary.ownerControls.releaseStatus === 'live' ? (
-                <Button type="button" size="sm" variant="outline" className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300" disabled={unpressing} onClick={() => void unpressSong()}>
-                  <Unlink className="mr-1.5 h-3.5 w-3.5" /> Take offline
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase" onClick={() => openFirstDropLathe({ shareId: summary.shareId, mode: 'song' })}>
+                    Update
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" className="h-8 border-red-400/30 text-[10px] font-bold uppercase text-red-300" disabled={unpressing} onClick={() => void unpressSong()}>
+                    <Unlink className="mr-1.5 h-3.5 w-3.5" /> Take offline
+                  </Button>
+                </div>
               ) : (
                 <Button asChild size="sm" variant="outline" className="h-8 text-[10px] font-bold uppercase"><Link href="/vault">Republish from Vault</Link></Button>
               )}
@@ -233,6 +254,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               playCount={summary.publicTotals.plays}
               purchaseCount={summary.publicTotals.buyers}
               hasAudio
+              trackId={summary.scope === 'track' ? summary.trackId : undefined}
               ownerName={summary.artist.name}
               ownerSlug={summary.artist.slug}
             />

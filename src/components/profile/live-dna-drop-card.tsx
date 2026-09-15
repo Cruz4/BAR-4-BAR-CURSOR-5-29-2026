@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Shared live DNA Drop list cards — album DNA with nested track DNA,
+ * Shared live Lyrics DNA Drop list cards — album DNA with nested track DNA,
  * plus standalone track drops.
  */
 

@@ -7,7 +7,7 @@ import type { User } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
-/** Increment DNA Drop import counter — clients cannot write shares directly. */
+/** Increment Lyrics DNA Drop import counter — clients cannot write shares directly. */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ shareId: string }> }
@@ -33,7 +33,7 @@ export async function POST(
     const userSnap = await db.collection('users').doc(userId).get();
     if (!isProOrTrial(userSnap.data() as Pick<User, 'subscriptionStatus' | 'proFeaturePreviewExpiresAt'> | undefined)) {
       return NextResponse.json(
-        { error: 'Studio Pro is required to import DNA Drops.' },
+        { error: 'Studio Pro is required to import Lyrics DNA Drops.' },
         { status: 403 }
       );
     }

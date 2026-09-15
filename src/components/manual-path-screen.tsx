@@ -128,7 +128,7 @@ export function ManualPathScreen({ kind }: { kind: PathScreenKind }) {
         <div className="grid grid-cols-[1fr_1.4fr_1fr] gap-1.5">
           <div className="space-y-1 rounded-md border border-sky-400/25 bg-sky-500/10 p-1.5">
             <p className="font-code text-[7px] font-bold uppercase text-sky-200">Status</p>
-            <p className="font-code text-[7px] text-sky-100/70">DNA Drop · Collab</p>
+            <p className="font-code text-[7px] text-sky-100/70">Lyrics DNA Drop · Collab</p>
           </div>
           <div className="space-y-1 rounded-md border border-white/10 bg-black/40 p-1.5">
             <div className="h-1.5 rounded bg-white/20" />

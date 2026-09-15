@@ -72,7 +72,7 @@ function serializedBytes(value: unknown): number {
 
 /**
  * Keep album releases below Firestore's 1MB document limit without touching the
- * private Vault. Full DNA remains in its separate DNA Drop; only an oversized
+ * private Vault. Full DNA remains in its separate Lyrics DNA Drop; only an oversized
  * commerce snapshot falls back to the compact public track manifest.
  */
 export function fitAlbumReleasePayload(input: Record<string, unknown>): AlbumReleasePayloadFit {

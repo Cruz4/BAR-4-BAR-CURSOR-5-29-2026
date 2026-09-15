@@ -3,23 +3,18 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShareCoverImage } from '@/components/share-cover-image';
 import {
-  hasActiveDnaDrop,
   trackLyricBarCount,
   type DnaDropAlbumPayload,
   type DnaDropTrackPayload,
 } from '@/lib/dna-drop';
-import { CassetteTape, ChevronRight, Lock } from 'lucide-react';
+import { ChevronRight, Dna, Lock, Music } from 'lucide-react';
 import { dropPriceSummary, isCommerceLive, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
-import { DropListenPanel } from '@/components/drop-listen-panel';
-import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
-import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { orderAlbumTracks } from '@/lib/album-track-order';
 import { pressedSongHref } from '@/lib/pressed-song';
-import { resolveDnaDropHref } from '@/lib/dna-drop-access';
+import { dnaDropSnapshotTrackPath } from '@/lib/dna-drop-access';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
@@ -33,189 +28,194 @@ type DnaDropAlbumHubProps = {
 
 function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean, canViewDna: boolean): string {
   const bits: string[] = [];
-  if (firstDropsOn && normalizeDropAudio(track.dropAudio)) bits.push('Audio');
-  const price = firstDropsOn ? dropPriceSummary(normalizeDropPrice(track.dropPrice)) : '';
-  if (price) bits.push(price);
+  const bars = trackLyricBarCount(track);
+  if (canViewDna) bits.push(bars > 0 ? `${bars} bar${bars === 1 ? '' : 's'}` : 'Empty strand');
   if (canViewDna && track.vibe?.enabled !== false && track.vibe?.genre) bits.push(track.vibe.genre);
   if (canViewDna && track.vibe?.enabled !== false && track.vibe?.tempoBPM) bits.push(`${track.vibe.tempoBPM} BPM`);
-  if (canViewDna) {
-    const bars = trackLyricBarCount(track);
-    if (bars > 0) bits.push(`${bars} bar${bars === 1 ? '' : 's'}`);
+  if (firstDropsOn && normalizeDropAudio(track.dropAudio)) bits.push('Audio on the release');
+  const price = firstDropsOn ? dropPriceSummary(normalizeDropPrice(track.dropPrice)) : '';
+  if (price) bits.push(price);
+  return bits.join(' · ') || (canViewDna ? 'Lyric strand' : 'Release track');
+}
+
+function LyricsDnaTrackButton({
+  active,
+  href,
+  title,
+  canViewDna,
+}: {
+  active: boolean;
+  href?: string;
+  title: string;
+  canViewDna: boolean;
+}) {
+  const label = 'Lyrics DNA';
+  if (active && href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] transition-colors',
+          'border-cyan-400/55 bg-cyan-400/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] hover:border-cyan-300/70 hover:bg-cyan-400/25'
+        )}
+        aria-label={`Open Lyrics DNA Drop for ${title}`}
+      >
+        <Dna className="h-3.5 w-3.5 shrink-0" />
+        {label}
+      </Link>
+    );
   }
-  return bits.join(' · ') || (canViewDna ? 'No lyrics drafted yet' : 'Release track');
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em]',
+        'border-white/10 bg-black/20 text-muted-foreground/45 cursor-not-allowed'
+      )}
+      aria-disabled
+      title={
+        !canViewDna
+          ? 'Studio Pro required to open Lyrics DNA Drops'
+          : 'No lyrics strand in this snapshot'
+      }
+    >
+      <Dna className="h-3.5 w-3.5 shrink-0 opacity-50" />
+      {label}
+    </span>
+  );
 }
 
 export function DnaDropAlbumHub({
   album,
   shareId,
-  ownerId,
   ownerName,
   houseRelease = false,
   canViewDna = true,
-  signedIn = false,
 }: DnaDropAlbumHubProps) {
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = orderAlbumTracks(album.tracks ?? [], album);
-  const liveCount = tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length;
+  const strandCount = tracks.length;
+  const barCount = tracks.reduce((n, track) => n + trackLyricBarCount(track), 0);
   const audioCount = tracks.filter((t) => normalizeDropAudio(t.dropAudio)).length;
   const albumForSale = firstDropsOn && audioCount > 0 && (
     houseRelease || isCommerceLive(normalizeDropPrice(album.dropPrice))
   );
 
   return (
-    <Card className="border-2 shadow-2xl relative overflow-hidden bg-card/90 min-h-[50vh]">
-      <div className="border-b px-4 py-5 sm:px-8 sm:py-6 space-y-2">
+    <Card className="border-2 border-cyan-400/25 shadow-[0_0_80px_-28px_rgba(217,70,239,0.55)] relative overflow-hidden bg-card/40 backdrop-blur-md min-h-[50vh]">
+      <div className="pointer-events-none absolute inset-y-0 left-[2.35rem] w-px bg-gradient-to-b from-cyan-400/70 via-fuchsia-500/35 to-transparent hidden sm:block" />
+      <div className="border-b border-cyan-400/15 px-4 py-5 sm:px-8 sm:py-6 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-primary/20 text-primary">
-            {houseRelease ? 'House album · Free' : albumForSale ? 'Album release' : 'Album DNA'}
+          <Badge variant="outline" className="text-[9px] uppercase tracking-widest border-cyan-400/40 text-cyan-300">
+            Lyrics DNA Drop
           </Badge>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-            {albumForSale
-              ? `${audioCount} audio track${audioCount === 1 ? '' : 's'} included`
-              : `${liveCount}/${tracks.length} tracks live`}
+          <span className="text-[9px] font-bold uppercase tracking-widest text-fuchsia-300/80">
+            {strandCount} strand{strandCount === 1 ? '' : 's'} · {barCount} bars frozen
           </span>
         </div>
-        <h3 className="font-headline text-xl sm:text-2xl font-bold uppercase tracking-tight">
-          Songs in {album.title}
+        <h3 className="font-headline text-xl sm:text-3xl font-bold uppercase tracking-tight">
+          Sequence · {album.title}
         </h3>
         <p className="text-[11px] text-muted-foreground font-code leading-relaxed max-w-2xl">
-          {albumForSale
-            ? houseRelease
-              ? 'Every signed-in member receives every included recording free in their AKAsheet Library; lyrics are optional.'
-              : 'Preview every included recording here. One album purchase unlocks every audio track in your AKAsheet Library; lyrics are optional.'
-            : canViewDna
-              ? 'Open a live track to see its DNA Drop — lyrics, Creative DNA, and whatever was toggled on when it went public.'
-              : 'Open a live track to listen. Viewing or importing DNA Drop lyrics is Studio Pro.'}
+          {canViewDna
+            ? 'This is a frozen lyric snapshot, not the album in your vault. Open a strand to read that song’s lyrics and Creative DNA.'
+            : albumForSale
+              ? 'Listen from the playlist. Lyrics DNA Drop on each strand is Studio Pro.'
+              : 'Sign in with Studio Pro to open each song’s Lyrics DNA Drop from this snapshot.'}
         </p>
       </div>
 
       <CardContent className="p-4 sm:p-6">
         {tracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic py-12 text-center">No tracks in this album snapshot.</p>
+          <p className="text-sm text-muted-foreground italic py-12 text-center">No strands in this snapshot.</p>
         ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <ol className="space-y-2">
             {tracks.map((track, idx) => {
-              const live = hasActiveDnaDrop(track.shareId) && track.dnaStatus !== 'unlisted';
               const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
-              const releasedInAlbum = albumForSale && hasAudio;
-              const releaseHref = releasedInAlbum
-                ? pressedSongHref(shareId, { trackId: track.id })
-                : live && track.shareId
-                  ? resolveDnaDropHref(track.shareId, signedIn, canViewDna)
-                  : undefined;
-              const inner = (
+              const hasLyricDna = canViewDna && trackLyricBarCount(track) > 0;
+              const lyricDnaHref = hasLyricDna ? dnaDropSnapshotTrackPath(shareId, track.id) : undefined;
+              const songListenHref =
+                firstDropsOn && hasAudio ? pressedSongHref(shareId, { trackId: track.id }) : undefined;
+              const rowHref = songListenHref || lyricDnaHref;
+              const trackTitle = track.title || `Untitled ${idx + 1}`;
+
+              const main = (
                 <>
-                  <div className="relative aspect-square w-full overflow-hidden border-b bg-neutral-950">
-                    <ShareCoverImage
-                      src={track.coverArtUrl || album.coverArtUrl}
-                      alt={track.title || `Track ${idx + 1}`}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
-                    <div className="absolute top-2 left-2">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[8px] uppercase tracking-widest border bg-black/50 backdrop-blur-sm',
-                          releasedInAlbum || live
-                            ? 'border-emerald-500/40 text-emerald-300'
-                            : 'border-white/20 text-muted-foreground'
-                        )}
-                      >
-                        {releasedInAlbum ? 'Released on album' : live ? 'DNA live' : 'Offline'}
-                      </Badge>
-                    </div>
-                    <div className="absolute bottom-2 left-2 right-2 pointer-events-none">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-white/50 tabular-nums">
-                        {String(idx + 1).padStart(2, '0')}
-                      </p>
-                      <h4 className="font-headline text-base sm:text-lg font-bold uppercase tracking-tight text-white leading-tight line-clamp-2">
-                        {track.title || `Untitled ${idx + 1}`}
-                      </h4>
-                    </div>
+                  <div
+                    className={cn(
+                      'relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold tabular-nums',
+                      rowHref
+                        ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200'
+                        : 'border-border bg-muted/20 text-muted-foreground'
+                    )}
+                  >
+                    {String(idx + 1).padStart(2, '0')}
                   </div>
-                  <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-[10px] text-muted-foreground truncate">{trackSubtitle(track, firstDropsOn, canViewDna)}</p>
-                      <p className="text-[9px] uppercase tracking-widest text-muted-foreground/70 flex items-center gap-1.5">
-                        {releasedInAlbum ? (
-                          <>
-                            <CassetteTape className="h-3 w-3 text-emerald-300 shrink-0" />
-                            Open song page
-                          </>
-                        ) : live ? (
-                          <>
-                            <CassetteTape className="h-3 w-3 text-primary shrink-0" />
-                            {canViewDna
-                              ? hasAudio ? 'Audio included · open track DNA' : 'Open track DNA'
-                              : 'Studio Pro to view lyrics'}
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="h-3 w-3 shrink-0" />
-                            {hasAudio ? 'Audio included · lyrics optional' : 'Not dropped yet'}
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    {releasedInAlbum || live ? (
-                      <ChevronRight className="h-5 w-5 text-primary shrink-0" aria-hidden />
-                    ) : null}
+                  <div className="min-w-0 flex-1 py-1">
+                    <h4 className="font-headline text-base sm:text-lg font-bold uppercase tracking-tight leading-tight truncate">
+                      {trackTitle}
+                    </h4>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {trackSubtitle(track, firstDropsOn, canViewDna)}
+                    </p>
+                    <p className="mt-1 text-[9px] uppercase tracking-widest text-cyan-300/70 flex items-center gap-1.5">
+                      {songListenHref ? (
+                        <>
+                          <Music className="h-3 w-3 shrink-0" />
+                          Song page · stream this track
+                        </>
+                      ) : lyricDnaHref ? (
+                        <>
+                          <Dna className="h-3 w-3 shrink-0" />
+                          Lyrics DNA strand
+                        </>
+                      ) : !canViewDna && hasAudio ? (
+                        'Listen from the album playlist'
+                      ) : (
+                        <>
+                          <Lock className="h-3 w-3 shrink-0" />
+                          {hasAudio ? 'Audio on the album · no lyric strand' : 'Not in this snapshot'}
+                        </>
+                      )}
+                    </p>
                   </div>
                 </>
               );
 
               return (
                 <li key={track.id}>
-                  {releaseHref ? (
-                    <Link
-                      href={releaseHref}
-                      className={cn(
-                        'block overflow-hidden rounded-xl border-2 border-border bg-card/80 transition-colors',
-                        'hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                      )}
-                      aria-label={releasedInAlbum ? `Open song page for ${track.title}` : `Open DNA Drop for ${track.title}`}
-                    >
-                      {inner}
-                    </Link>
-                  ) : (
-                    <div
-                      className="overflow-hidden rounded-xl border-2 border-dashed border-border/60 bg-muted/10 opacity-80"
-                      title={`Ask ${ownerName} to live-drop this track`}
-                      aria-disabled
-                    >
-                      {inner}
-                    </div>
-                  )}
-                  <MusicDiscoveryTags
-                    metadata={combinePublicMusicMetadata([
-                      publicMusicMetadataFromTrack(track),
-                      publicMusicMetadataFromTrack(album),
-                    ], album.title)}
-                    compact
-                    className="mt-2 px-1"
-                  />
-                  {albumForSale && hasAudio ? (
-                    <DropListenPanel
-                      shareId={shareId}
-                      trackId={track.id}
-                      title={track.title || `Track ${idx + 1}`}
-                      artistName={ownerName}
-                      ownerId={ownerId}
-                      price={album.dropPrice}
-                      hasAudio
-                      houseRelease={houseRelease}
-                      source="share"
-                      presentation="compact"
-                      playbackGroup={`album-${shareId}`}
-                      detailsHref={pressedSongHref(shareId, { trackId: track.id })}
-                      checkoutDestination="share"
-                      showPurchase={false}
+                  <div
+                    className={cn(
+                      'flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-cyan-400/15 bg-black/20 px-3 py-3 sm:px-4',
+                      rowHref && 'hover:border-cyan-400/35'
+                    )}
+                  >
+                    {rowHref ? (
+                      <Link
+                        href={rowHref}
+                        className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 transition-colors hover:bg-cyan-400/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded-xl -m-1 p-1"
+                        aria-label={
+                          songListenHref
+                            ? `Open song page for ${trackTitle}`
+                            : `Open Lyrics DNA Drop for ${trackTitle}`
+                        }
+                      >
+                        {main}
+                        <ChevronRight className="h-5 w-5 text-cyan-300 shrink-0" aria-hidden />
+                      </Link>
+                    ) : (
+                      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 opacity-80">{main}</div>
+                    )}
+                    <LyricsDnaTrackButton
+                      active={hasLyricDna}
+                      href={lyricDnaHref}
+                      title={trackTitle}
+                      canViewDna={canViewDna}
                     />
-                  ) : null}
+                  </div>
                 </li>
               );
             })}
-          </ul>
+          </ol>
         )}
       </CardContent>
     </Card>

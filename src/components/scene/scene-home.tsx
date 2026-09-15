@@ -75,6 +75,11 @@ import {
   type DiscoverCard,
   type DiscoverData,
 } from '@/lib/scene/discover-client';
+import {
+  buildFriendCircleDropCards,
+  mergeBlockFeedItems,
+  type BlockFeedItem,
+} from '@/lib/scene/scene-block-feed';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
 import {
   SCENE_HOME_TOUR_STEPS,
@@ -854,21 +859,42 @@ export function SceneHome() {
     [friendships, user?.id, user?.email, user?.displayName]
   );
 
+  const circleUserIds = useMemo(() => {
+    if (!user?.id) return new Set<string>();
+    return new Set(
+      friendProfilesOf(friendships, user.id, {
+        email: user.email,
+        displayName: user.displayName,
+      }).map((f) => f.userId)
+    );
+  }, [friendships, user?.id, user?.email, user?.displayName]);
+
+  const friendDropCards = useMemo(
+    () => buildFriendCircleDropCards(discover?.drops || [], circleUserIds),
+    [circleUserIds, discover?.drops]
+  );
+
   const discoverCards: DiscoverCard[] = useMemo(() => {
     if (!discover) return [];
     return buildDiscoverCards(discover, {
       excludePostIds: new Set(posts.map((p) => p.id)),
       excludeUserIds: blockedIds,
+      circleUserIds,
       maxCards: DISCOVER_HOME_MAX_CARDS,
     });
-  }, [discover, posts, blockedIds]);
+  }, [discover, posts, blockedIds, circleUserIds]);
 
   const blockPosts = useMemo(() => {
     if (showMine || !user?.id) return posts;
     return posts.filter((p) => p.ownerId !== user.id);
   }, [posts, showMine, user?.id]);
 
-  const visibleBlockPosts = blockPosts.slice(0, blockVisible);
+  const blockFeedItems: BlockFeedItem[] = useMemo(
+    () => mergeBlockFeedItems(blockPosts, friendDropCards),
+    [blockPosts, friendDropCards]
+  );
+
+  const visibleBlockFeedItems = blockFeedItems.slice(0, blockVisible);
   const visibleDiscoverCards = discoverCards.slice(0, discoverVisible);
 
   const applySceneScrollExtras = useCallback((extras?: Record<string, unknown>) => {
@@ -950,7 +976,9 @@ export function SceneHome() {
     const run = () => {
       const target = parseActivityPostHash(window.location.hash);
       if (!target) return;
-      const idx = blockPosts.findIndex((p) => p.id === target.postId);
+      const idx = blockFeedItems.findIndex(
+        (item) => item.kind === 'post' && item.post.id === target.postId
+      );
       if (idx >= 0) {
         setBlockVisible((n) => Math.max(n, idx + 1));
       }
@@ -969,11 +997,13 @@ export function SceneHome() {
     run();
     window.addEventListener('hashchange', run);
     return () => window.removeEventListener('hashchange', run);
-  }, [blockPosts, showPortalHub, portalFeed, router]);
+  }, [blockFeedItems, showPortalHub, portalFeed, router]);
 
   useEffect(() => {
-    setBlockVisible((n) => Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockPosts.length)));
-  }, [blockPosts.length]);
+    setBlockVisible((n) =>
+      Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockFeedItems.length))
+    );
+  }, [blockFeedItems.length]);
 
   useEffect(() => {
     setDiscoverVisible((n) =>
@@ -983,8 +1013,14 @@ export function SceneHome() {
 
   const newBlockCount = useMemo(() => {
     if ((!showPortalHub && blockExpanded) || !user?.id || !blockLastSeen) return 0;
-    return posts.filter((p) => p.ownerId !== user.id && p.createdAt > blockLastSeen).length;
-  }, [blockExpanded, blockLastSeen, showPortalHub, posts, user?.id]);
+    const newPosts = posts.filter(
+      (p) => p.ownerId !== user.id && p.createdAt > blockLastSeen
+    ).length;
+    const newDrops = friendDropCards.filter(
+      (c) => c.kind === 'drop' && (c.drop.updatedAt || '') > blockLastSeen
+    ).length;
+    return newPosts + newDrops;
+  }, [blockExpanded, blockLastSeen, showPortalHub, posts, friendDropCards, user?.id]);
 
   const newDiscoverCount = useMemo(() => {
     if ((!showPortalHub && discoverExpanded) || !discoverLastSeen) return 0;
@@ -1274,7 +1310,8 @@ export function SceneHome() {
                 onOpenChange={(open) => {
                   if (!open) closeScenePortalFeed(router);
                 }}
-                posts={posts}
+                posts={blockPosts}
+                blockDropCards={friendDropCards}
                 discoverCards={discoverCards}
                 viewerSlug={viewerSlug}
                 onPostDeleted={onPostDeleted}
@@ -1333,22 +1370,30 @@ export function SceneHome() {
 
               {blockExpanded ? (
                 <div id="scene-block-body" className="space-y-4">
-                  {!blockReady && visibleBlockPosts.length === 0 ? (
+                  {!blockReady && visibleBlockFeedItems.length === 0 ? (
                     <>
                       <FeedCardSkeleton />
                       <FeedCardSkeleton />
                     </>
-                  ) : visibleBlockPosts.length > 0 ? (
-                    visibleBlockPosts.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        showAuthor
-                        viewerSlug={viewerSlug}
-                        onDeleted={onPostDeleted}
-                        onReverbed={onPosted}
-                      />
-                    ))
+                  ) : visibleBlockFeedItems.length > 0 ? (
+                    visibleBlockFeedItems.map((item) =>
+                      item.kind === 'post' ? (
+                        <PostCard
+                          key={item.key}
+                          post={item.post}
+                          showAuthor
+                          viewerSlug={viewerSlug}
+                          onDeleted={onPostDeleted}
+                          onReverbed={onPosted}
+                        />
+                      ) : (
+                        <SceneDiscoverCard
+                          key={item.key}
+                          card={item.card}
+                          viewerSlug={viewerSlug}
+                        />
+                      )
+                    )
                   ) : circleLoading ? (
                     <>
                       <FeedCardSkeleton />
@@ -1365,21 +1410,27 @@ export function SceneHome() {
                       </p>
                     </div>
                   )}
-                  {circleLoading && visibleBlockPosts.length > 0 ? (
+                  {circleLoading && visibleBlockFeedItems.length > 0 ? (
                     <p className="font-code text-[9px] uppercase tracking-[0.22em] text-muted-foreground/70">
                       Catching up your circle…
                     </p>
                   ) : null}
                   <InfiniteFeedSentinel
                     key={`block-${blockVisible}`}
-                    disabled={visibleBlockPosts.length >= blockPosts.length}
+                    disabled={visibleBlockFeedItems.length >= blockFeedItems.length}
                     onVisible={loadMoreBlock}
                   />
                 </div>
               ) : null}
             </div>
 
-            {blockExpanded ? <SceneOnSaleRail drops={discover?.drops || []} /> : null}
+            {blockExpanded ? (
+              <SceneOnSaleRail
+                drops={(discover?.drops || []).filter(
+                  (d) => !d.ownerId || !circleUserIds.has(d.ownerId)
+                )}
+              />
+            ) : null}
 
             <div
               id={DISCOVER_SECTION_ID}

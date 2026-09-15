@@ -172,13 +172,13 @@ export function StudioPrivacyIntroDialog() {
               <>
                 Your Artist Home is <strong className="text-foreground">already live</strong> from Your Booth. These
                 switches match that — saving will not turn your page off unless you flip Public profile off here.
-                Lyrics, DNA, and vault content are never published unless you share a DNA Drop link.
+                Lyrics, DNA, and vault content are never published unless you share a Lyrics DNA Drop link.
               </>
             ) : (
               <>
                 You start <strong className="text-foreground">fully private</strong>. Artist Home is a core shareable
                 surface — turn Public profile on only when you want eyes on your page. Lyrics, DNA, and vault content are
-                never published unless you share a DNA Drop link. After you go live, customize modules and links on Edit
+                never published unless you share a Lyrics DNA Drop link. After you go live, customize modules and links on Edit
                 Public Page.
               </>
             )}

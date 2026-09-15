@@ -362,7 +362,7 @@ export function FeatureAlbumBlueprintScene() {
             ))}
           </div>
           <Button variant="outline" className="w-full mt-6 h-11 border-emerald-500/40 text-emerald-300 text-sm font-bold uppercase">
-            <Globe className="h-4 w-4 mr-2" /> DNA Drop
+            <Globe className="h-4 w-4 mr-2" /> Lyrics DNA Drop
           </Button>
         </div>
       </div>
@@ -453,7 +453,7 @@ export function FeatureStudioProgressScene() {
             <Progress value={71} className="h-3" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {['Write 8 bars this week', 'Complete a track hook', 'Run Rhyme Pulse', 'Share a DNA Drop'].map((label, i) => (
+            {['Write 8 bars this week', 'Complete a track hook', 'Run Rhyme Pulse', 'Share a Lyrics DNA Drop'].map((label, i) => (
               <div
                 key={label}
                 className={cn(
@@ -570,7 +570,7 @@ export function HowStepProgressScene() {
           <CardTitle className="font-headline text-4xl uppercase text-violet-200 flex items-center gap-3">
             <Trophy className="h-10 w-10 text-violet-300" /> Studio Progress
           </CardTitle>
-          <p className="text-base font-code text-violet-300/75 mt-2">Performance Mode, DNA Drops, and habits that keep you writing.</p>
+          <p className="text-base font-code text-violet-300/75 mt-2">Performance Mode, Lyrics DNA Drops, and habits that keep you writing.</p>
         </CardHeader>
         <CardContent className="px-8 py-7 space-y-6">
           <div>

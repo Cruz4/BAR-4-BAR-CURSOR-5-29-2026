@@ -3,6 +3,7 @@ import { getDb } from '@/lib/firebase/server';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
 import { dropAudioFileUrl, mintDropAudioTicket } from '@/lib/server/drop-audio-stream';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
+import { loadShareForManager } from '@/lib/server/house-release-manage';
 
 export const runtime = 'nodejs';
 
@@ -14,9 +15,10 @@ export async function GET(req: Request) {
   try {
     const params = new URL(req.url).searchParams;
     const userId = (params.get('userId') || '').trim();
-    const albumId = (params.get('albumId') || '').trim();
-    const trackId = (params.get('trackId') || '').trim();
-    if (!userId || !safeId(albumId) || !safeId(trackId)) {
+    const shareId = (params.get('shareId') || '').trim();
+    let albumId = (params.get('albumId') || '').trim();
+    let trackId = (params.get('trackId') || '').trim();
+    if (!userId) {
       return NextResponse.json({ error: 'Invalid private song request.' }, { status: 400 });
     }
     try {
@@ -28,7 +30,20 @@ export async function GET(req: Request) {
       throw error;
     }
     const db = await getDb();
-    const snap = await db.doc(`users/${userId}/albums/${albumId}/tracks/${trackId}`).get();
+    let ownerId = userId;
+    if (shareId) {
+      const loaded = await loadShareForManager(db, shareId, userId);
+      if (!loaded) return NextResponse.json({ error: 'You cannot open this recording.' }, { status: 403 });
+      if (loaded.ref) {
+        ownerId = loaded.ref.ownerId;
+        albumId = loaded.ref.albumId;
+        if (loaded.ref.trackId) trackId = loaded.ref.trackId;
+      }
+    }
+    if (!safeId(albumId) || !safeId(trackId)) {
+      return NextResponse.json({ error: 'Invalid private song request.' }, { status: 400 });
+    }
+    const snap = await db.doc(`users/${ownerId}/albums/${albumId}/tracks/${trackId}`).get();
     if (!snap.exists) return NextResponse.json({ error: 'Song was not found.' }, { status: 404 });
     const audio = normalizeDropAudio(snap.data()?.dropAudio);
     if (!audio?.storagePath) return NextResponse.json({ error: 'No private audio is attached.' }, { status: 404 });
@@ -37,7 +52,7 @@ export async function GET(req: Request) {
     if (!storagePath) return NextResponse.json({ error: 'That private audio file is not available.' }, { status: 404 });
     const ticket = mintDropAudioTicket({
       storagePath,
-      ownerId: userId,
+      ownerId,
       contentType: kind === 'preview' ? 'audio/wav' : audio.contentType || 'audio/mpeg',
       full: kind === 'full',
     });

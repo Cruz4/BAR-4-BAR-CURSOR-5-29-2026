@@ -141,8 +141,8 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
           </span>
           <span className="block text-xs leading-snug text-foreground/90 sm:text-sm sm:leading-relaxed">
             {total === 0
-              ? 'Nothing live yet. New release = music (free). DNA Drop = share lyrics from The Vault (Pro).'
-              : `${saleCount} for sale · ${lyricPreviewCount} DNA Drop${lyricPreviewCount === 1 ? '' : 's'}`}
+              ? 'Nothing live yet. New release = music (free). Lyrics DNA Drop = share lyrics from The Vault (Pro).'
+              : `${saleCount} for sale · ${lyricPreviewCount} Lyrics DNA Drop${lyricPreviewCount === 1 ? '' : 's'}`}
           </span>
         </span>
         <span className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">

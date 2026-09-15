@@ -1,5 +1,5 @@
 /**
- * AKAsheet First Drops — buy-once, stream-in-app commerce for DNA Drops.
+ * AKAsheet First Drops — buy-once, stream-in-app commerce for Lyrics DNA Drops.
  * Named release: feat/bar4bar-first-drops
  * Live switch: Admin Panel → Config → First Drops (`config/firstDrops`).
  */
@@ -115,15 +115,15 @@ export function firstDropsFeeCashoutLine(): string {
 
 /** Public selling copy — hide whenever First Drops is toggled off. */
 export function firstDropsPitch(): string {
-  return `Open New release from The Scene — Free on every signed-in account. Choose a song or album, upload the music, set a price, and publish the release. Listen / buy sits at the top of your Artist Home, on The Scene, and on the release link. Preview 30 seconds, buy once, stream here. You keep the rights to your music—we take a small fee on the sale to run the platform. DNA Drop is the separate Pro lyric page. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
+  return `Open New release from The Scene — Free on every signed-in account. Choose a song or album, upload the music, set a price, and publish the release. Listen / buy sits at the top of your Artist Home, on The Scene, and on the release link. Preview 30 seconds, buy once, stream here. You keep the rights to your music—we take a small fee on the sale to run the platform. Lyrics DNA Drop is the separate Pro lyric page. ${firstDropsFeeLine()} ${firstDropsCashoutLine()}`;
 }
 
 export function getFirstDropsWhatFaqAnswer(): string {
-  return `A Release is a recording you publish for listening or purchase—not a subsection of DNA Drop, and not a Pro-only feature. Upload the song privately, set a price or pay-what-you-want, and fans buy once to stream it in AKAsheet. Preview is 30 seconds until they unlock. Library is the in-app player—crates, search, and a four-bar visualizer. It is not a Spotify listing. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music. DNA Drop lyric links stay Pro.`;
+  return `A Release is a recording you publish for listening or purchase—not a subsection of Lyrics DNA Drop, and not a Pro-only feature. Upload the song privately, set a price or pay-what-you-want, and fans buy once to stream it in AKAsheet. Preview is 30 seconds until they unlock. Library is the in-app player—crates, search, and a four-bar visualizer. It is not a Spotify listing. ${firstDropsFeeLine()} ${firstDropsCashoutLine()} Ink is never used to buy music. Lyrics DNA Drop links stay Pro.`;
 }
 
 export function getFirstDropsSellFaqAnswer(): string {
-  return `Free on every signed-in account. On The Scene, tap New release. Choose a Vault song or album, upload the music, set a price or pay-what-you-want, then Publish release. Visitor catalog is ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks; Pro adds unlimited slots. Offline downloads are included for music you own or purchased. DNA Drop is the separate Pro lyrics-only page. Visitors see Listen / buy on your Artist Home, The Scene, and the release link. To get paid, open Earnings and connect Stripe payouts.`;
+  return `Free on every signed-in account. On The Scene, tap New release. Choose a Vault song or album, upload the music, set a price or pay-what-you-want, then Publish release. Visitor catalog is ${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks; Pro adds unlimited slots. Offline downloads are included for music you own or purchased. Lyrics DNA Drop is the separate Pro lyrics-only page. Visitors see Listen / buy on your Artist Home, The Scene, and the release link. To get paid, open Earnings and connect Stripe payouts.`;
 }
 
 export function getFirstDropsRightsFaqAnswer(): string {

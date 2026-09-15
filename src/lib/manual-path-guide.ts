@@ -86,7 +86,7 @@ export const MANUAL_PATH_GUIDES: PathGuide[] = [
     want: 'Press a song live',
     what: 'Upload finished audio, set a price, and publish it for listening or sale.',
     where: 'Scene → Your Booth or dock → New release',
-    photoCaption: 'New release lives on Your Booth. It is not The Vault and not DNA Drop.',
+    photoCaption: 'New release lives on Your Booth. It is not The Vault and not Lyrics DNA Drop.',
     image: {
       src: '/marketing/paths/press-song.png',
       alt: 'New release dialog on The Scene',
@@ -135,13 +135,13 @@ export const MANUAL_PATH_GUIDES: PathGuide[] = [
   },
   {
     laneId: 'dna-drop',
-    want: 'Share lyrics (DNA Drop)',
+    want: 'Share lyrics (Lyrics DNA Drop)',
     what: 'Publish, view, and import lyric snapshots — Studio Pro only. No audio. Not New release.',
-    where: 'Vault → sheet → left panel → DNA Drop',
+    where: 'Vault → sheet → left panel → Lyrics DNA Drop',
     photoCaption: 'DNA lives on the sheet. The public link is a lyric page, not a song sale.',
     image: {
       src: '/marketing/paths/dna-drop.png',
-      alt: 'DNA Drop control on the lyric sheet',
+      alt: 'Lyrics DNA Drop control on the lyric sheet',
     },
     screen: 'sheet',
     family: 'write',
@@ -215,7 +215,7 @@ export const MANUAL_PATH_GUIDES: PathGuide[] = [
   {
     laneId: 'ink-store',
     want: 'Ink and Studio Pro',
-    what: 'Ink pays AI only. Fans never pay Ink. Pro unlocks catalog, DNA Drop, Collab, Freestyle.',
+    what: 'Ink pays AI only. Fans never pay Ink. Pro unlocks catalog, Lyrics DNA Drop, Collab, Freestyle.',
     where: 'Pricing',
     photoCaption: 'Ink store and Studio Pro — not where you press a song.',
     image: {

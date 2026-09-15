@@ -174,7 +174,7 @@ const PRECISION_TOOL_GLOSSARY: ManualSearchItem[] = [
   { label: 'Freestyle Pad', detail: 'Generation & Capture', tab: 'power-tools', targetId: 'manual-freestyle-pad', keywords: 'voice speak transcribe' },
   { label: 'Vibe Suggester', detail: 'Generation & Capture', tab: 'power-tools', targetId: 'manual-vibe-suggester', keywords: 'analyze genre bpm instrumentation' },
   { label: 'Performance Mode', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-performance-mode', keywords: 'teleprompter rehearsal' },
-  { label: 'DNA Drop', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-dna-drop', keywords: 'share lyric snapshot' },
+  { label: 'Lyrics DNA Drop', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-dna-drop', keywords: 'share lyric snapshot' },
   { label: 'Collab Sheet', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-collab-sheet', keywords: 'live editing invite chat' },
   { label: 'Export & Backup', detail: 'Export & Share', tab: 'power-tools', targetId: 'manual-export-backup', keywords: 'pdf json vault download' },
 ];
@@ -197,7 +197,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is Press / Release tracking on album sheets?",
-      a: "Optional personal stages on each sheet: Beat, Writing, Recorded, Mixed, Mastered, Artwork, Released. Change the stage on the album tracklist or in Track Status. Search and sort by name, date created, last edited, or % finished (ascending or descending). This is not Press live (audio) and not DNA Drop. Turn it off in Settings → Press / Release tracking, or with the switch on that album. Public identity labels (Producer, Music Fan, and so on) do not change the stages — one list for every account.",
+      a: "Optional personal stages on each sheet: Beat, Writing, Recorded, Mixed, Mastered, Artwork, Released. Change the stage on the album tracklist or in Track Status. Search and sort by name, date created, last edited, or % finished (ascending or descending). This is not Press live (audio) and not Lyrics DNA Drop. Turn it off in Settings → Press / Release tracking, or with the switch on that album. Public identity labels (Producer, Music Fan, and so on) do not change the stages — one list for every account.",
     },
     {
       q: "How do I add several blank sheets to an album?",
@@ -209,7 +209,7 @@ const CORE_FAQS = [
     },
     {
       q: "What is my public music home and Edit Public Page?",
-      a: "Your public music home is completely free—no Pro required to claim or go live. It uses the clean link /your_slug and supports Artist, Songwriter, Producer, Engineer, DJ, and Music Fan labels, Sound Identity, a featured owned/purchased track, skin, modules, The Board, embeds, socials, wall, friends, guestbook, and live DNA Drops. On the Scene dock, Artist Home | Edit page is one split control—view live or customize. Private by default; never shows private lyrics unless you publish a DNA Drop."
+      a: "Your public music home is completely free—no Pro required to claim or go live. It uses the clean link /your_slug and supports Artist, Songwriter, Producer, Engineer, DJ, and Music Fan labels, Sound Identity, a featured owned/purchased track, skin, modules, The Board, embeds, socials, wall, friends, guestbook, and live Lyrics DNA Drops. On the Scene dock, Artist Home | Edit page is one split control—view live or customize. Private by default; never shows private lyrics unless you publish a Lyrics DNA Drop."
     },
     {
       q: "What is The Block?",
@@ -301,15 +301,15 @@ const CORE_FAQS = [
     },
     {
       q: "What shows on the leaderboard and public profile?",
-      a: "Writing boards show display name, rank, XP, bars (7 days), streak, and tracks completed—never lyrics. Emerging (7d) separately shows its public momentum score, signal counts, and reasons without dollar, Ink, Pro, ad, or sponsorship points. Opt in via Studio Progress → Sharing. Your public music home is off by default and never shows private lyrics unless you publish a DNA Drop."
+      a: "Writing boards show display name, rank, XP, bars (7 days), streak, and tracks completed—never lyrics. Emerging (7d) separately shows its public momentum score, signal counts, and reasons without dollar, Ink, Pro, ad, or sponsorship points. Opt in via Studio Progress → Sharing. Your public music home is off by default and never shows private lyrics unless you publish a Lyrics DNA Drop."
     },
     {
-      q: "What is DNA Drop?",
-      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Viewing, downloading, and importing DNA Drops are also Pro: guests are sent to sign in (check tier, upgrade, or create an account); Visitor members land on Studio Tier with the DNA Drop perk highlighted. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate and Free: use Release song from a sheet or New release on The Scene. DNA Drop is not the sell desk."
+      q: "What is Lyrics DNA Drop?",
+      a: "Studio Pro—publish a shareable lyric snapshot from the left panel. Viewing, downloading, and importing Lyrics DNA Drops are also Pro: guests are sent to sign in (check tier, upgrade, or create an account); Visitor members land on Studio Tier with the Lyrics DNA Drop perk highlighted. Recipients import lyrics, structure, Creative DNA, vibe, and strains. Live lyric drops list on your Artist Home. Update snapshot after edits; Take offline to revoke. Music is separate and Free: use Release song from a sheet or New release on The Scene. Lyrics DNA Drop is not the sell desk."
     },
     {
       q: "What is Collab Sheet?",
-      a: "Studio Pro — share a live editable lyric sheet on a track with friends. Everyone on the sheet sees edits in real time, a 2/13-style presence chip (live of shared), in-sheet chat at the bottom, and activity alerts when someone writes 4+ new bars or changes structure. Only the owner can invite or revoke access. DNA Drop is a snapshot import; Collab Sheet is the same room."
+      a: "Studio Pro — share a live editable lyric sheet on a track with friends. Everyone on the sheet sees edits in real time, a 2/13-style presence chip (live of shared), in-sheet chat at the bottom, and activity alerts when someone writes 4+ new bars or changes structure. Only the owner can invite or revoke access. Lyrics DNA Drop is a snapshot import; Collab Sheet is the same room."
     },
     {
       q: "What happens during Creative Syncing vs DNA Extraction?",
@@ -320,16 +320,16 @@ const CORE_FAQS = [
       a: "Weekly resets Monday; monthly follows the calendar. Both use rhyme bars (lines ÷ 2). Counters on /studio-progress and the Vault sidebar."
     },
     {
-      q: "What is included in a DNA Drop?",
-      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links and embeds attach from the DNA Drop dialog. Audio and pricing belong to Releases—use New release or Release Catalog, not the DNA dialog.",
+      q: "What is included in a Lyrics DNA Drop?",
+      a: "Lyrics & sections, Creative DNA, checked intents, vibe, guardrails, special instructions, and Style DNA when toggled on. Album drops add album DNA presets and motifs. Optional links and embeds attach from the Lyrics DNA Drop dialog. Audio and pricing belong to Releases—use New release or Release Catalog, not the Lyrics DNA Drop dialog.",
     },
     {
-      q: "Is my DNA Drop live-synced when I edit?",
-      a: "No — it's the last published snapshot. After changes, open DNA Drop → Update snapshot (same URL). Until then, shared links keep the previous version."
+      q: "Is my Lyrics DNA Drop live-synced when I edit?",
+      a: "No — it's the last published snapshot. After changes, open Lyrics DNA Drop → Update snapshot (same URL). Until then, shared links keep the previous version."
     },
     {
-      q: "How do I unshare or take a DNA Drop offline?",
-      a: "DNA Drop (track left panel or album page) → Take offline. The public link stops immediately. Publish again later with Confirm DNA Drop."
+      q: "How do I unshare or take a Lyrics DNA Drop offline?",
+      a: "Lyrics DNA Drop (track left panel or album page) → Take offline. The public link stops immediately. Publish again later with Confirm Lyrics DNA Drop."
     },
     {
       q: "Why did light mode follow me off the lyrics sheet?",
@@ -646,10 +646,10 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <li><strong>Generate one bar</strong> — tap that line → Bar Workstation at the bottom → Generate Next (~{AI_COSTS.generateNextLine} Ink).</li>
                   </ol>
                   <p className="text-xs border-l-2 border-primary/30 pl-3 italic">
-                    Skip until you have a bar: Generation Workstation, DNA Drop, Collab Sheet, Release song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional—flip a switch on only if you want Next to follow it.
+                    Skip until you have a bar: Generation Workstation, Lyrics DNA Drop, Collab Sheet, Release song, Creative Effects, Takes, export, the sun/moon theme toggle. Co-Writer rails (DNA, Vibe, Intents, Style DNA) are optional—flip a switch on only if you want Next to follow it.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    When you sell or share later: <strong>Release song</strong> = audio + price. <strong>DNA Drop</strong> = an opt-in lyric snapshot (Studio Pro to view or import; not your Vault). They are separate.
+                    When you sell or share later: <strong>Release song</strong> = audio + price. <strong>Lyrics DNA Drop</strong> = an opt-in lyric snapshot (Studio Pro to view or import; not your Vault). They are separate.
                   </p>
                 </ChapterCard>
 
@@ -714,7 +714,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
 
                 <ChapterCard icon={<CassetteTape className="text-sky-300" />} title="Blank sheets &amp; Press tracking" colorClass="border-l-sky-400 text-sky-300">
                   <p className="text-sm">
-                    Inside a created album, <strong>Add sheets</strong> drops empty lyric pages you name in a list — they stay on the album. Optional <strong>Press / Release</strong> stages (Beat → Writing → Recorded → Mixed → Mastered → Artwork → Released) show progress. Turn them off in Settings or on that album. Search and sort the tracklist. This is not Press live or DNA Drop.
+                    Inside a created album, <strong>Add sheets</strong> drops empty lyric pages you name in a list — they stay on the album. Optional <strong>Press / Release</strong> stages (Beat → Writing → Recorded → Mixed → Mastered → Artwork → Released) show progress. Turn them off in Settings or on that album. Search and sort the tracklist. This is not Press live or Lyrics DNA Drop.
                   </p>
                 </ChapterCard>
 
@@ -797,7 +797,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <li><strong>Turn it off or on</strong> in Settings → Press / Release tracking (default for albums that have not set their own switch), or with the switch on that album page. The sheet also shows the stage under Track Status when tracking is on.</li>
                   </ul>
                   <p className="text-xs border-l-2 border-sky-400/40 pl-3">
-                    Released here means “this idea is ready or already out” on your checklist. It does not press audio live and it is not a DNA Drop.
+                    Released here means “this idea is ready or already out” on your checklist. It does not press audio live and it is not a Lyrics DNA Drop.
                   </p>
                 </ChapterCard>
 
@@ -829,9 +829,9 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">Exactly where to go</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
                       <li><strong>Open The Scene → New release</strong>, or open the song&apos;s sheet and use <strong>Left panel → Track Status → Release song</strong>.</li>
-                      <li><strong>Choose a Vault track</strong>. A Release publishes the recording; DNA Drop is the separate lyric-preview and import link.</li>
+                      <li><strong>Choose a Vault track</strong>. A Release publishes the recording; Lyrics DNA Drop is the separate lyric-preview and import link.</li>
                       <li><strong>Upload the finished audio</strong>, choose Fixed price or Pay what you want, and review the live artist-share line.</li>
-                      <li><strong>Publish release</strong> — Free on every signed-in account (Visitor catalog slots apply). Listen / buy appears on your Artist Home, The Scene, and its public release link. DNA Drop lyric links stay Pro.</li>
+                      <li><strong>Publish release</strong> — Free on every signed-in account (Visitor catalog slots apply). Listen / buy appears on your Artist Home, The Scene, and its public release link. Lyrics DNA Drop links stay Pro.</li>
                       <li><strong>Open Earnings</strong> and connect Stripe payouts so your share can reach your bank.</li>
                     </ol>
                   </div>
@@ -926,7 +926,7 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     </Link>
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Fans can buy immediately or add releases to one multi-artist cart from the Listen / buy player on your Artist Home, The Scene, and public song or album pages. Manage live releases from The Scene, Vault, or Edit Public Page → Live Lyric DNA Drops.
+                    Fans can buy immediately or add releases to one multi-artist cart from the Listen / buy player on your Artist Home, The Scene, and public song or album pages. Manage live releases from The Scene, Vault, or Edit Public Page → Live Lyrics DNA Drops.
                   </p>
                 </ChapterCard>
               </TabsContent>
@@ -1192,8 +1192,8 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                     <p>Studio Pro — left panel Track Status card. Distraction-free teleprompter with rhyme focus for live runs or rehearsal.</p>
                 </ChapterCard>
 
-                <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="DNA Drop" colorClass="border-l-primary">
-                    <p>Studio Pro — publish, view, download, and import lyric snapshots. Guests who tap a live drop go to sign in (must be Pro — sign in to check tier or create an account). Signed-in Visitor members go to Studio Tier with the DNA Drop perk flashing. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> (Free) — DNA Drop is not the sell desk.</p>
+                <ChapterCard id="manual-dna-drop" icon={<Link2 className="text-primary" />} title="Lyrics DNA Drop" colorClass="border-l-primary">
+                    <p>Studio Pro — publish, view, download, and import lyric snapshots. Guests who tap a live drop go to sign in (must be Pro — sign in to check tier or create an account). Signed-in Visitor members go to Studio Tier with the Lyrics DNA Drop perk flashing. Update snapshot after edits; <strong>Take offline</strong> to revoke the link. To sell from The Scene, use <strong>New release</strong> (Free) — Lyrics DNA Drop is not the sell desk.</p>
                 </ChapterCard>
 
                 <ChapterCard id="manual-collab-sheet" icon={<Users className="text-violet-300" />} title="Collab Sheet" colorClass="border-l-violet-500 text-violet-300">
@@ -1215,8 +1215,8 @@ export function HowToUseDialog({ open, onOpenChange, initialTab = 'start-here' }
                             <AccordionTrigger className="font-bold text-xs uppercase">Left Panel: Track Status</AccordionTrigger>
                             <AccordionContent className="text-xs space-y-2">
                                 <p>• <strong>Status:</strong> Manage titles and enter Performance Mode. Optional Press / Release stage (Beat → Released) lives here too — turn it off in Settings or on the album page. Not the same as Press live.</p>
-                                <p>• <strong>Release song:</strong> Upload audio, set a price, and publish the music release. This is separate from DNA Drop.</p>
-                                <p>• <strong>DNA Drop / Collab Sheet:</strong> DNA Drop = Pro lyric snapshot — publish, view, and import. Collab Sheet = live shared editing with presence + chat.</p>
+                                <p>• <strong>Release song:</strong> Upload audio, set a price, and publish the music release. This is separate from Lyrics DNA Drop.</p>
+                                <p>• <strong>Lyrics DNA Drop / Collab Sheet:</strong> Lyrics DNA Drop = Pro lyric snapshot — publish, view, and import. Collab Sheet = live shared editing with presence + chat.</p>
                                 <p>• <strong>Structure:</strong> Live song map (Verse, Hook, Bridge). Tap a section to jump the sheet; Add Section to grow the form. Not the Smart Structure paste tool.</p>
                                 <p>• <strong>Vibe Suggester:</strong> Generate suno/udio instrumentation prompts.</p>
                             </AccordionContent>

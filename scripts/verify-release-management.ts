@@ -19,6 +19,8 @@ import { hasLiveFirstDrop, trackReleaseControlState } from '../src/lib/track-liv
 import { publicDropAudio } from '../src/lib/drop-commerce';
 import { buildAlbumDropPayload } from '../src/lib/dna-drop';
 import {
+  canManageReleaseShare,
+  houseReleaseVaultRef,
   isHouseReleaseCreditedToUser,
   toLinkedHouseRelease,
 } from '../src/lib/house-artist-link';
@@ -94,8 +96,34 @@ assert.deepEqual(
 assert.equal(isHouseReleaseDocument({ houseRelease: true, data: {} }), true);
 assert.equal(isHouseReleaseDocument({ data: { houseRelease: true } }), false);
 assert.equal(
-  isHouseReleaseCreditedToUser({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'artist'),
+  canManageReleaseShare({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'artist'),
   true,
+);
+assert.equal(
+  canManageReleaseShare({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'admin'),
+  true,
+);
+assert.equal(
+  canManageReleaseShare({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'other'),
+  false,
+);
+assert.equal(
+  houseReleaseVaultRef({
+    type: 'album',
+    ownerId: 'admin',
+    projectId: 'MIRROR',
+    data: { title: 'Mirror' },
+  })?.albumId,
+  'MIRROR',
+);
+assert.equal(
+  houseReleaseVaultRef({
+    type: 'track',
+    ownerId: 'admin',
+    projectId: 'song-1',
+    data: { albumId: 'MIRROR' },
+  })?.trackId,
+  'song-1',
 );
 assert.equal(
   isHouseReleaseCreditedToUser({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'other'),
@@ -173,6 +201,11 @@ const houseCatalog = readFileSync(new URL('../src/components/vault/release-catal
 const houseReleasesRoute = readFileSync(new URL('../src/app/api/profile/house-releases/route.ts', import.meta.url), 'utf8');
 assert.match(houseCatalog, /House catalog · linked to you/);
 assert.match(houseCatalog, /houseRows\.length \? renderHouseCard\(\)/);
+assert.match(houseCatalog, /shareId: row\.shareId/);
+assert.match(houseCatalog, /Take offline/);
+const houseManage = readFileSync(new URL('../src/app/api/releases/manage/route.ts', import.meta.url), 'utf8');
+assert.match(houseManage, /canManageReleaseShare/);
+assert.match(houseManage, /vaultUserId/);
 assert.match(houseReleasesRoute, /houseRelease',\s*'==',\s*true/);
 assert.match(houseReleasesRoute, /isHouseReleaseCreditedToUser/);
 assert.doesNotMatch(houseReleasesRoute, /getLiveDnaDropsForUser/, 'linked House catalog must not be capped by the DNA Drop shelf');
@@ -229,6 +262,7 @@ const libraryDeck = readFileSync(new URL('../src/components/library/drop-deck.ts
 const audioRoute = readFileSync(new URL('../src/app/api/drops/audio/route.ts', import.meta.url), 'utf8');
 const offlineCache = readFileSync(new URL('../src/lib/offline/pressed-audio-cache.ts', import.meta.url), 'utf8');
 const albumReleasePage = readFileSync(new URL('../src/components/dna-drop-album-hub.tsx', import.meta.url), 'utf8');
+const shareSnapshotPage = readFileSync(new URL('../src/app/share/[shareId]/page.tsx', import.meta.url), 'utf8');
 assert.match(manageRoute, /houseReleaseRequest !== undefined[\s\S]*verifyAdminRequest\(req\)/);
 assert.match(manageRoute, /houseLibraryNoticeAt:\s*houseLibraryNoticeAt \|\| FieldValue\.delete\(\)/);
 assert.match(libraryRoute, /listHouseReleaseLibraryItems\(db\)/);
@@ -247,7 +281,12 @@ assert.doesNotMatch(manageRoute, /Studio Pro is required to press a release live
 assert.doesNotMatch(releaseDialog, /Studio Pro required/, 'New release must not gate song/album publish behind Pro');
 assert.match(releaseDialog, /Free to press live/, 'New release copy must say pressing live is Free');
 assert.match(albumReleasePage, /orderAlbumTracks\(album\.tracks \?\? \[\], album\)/, 'open album releases must honor the saved track order');
-assert.match(albumReleasePage, /pressedSongHref\(shareId, \{ trackId: track\.id \}\)/, 'every playable album track must open its own song page');
+assert.match(albumReleasePage, /pressedSongHref\(shareId, \{ trackId: track\.id \}\)/, 'album tracks with audio still link to their song listen page when DNA is gated');
+assert.match(albumReleasePage, /dnaDropSnapshotTrackPath\(shareId, track\.id\)/, 'album DNA hub must open each song\'s lyric DNA from this snapshot');
+assert.doesNotMatch(albumReleasePage, /resolveDnaDropHref\(track\.shareId/, 'album DNA hub must not jump to a separate track share (that 404s to Discover)');
+assert.match(shareSnapshotPage, /DNA_DROP_SNAPSHOT_TRACK_PARAM/, 'album snapshot must read the in-snapshot track query');
+assert.match(shareSnapshotPage, /DnaDropAtmosphere/, 'DNA snapshot pages must use the lyric-lab atmosphere');
+assert.match(albumDetail, /AlbumPageAtmosphere/, 'album vault pages must use the vinyl chamber atmosphere');
 assert.match(releaseDialog, /action:\s*'remove'/, 'New release must be able to retire an offline release record');
 assert.match(manageRoute, /releaseRemovedAt:\s*now/);
 assert.match(releaseDialog, /Take album offline/);

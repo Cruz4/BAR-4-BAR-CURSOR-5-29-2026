@@ -28,7 +28,7 @@ import type { Album, Track } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type Row = { album: Album; track?: Track };
-type UnpressTarget = { kind: 'album' | 'track'; album: Album; track?: Track };
+type UnpressTarget = { kind: 'album' | 'track'; album?: Album; track?: Track; shareId?: string };
 type RemoveTarget = UnpressTarget;
 
 const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string; shortLabel: string }> = [
@@ -39,7 +39,7 @@ const GROUPS: Array<{ key: keyof VaultReleaseGroups; label: string; note: string
   { key: 'liveAlbumsAllLyrics', shortLabel: 'Albums', label: 'Live albums · all lyrics attached', note: 'Bundles whose tracks all have lyric sheets.' },
   { key: 'liveAlbumsMixedLyrics', shortLabel: 'Mixed albums', label: 'Live albums · mixed', note: 'Bundles with some lyric sheets and some audio-only tracks.' },
   { key: 'liveAlbumsAudioOnly', shortLabel: 'Audio albums', label: 'Live albums · audio only', note: 'Bundle releases without lyric requirements.' },
-  { key: 'dnaPreviews', shortLabel: 'DNA Drops', label: 'Live DNA Drops', note: 'Public lyric pages from your Vault sheet (Pro).' },
+  { key: 'dnaPreviews', shortLabel: 'Lyrics DNA Drops', label: 'Live Lyrics DNA Drops', note: 'Public lyric pages from your Vault sheet (Pro).' },
   { key: 'unpressed', shortLabel: 'Vault only', label: 'Not released yet', note: 'Vault work that is not public yet.' },
 ];
 
@@ -268,16 +268,18 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
 
   const unpressRelease = async (hideDna: boolean) => {
     if (!unpress) return;
-    const { kind, album, track } = unpress;
-    const key = `${kind}:${track?.id || album.id}`;
+    const { kind, album, track, shareId } = unpress;
+    if (!album && !shareId) return;
+    const key = `${kind}:${track?.id || album?.id || shareId}`;
     setBusy(key);
     try {
-      await flushCloudNow();
+      if (album) await flushCloudNow();
       const result = await manageRelease({
         kind,
         action: 'unpublish',
-        albumId: album.id,
+        ...(album ? { albumId: album.id } : {}),
         ...(track ? { trackId: track.id } : {}),
+        ...(shareId ? { shareId } : {}),
         hideDna,
       });
       const patch = {
@@ -285,8 +287,13 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
         ...(result.releaseShareId ? { releaseShareId: result.releaseShareId } : {}),
         ...(hideDna ? { dnaStatus: 'unlisted' as const } : {}),
       };
-      if (track) updateTrack(album.id, track.id, patch);
-      else updateAlbum(album.id, patch);
+      if (album && track) updateTrack(album.id, track.id, patch);
+      else if (album) updateAlbum(album.id, patch);
+      if (shareId) {
+        setLinkedHouse((current) =>
+          current.map((row) => (row.shareId === shareId ? { ...row, releaseLive: false } : row))
+        );
+      }
       toast({
         title: 'Release taken offline',
         description: hideDna
@@ -302,7 +309,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   };
 
   const removeRelease = async (hideDna: boolean) => {
-    if (!remove) return;
+    if (!remove?.album) return;
     const { kind, album, track } = remove;
     const key = `${kind}:${track?.id || album.id}`;
     setBusy(key);
@@ -457,7 +464,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 <span className="block truncate text-base font-bold">{track?.title || album.title || 'Untitled'}</span>
                 <span className="block truncate font-code text-[11px] uppercase tracking-wider text-muted-foreground sm:text-xs">
                   {track ? `${album.title} · ${hasLyrics(track) ? 'lyrics attached' : 'audio only'}` : `${album.tracks.length} tracks`}
-                  {dnaGroup ? ' · DNA Drop live' : status ? ` · ${status}` : ''}
+                  {dnaGroup ? ' · Lyrics DNA Drop live' : status ? ` · ${status}` : ''}
                   {!dnaGroup && (track?.houseRelease || (!track && album.houseRelease)) ? ' · House · Free' : ''}
                   {!dnaGroup && (track?.houseLibraryNotice || (!track && album.houseLibraryNotice)) ? ' · Library notice on' : ''}
                 </span>
@@ -566,7 +573,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold uppercase tracking-wide text-foreground">House catalog · linked to you</span>
           <span className="block text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            Free Library releases credited to your page. Update ones in your vault, or show/hide linked ones on Artist Home.
+            Free Library releases credited to your page. Open, update, take offline, or show/hide on Artist Home — even when AKAsheet only linked the release to you.
           </span>
         </span>
         <span className="rounded-full border border-cyan-400/35 bg-cyan-400/15 px-2 py-1 font-code text-xs font-bold text-cyan-100">
@@ -598,28 +605,39 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 <Button asChild size="sm" variant="secondary" className="h-9 text-xs font-bold uppercase">
                   <Link href={href}><ExternalLink className="mr-1 h-3 w-3" /> Open release</Link>
                 </Button>
-                {album ? (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 text-xs font-bold uppercase"
-                      onClick={() => openFirstDropLathe({
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-xs font-bold uppercase"
+                  onClick={() => {
+                    if (album) {
+                      openFirstDropLathe({
                         albumId: album.id,
                         ...(track ? { trackId: track.id } : { mode: 'album' as const }),
-                      })}
-                    >
-                      <Settings2 className="mr-1 h-3 w-3" /> Update
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300"
-                      onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}
-                    >
-                      <Unlink className="mr-1 h-3 w-3" /> Take offline
-                    </Button>
-                  </>
+                      });
+                      return;
+                    }
+                    openFirstDropLathe({
+                      shareId: row.shareId,
+                      mode: row.type === 'album' ? 'album' : 'song',
+                    });
+                  }}
+                >
+                  <Settings2 className="mr-1 h-3 w-3" /> Update
+                </Button>
+                {row.releaseLive ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300"
+                    onClick={() => setUnpress({
+                      kind: track ? 'track' : row.type,
+                      ...(album ? { album, track } : {}),
+                      shareId: row.shareId,
+                    })}
+                  >
+                    <Unlink className="mr-1 h-3 w-3" /> Take offline
+                  </Button>
                 ) : null}
                 <label className="ml-auto inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/25 bg-cyan-500/10 px-2.5 text-[10px] font-bold uppercase tracking-wide text-cyan-100">
                   <span>{onHome ? 'On your page' : 'Hidden on page'}</span>
@@ -647,7 +665,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 Your catalog is empty — that is normal when you are just getting started.
               </p>
               <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                Upload a recording with <strong className="text-foreground">New release</strong>, write lyrics in The Vault, then DNA Drop when you want lyrics public (Pro).
+                Upload a recording with <strong className="text-foreground">New release</strong>, write lyrics in The Vault, then Lyrics DNA Drop when you want lyrics public (Pro).
               </p>
             </>
           ) : (
@@ -658,7 +676,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                 Jump below or expand a colored group.
               </p>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-cyan-100/75 sm:text-sm">
-                New release = music. DNA Drop = public lyrics from your Vault sheet.
+                New release = music. Lyrics DNA Drop = public lyrics from your Vault sheet.
               </p>
             </>
           )}
@@ -675,7 +693,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
           </span>
           <p className="mt-4 font-headline text-lg font-bold uppercase tracking-tight text-foreground">Nothing released yet</p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Sections for live singles, albums, DNA Drops, and drafts appear here automatically once you create them. No need to hunt through empty folders.
+            Sections for live singles, albums, Lyrics DNA Drops, and drafts appear here automatically once you create them. No need to hunt through empty folders.
           </p>
           <Button type="button" className="mt-5 bg-fuchsia-400 font-bold uppercase text-black hover:bg-fuchsia-300" onClick={() => openFirstDropLathe()}>
             <Disc3 className="mr-2 h-4 w-4" /> Start your first release
@@ -807,7 +825,7 @@ export function ReleaseCatalogDialog({ open, onOpenChange, className }: ReleaseC
             Release Catalog
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed sm:text-base">
-            Manage music releases, live DNA Drops, and drafts from one place.
+            Manage music releases, live Lyrics DNA Drops, and drafts from one place.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-1">

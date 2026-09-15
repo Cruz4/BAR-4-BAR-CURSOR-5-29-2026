@@ -39,7 +39,7 @@ export function PressTrackingSettingsCard() {
           />
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          This is a personal checklist, not Press live or DNA Drop. You can also flip it on or off on any album page.
+          This is a personal checklist, not Press live or Lyrics DNA Drop. You can also flip it on or off on any album page.
           Public identity labels (Producer, Music Fan, and so on) do not change the stages.
         </p>
       </CardContent>

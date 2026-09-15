@@ -54,7 +54,7 @@ export async function sendWelcomeEmail(
       <p style="margin:0 0 14px">Your AKAsheet account is ready. Here’s what’s unlocked:</p>
       <ul style="margin:0 0 14px;padding-left:18px;color:#c8c8d0">
         <li><strong style="color:#fff">${SIGNUP_INK} welcome Ink</strong> for AI co-writing tools</li>
-        <li><strong style="color:#fff">${previewHours}-hour Pro feature preview</strong> — export, vault saves, Performance, Freestyle &amp; DNA Drop</li>
+        <li><strong style="color:#fff">${previewHours}-hour Pro feature preview</strong> — export, vault saves, Performance, Freestyle &amp; Lyrics DNA Drop</li>
         <li>Demo catalog stays at <strong style="color:#fff">${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} tracks</strong> until you Go Pro</li>
       </ul>
       <p style="margin:0 0 14px">If you signed up with email, confirm your address with the verification email from <strong style="color:#fff">noreply@akasheet.com</strong> so Ink and preview unlock fully.</p>
@@ -185,7 +185,7 @@ export async function sendProUpgradeEmail(
       <ul style="margin:0 0 14px;padding-left:18px;color:#c8c8d0">
         <li>Unlimited albums &amp; tracks</li>
         <li>Custom DNA / Vibe / Style vault saves</li>
-        <li>Export, import, Performance, Freestyle &amp; DNA Drop</li>
+        <li>Export, import, Performance, Freestyle &amp; Lyrics DNA Drop</li>
         <li>Pro residency Ink refill on your billing cycle</li>
       </ul>
       <p style="margin:0">Manage billing anytime in Settings → Cloud / Pro.</p>

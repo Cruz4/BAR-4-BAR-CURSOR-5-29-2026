@@ -1,6 +1,6 @@
 /**
  * Scene home Discover stream client — fetches site-wide public activity
- * (recently live Artist Homes, public wall posts, live DNA Drops, leaderboard
+ * (recently live Artist Homes, public wall posts, live Lyrics DNA Drops, leaderboard
  * risers) so the home feed is never empty.
  */
 
@@ -11,6 +11,15 @@ import { auth } from '@/lib/firebase/client/firebase';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import type { DiscoveryGraphMode, DiscoveryMatch } from '@/lib/discovery-graph';
 import type { PressingConfig } from '@/lib/profile/pressing';
+
+/** Lyrics DNA Drop or pressed song — routed to Your Block when the owner is a friend. */
+export function isCircleDropKind(drop: DiscoverDrop): boolean {
+  if (drop.type === 'track' && drop.hasDropAudio) return true;
+  if (drop.dnaLive) return true;
+  if (drop.type === 'album' && !drop.hasDropAudio) return true;
+  if (drop.type === 'track' && !drop.hasDropAudio) return true;
+  return false;
+}
 
 export type DiscoverArtist = {
   userId: string;
@@ -206,20 +215,28 @@ export function buildDiscoverCards(
     excludePostIds?: Set<string>;
     /** Owners the viewer blocked (or who blocked the viewer). */
     excludeUserIds?: Set<string>;
+    /** Accepted friends — their Lyrics DNA / pressed songs show on Your Block, not here. */
+    circleUserIds?: Set<string>;
     maxCards?: number;
     mode?: DiscoveryGraphMode | 'fresh';
   } = {}
 ): DiscoverCard[] {
   const excludePostIds = opts.excludePostIds ?? new Set<string>();
   const excludeUserIds = opts.excludeUserIds ?? new Set<string>();
+  const circleUserIds = opts.circleUserIds ?? new Set<string>();
   const maxCards = opts.maxCards ?? DISCOVER_HOME_MAX_CARDS;
   const mode = opts.mode ?? (data.viewerGraph.hasTaste ? 'taste' : 'fresh');
+
+  const dropBelongsOnBlock = (drop: DiscoverDrop) =>
+    Boolean(drop.ownerId && circleUserIds.has(drop.ownerId) && isCircleDropKind(drop));
 
   const artists = data.artists.filter((a) => !excludeUserIds.has(a.userId));
   const posts = data.posts.filter(
     (p) => !excludePostIds.has(p.id) && !excludeUserIds.has(p.ownerId)
   );
-  const drops = data.drops;
+  const drops = data.drops.filter(
+    (d) => !dropBelongsOnBlock(d) && !(d.ownerId && excludeUserIds.has(d.ownerId))
+  );
   const saleDrops = drops.filter((d) => d.hasDropAudio && d.type === 'track');
   const otherDrops = drops.filter((d) => !(d.hasDropAudio && d.type === 'track'));
   const locks = (data.locks || []).filter(

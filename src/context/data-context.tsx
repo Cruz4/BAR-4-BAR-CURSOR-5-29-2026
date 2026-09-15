@@ -938,7 +938,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     async (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
       if (!isProOrTrial(user)) {
-        throw new Error('DNA Drop lyric links are Studio Pro. Upgrade to publish, view, or import drops.');
+        throw new Error('Lyrics DNA Drop links are Studio Pro. Upgrade to publish, view, or import drops.');
       }
       const albumId = options?.albumId;
       const data = stripForFirestore({ ...buildDropPayload(type, id, albumId), dnaStatus: 'live' });
@@ -986,7 +986,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     async (type: 'album' | 'track', id: string, options?: { albumId?: string }): Promise<string> => {
       if (!user) throw new Error('Artist Session Required.');
       if (!isProOrTrial(user)) {
-        throw new Error('DNA Drop lyric links are Studio Pro. Upgrade to publish, view, or import drops.');
+        throw new Error('Lyrics DNA Drop links are Studio Pro. Upgrade to publish, view, or import drops.');
       }
       const albumId = options?.albumId;
       const existingShareId =
@@ -1046,7 +1046,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }),
       });
       const result = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(result.error || 'Could not take this DNA Drop offline.');
+      if (!response.ok) throw new Error(result.error || 'Could not take this Lyrics DNA Drop offline.');
       if (type === 'album') {
         updateAlbum(id, { shareId: undefined, dnaStatus: 'unlisted' });
       } else {

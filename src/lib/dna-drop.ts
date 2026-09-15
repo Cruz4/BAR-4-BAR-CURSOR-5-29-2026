@@ -16,12 +16,12 @@ import { hasDirectionContent, mergeDirection } from '@/lib/utils';
 import { normalizeDropPrice, publicDropAudio } from '@/lib/drop-commerce';
 import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
 
-/** True when this project has an active public DNA Drop link (shareId persisted on album/track). */
+/** True when this project has an active public Lyrics DNA Drop link (shareId persisted on album/track). */
 export function hasActiveDnaDrop(shareId?: string | null): boolean {
   return typeof shareId === 'string' && shareId.trim().length > 0;
 }
 
-/** Tracks in an album that do not yet have a live DNA Drop link. */
+/** Tracks in an album that do not yet have a live Lyrics DNA Drop link. */
 export function tracksMissingDnaDrop(album: Pick<Album, 'tracks'> | null | undefined): Track[] {
   return (album?.tracks ?? []).filter((t) => !hasActiveDnaDrop(t.shareId));
 }
@@ -52,7 +52,7 @@ export type DnaDropAlbumContext = {
   theme?: string;
   /** Album cover when the track has no art of its own — used on public snapshot pages. */
   coverArtUrl?: string;
-  /** Parent album DNA Drop share id when the album is live. */
+  /** Parent album Lyrics DNA Drop share id when the album is live. */
   shareId?: string;
   direction?: Album['direction'];
   thingsToSay?: string[];
@@ -90,7 +90,7 @@ function clone<T>(value: T): T {
 
 const MAX_DNA_DROP_MEDIA = 6;
 
-/** Normalize / cap DNA Drop media URLs for snapshot + storage. */
+/** Normalize / cap Lyrics DNA Drop media URLs for snapshot + storage. */
 export function normalizeDnaDropMedia(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   const out: string[] = [];
@@ -262,8 +262,8 @@ function sanitizeAlbumForSnapshot(
   else delete payload.dnaDropMedia;
   payload.dropPrice = normalizeDropPrice(album.dropPrice);
 
-  // Preserve each track's live shareId so the public album hub can link
-  // into that song's DNA Drop page (lyrics stay in the snapshot for import).
+  // Keep per-track shareIds for Discover/permalinks. Album hub opens lyrics
+  // from this snapshot (`?track=`), so a missing track share cannot dump to Discover.
   const orderedTracks = orderAlbumTracks(album.tracks ?? [], album);
   payload.trackOrder = trackOrderFromTracks(orderedTracks);
   payload.tracks = orderedTracks.map((t) => {

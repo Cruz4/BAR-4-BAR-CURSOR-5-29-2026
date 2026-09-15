@@ -21,6 +21,7 @@ import {
   RELEASE_SHARE_PAYLOAD_BUDGET_BYTES,
 } from '@/lib/release-management';
 import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
+import { canManageReleaseShare, houseReleaseVaultRef } from '@/lib/house-artist-link';
 
 export const runtime = 'nodejs';
 
@@ -42,19 +43,23 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const userId = typeof body.userId === 'string' ? body.userId : '';
-    const kind = body.kind === 'album' || body.kind === 'track' ? body.kind : null;
+    let kind = body.kind === 'album' || body.kind === 'track' ? body.kind : null;
     const action: ManageAction | null =
       body.action === 'save-draft' || body.action === 'publish' || body.action === 'unpublish' || body.action === 'remove'
         ? body.action
         : null;
-    const albumId = body.albumId;
-    const trackId = body.trackId;
+    const shareIdInput = typeof body.shareId === 'string' ? body.shareId.trim() : '';
+    let albumId = body.albumId;
+    let trackId = body.trackId;
     const hideDna = body.hideDna === true;
     const houseReleaseRequest = typeof body.houseRelease === 'boolean' ? body.houseRelease : undefined;
     const houseLibraryNoticeRequest = typeof body.houseLibraryNotice === 'boolean'
       ? body.houseLibraryNotice
       : undefined;
-    if (!userId || !kind || !action || !safeId(albumId) || (kind === 'track' && !safeId(trackId))) {
+    if (!userId || !action) {
+      return NextResponse.json({ error: 'Invalid release request.' }, { status: 400 });
+    }
+    if (!shareIdInput && (!kind || !safeId(albumId) || (kind === 'track' && !safeId(trackId)))) {
       return NextResponse.json({ error: 'Invalid release request.' }, { status: 400 });
     }
 
@@ -78,15 +83,72 @@ export async function POST(req: Request) {
     }
 
     const db = await getDb();
-    const userRef = db.doc(`users/${userId}`);
-    const albumRef = db.doc(`users/${userId}/albums/${albumId}`);
+    let vaultUserId = userId;
+    if (shareIdInput) {
+      if (!safeId(shareIdInput)) {
+        return NextResponse.json({ error: 'Invalid release request.' }, { status: 400 });
+      }
+      const shareSnap = await db.doc(`shares/${shareIdInput}`).get();
+      if (!shareSnap.exists) {
+        return NextResponse.json({ error: 'Release was not found.' }, { status: 404 });
+      }
+      const share = (shareSnap.data() || {}) as Record<string, unknown>;
+      if (!canManageReleaseShare(share, userId)) {
+        return NextResponse.json({ error: 'You cannot manage this release.' }, { status: 403 });
+      }
+      const vault = houseReleaseVaultRef(share);
+      const shareOwnerId = typeof share.ownerId === 'string' ? share.ownerId.trim() : '';
+      vaultUserId = vault?.ownerId || shareOwnerId || userId;
+      kind = vault?.kind || (share.type === 'album' ? 'album' : 'track');
+      albumId = vault?.albumId || albumId;
+      if (vault?.trackId) trackId = vault.trackId;
+    }
+    if (!kind || !safeId(albumId) || (kind === 'track' && !safeId(trackId))) {
+      if (shareIdInput && (action === 'unpublish' || action === 'remove')) {
+        const shareRef = db.doc(`shares/${shareIdInput}`);
+        const nowOnly = new Date().toISOString();
+        if (action === 'unpublish') {
+          await shareRef.set({
+            releaseStatus: 'unlisted',
+            unpressedAt: nowOnly,
+            updatedAt: nowOnly,
+            'data.releaseStatus': 'unlisted',
+            houseLibraryNotice: false,
+            houseLibraryNoticeAt: FieldValue.delete(),
+          }, { merge: true });
+          return NextResponse.json({ ok: true, releaseStatus: 'unlisted', releaseShareId: shareIdInput });
+        }
+        await shareRef.set({
+          releaseStatus: 'unlisted',
+          releaseRemovedAt: nowOnly,
+          unpressedAt: nowOnly,
+          houseRelease: false,
+          houseLibraryNotice: false,
+          updatedAt: nowOnly,
+          'data.releaseStatus': 'unlisted',
+          'data.houseRelease': false,
+        }, { merge: true });
+        return NextResponse.json({
+          ok: true,
+          removed: true,
+          releaseStatus: 'draft',
+          releaseShareId: null,
+          houseRelease: false,
+          houseLibraryNotice: false,
+        });
+      }
+      return NextResponse.json({ error: 'Invalid release request.' }, { status: 400 });
+    }
+
+    const userRef = db.doc(`users/${vaultUserId}`);
+    const albumRef = db.doc(`users/${vaultUserId}/albums/${albumId}`);
     const trackRef = kind === 'track'
-      ? db.doc(`users/${userId}/albums/${albumId}/tracks/${trackId}`)
+      ? db.doc(`users/${vaultUserId}/albums/${albumId}/tracks/${trackId}`)
       : null;
     const [userSnap, albumSnap, styleSnap, tracksSnap] = await Promise.all([
       userRef.get(),
       albumRef.get(),
-      db.doc(`users/${userId}/styleProfile/main`).get(),
+      db.doc(`users/${vaultUserId}/styleProfile/main`).get(),
       albumRef.collection('tracks').get(),
     ]);
     if (!userSnap.exists || !albumSnap.exists) {
@@ -100,13 +162,13 @@ export async function POST(req: Request) {
 
     const albumData = albumSnap.data() as Omit<Album, 'tracks'> & { tracks?: unknown };
     const orderedTracks = orderAlbumTracks(
-      tracksSnap.docs.map((doc) => ({ ...(doc.data() as Track), id: doc.id, albumId })),
+      tracksSnap.docs.map((doc) => ({ ...(doc.data() as Track), id: doc.id, albumId: String(albumId) })),
       albumData,
     );
     const album = {
       ...albumData,
       id: albumId,
-      ownerId: userId,
+      ownerId: vaultUserId,
       tracks: orderedTracks,
       trackOrder: trackOrderFromTracks(orderedTracks),
     } as Album;
@@ -115,13 +177,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Song was not found in your Vault.' }, { status: 404 });
     }
     const target = (kind === 'album' ? album : track!) as Album | Track;
-    // Never trust the owner-writable Vault document for a universal entitlement.
-    // Only an explicit flag on this admin-authorized request may set the public share flag.
-    // House Library notices are activated only by `/api/admin/house-release-ping`.
-    const houseRelease = houseReleaseRequest === true;
     const style = styleSnap.exists ? (styleSnap.data() as StyleProfile) : undefined;
     const existingReleaseId = target.releaseShareId?.trim();
-    let releaseShareId = existingReleaseId;
+    let releaseShareId = shareIdInput || existingReleaseId;
 
     // Old releases used shareId for both the lyric page and the paid release.
     if (!releaseShareId && target.shareId) {
@@ -136,6 +194,10 @@ export async function POST(req: Request) {
     const existingSharePreview = releaseShareId
       ? await db.doc(`shares/${releaseShareId}`).get()
       : null;
+    // Never trust the owner-writable Vault document for a universal entitlement.
+    // Admin may set/clear the flag; linked artists keep an existing House share as House.
+    const existingShareHouse = Boolean(existingSharePreview?.exists && existingSharePreview.data()?.houseRelease === true);
+    const houseRelease = houseReleaseRequest === true || (houseReleaseRequest !== false && existingShareHouse);
     const existingNoticeLive =
       houseRelease &&
       existingSharePreview?.exists &&
@@ -160,9 +222,10 @@ export async function POST(req: Request) {
     }
 
     if (action === 'unpublish') {
-      const [artistHomeSnap, publicProfilesSnap] = await Promise.all([
-        db.doc(`users/${userId}/gamification/artistHome`).get(),
-        db.collection('publicProfiles').where('userId', '==', userId).get(),
+      const homeIds = [...new Set([userId, vaultUserId])];
+      const [artistHomeSnaps, publicProfilesSnaps] = await Promise.all([
+        Promise.all(homeIds.map((id) => db.doc(`users/${id}/gamification/artistHome`).get())),
+        Promise.all(homeIds.map((id) => db.collection('publicProfiles').where('userId', '==', id).get())),
       ]);
       const batch = db.batch();
       batch.set(targetRef, {
@@ -192,11 +255,17 @@ export async function POST(req: Request) {
           'data.dnaStatus': 'unlisted',
         });
       }
-      if (releaseShareId && artistHomeSnap.data()?.featured?.featuredTrack?.shareId === releaseShareId) {
-        batch.update(artistHomeSnap.ref, { 'featured.featuredTrack': FieldValue.delete(), updatedAt: now });
-        for (const profile of publicProfilesSnap.docs) {
-          if (profile.data()?.artistHome?.featured?.featuredTrack?.shareId === releaseShareId) {
-            batch.update(profile.ref, { 'artistHome.featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+      if (releaseShareId) {
+        for (const artistHomeSnap of artistHomeSnaps) {
+          if (artistHomeSnap.data()?.featured?.featuredTrack?.shareId === releaseShareId) {
+            batch.update(artistHomeSnap.ref, { 'featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+          }
+        }
+        for (const publicProfilesSnap of publicProfilesSnaps) {
+          for (const profile of publicProfilesSnap.docs) {
+            if (profile.data()?.artistHome?.featured?.featuredTrack?.shareId === releaseShareId) {
+              batch.update(profile.ref, { 'artistHome.featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+            }
           }
         }
       }
@@ -205,9 +274,10 @@ export async function POST(req: Request) {
     }
 
     if (action === 'remove') {
-      const [artistHomeSnap, publicProfilesSnap] = await Promise.all([
-        db.doc(`users/${userId}/gamification/artistHome`).get(),
-        db.collection('publicProfiles').where('userId', '==', userId).get(),
+      const homeIds = [...new Set([userId, vaultUserId])];
+      const [artistHomeSnaps, publicProfilesSnaps] = await Promise.all([
+        Promise.all(homeIds.map((id) => db.doc(`users/${id}/gamification/artistHome`).get())),
+        Promise.all(homeIds.map((id) => db.collection('publicProfiles').where('userId', '==', id).get())),
       ]);
       const batch = db.batch();
       batch.set(targetRef, {
@@ -240,11 +310,17 @@ export async function POST(req: Request) {
           'data.dnaStatus': 'unlisted',
         }, { merge: true });
       }
-      if (releaseShareId && artistHomeSnap.data()?.featured?.featuredTrack?.shareId === releaseShareId) {
-        batch.update(artistHomeSnap.ref, { 'featured.featuredTrack': FieldValue.delete(), updatedAt: now });
-        for (const profile of publicProfilesSnap.docs) {
-          if (profile.data()?.artistHome?.featured?.featuredTrack?.shareId === releaseShareId) {
-            batch.update(profile.ref, { 'artistHome.featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+      if (releaseShareId) {
+        for (const artistHomeSnap of artistHomeSnaps) {
+          if (artistHomeSnap.data()?.featured?.featuredTrack?.shareId === releaseShareId) {
+            batch.update(artistHomeSnap.ref, { 'featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+          }
+        }
+        for (const publicProfilesSnap of publicProfilesSnaps) {
+          for (const profile of publicProfilesSnap.docs) {
+            if (profile.data()?.artistHome?.featured?.featuredTrack?.shareId === releaseShareId) {
+              batch.update(profile.ref, { 'artistHome.featured.featuredTrack': FieldValue.delete(), updatedAt: now });
+            }
           }
         }
       }
@@ -327,7 +403,7 @@ export async function POST(req: Request) {
     payload.houseRelease = houseRelease;
     const shareRef = db.doc(`shares/${releaseShareId}`);
     const existingShare = await shareRef.get();
-    if (existingShare.exists && existingShare.data()?.ownerId !== userId) {
+    if (existingShare.exists && existingShare.data()?.ownerId !== vaultUserId) {
       return NextResponse.json({ error: 'That release link belongs to another account.' }, { status: 409 });
     }
     const existingNoticeAt = typeof existingShare.data()?.houseLibraryNoticeAt === 'string'
@@ -348,14 +424,14 @@ export async function POST(req: Request) {
       id: releaseShareId,
       type: kind,
       projectId: kind === 'track' ? trackId : albumId,
-      ownerId: userId,
+      ownerId: vaultUserId,
       ownerName: typeof userSnap.data()?.displayName === 'string' ? userSnap.data()!.displayName : 'Artist',
       data: payload,
       releaseStatus: 'live',
       releaseRemovedAt: FieldValue.delete(),
       houseRelease,
       ...(houseRelease
-        ? { houseArtistId: existingHouseArtistId || userId }
+        ? { houseArtistId: existingHouseArtistId || vaultUserId }
         : { houseArtistId: FieldValue.delete() }),
       houseLibraryNotice,
       houseLibraryNoticeAt: houseLibraryNoticeAt || FieldValue.delete(),
@@ -364,7 +440,7 @@ export async function POST(req: Request) {
       updatedAt: now,
       views: existingShare.exists ? existingShare.data()?.views || 0 : 0,
       imports: existingShare.exists ? existingShare.data()?.imports || 0 : 0,
-      ...shareDocCommerceFlags(kind, payload),
+      ...shareDocCommerceFlags(kind === 'album' ? 'album' : 'track', payload),
     }, { merge: true });
     await batch.commit();
     return NextResponse.json({

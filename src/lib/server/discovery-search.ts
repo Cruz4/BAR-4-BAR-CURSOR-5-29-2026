@@ -449,8 +449,8 @@ export async function searchPublicMusicNetwork(input: {
     const kindLabel = drop.houseRelease
       ? drop.shareType === 'album' ? 'House album' : 'House release'
       : drop.shareType === 'album'
-        ? drop.pressed ? 'Album release' : 'Album DNA Drop'
-        : drop.pressed ? 'Music release' : 'DNA Drop';
+        ? drop.pressed ? 'Album release' : 'Album Lyrics DNA Drop'
+        : drop.pressed ? 'Music release' : 'Lyrics DNA Drop';
     const href = drop.shareType === 'album'
       ? `/share/${drop.shareId}`
       : drop.pressed
@@ -470,7 +470,7 @@ export async function searchPublicMusicNetwork(input: {
         ownerName: drop.ownerName,
         ...(drop.ownerSlug ? { ownerSlug: drop.ownerSlug } : {}),
         tags: [
-          drop.houseRelease ? 'House' : drop.pressed ? 'Release' : 'DNA Drop',
+          drop.houseRelease ? 'House' : drop.pressed ? 'Release' : 'Lyrics DNA Drop',
           ...drop.metadata.genreStyles,
           ...drop.metadata.moods,
         ].slice(0, 4),

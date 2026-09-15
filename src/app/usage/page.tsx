@@ -93,7 +93,7 @@ import {
   buildLoginPath,
   isProCheckoutPriceKey,
 } from '@/lib/checkout-intent';
-import { DNA_DROP_HIGHLIGHT, isDnaDropAccessFeature } from '@/lib/dna-drop-access';
+import { DNA_DROP_HIGHLIGHT, DNA_DROP_UPGRADE_TOAST, isDnaDropAccessFeature } from '@/lib/dna-drop-access';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 
 function InkPoolBadge({ pool }: { pool: InkPool | 'unknown' }) {
@@ -131,6 +131,7 @@ function UsagePageContent() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const checkoutAutoStartedRef = useRef(false);
   const dnaPerkRef = useRef<HTMLLIElement | null>(null);
+  const dnaUpgradeToastRef = useRef(false);
   const highlightDnaDrop = searchParams.get('highlight') === DNA_DROP_HIGHLIGHT;
 
   useEffect(() => {
@@ -195,6 +196,15 @@ function UsagePageContent() {
   useEffect(() => {
     setDisplayNameInput(user?.displayName || '');
   }, [user?.displayName]);
+
+  useEffect(() => {
+    if (!highlightDnaDrop || dnaUpgradeToastRef.current) return;
+    dnaUpgradeToastRef.current = true;
+    toast({
+      title: DNA_DROP_UPGRADE_TOAST.title,
+      description: DNA_DROP_UPGRADE_TOAST.description,
+    });
+  }, [highlightDnaDrop, toast]);
 
   useEffect(() => {
     if (!highlightDnaDrop || activeTab !== 'cloud') return;
@@ -535,11 +545,11 @@ function UsagePageContent() {
                 <CardHeader className="pb-3">
                   <CardTitle className="font-headline text-lg flex items-center gap-2">
                     <Sparkles className="text-accent h-5 w-5" />
-                    DNA Drops (Lyrics) — Studio Pro
+                    Lyrics DNA Drops — Studio Pro
                   </CardTitle>
                   <CardDescription className="text-xs font-code leading-relaxed">
-                    Extract, view, download, and import lyric DNA Drops are Pro only. Music releases (Listen / buy) stay Free.
-                    The DNA Drop perk is highlighted on the plans below — pick Monthly or Yearly to unlock it.
+                    Extract, view, download, and import Lyrics DNA Drops are Pro only. Music releases (Listen / buy) stay Free.
+                    The Lyrics DNA Drop perk is highlighted on the plans below — pick Monthly or Yearly to unlock it.
                   </CardDescription>
                 </CardHeader>
               </Card>

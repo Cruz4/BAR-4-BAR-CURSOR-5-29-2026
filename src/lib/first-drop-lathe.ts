@@ -4,6 +4,7 @@ export type FirstDropLatheDetail = {
   albumId?: string;
   trackId?: string;
   mode?: 'song' | 'album';
+  shareId?: string;
 };
 
 export function openFirstDropLathe(detail: FirstDropLatheDetail = {}): void {

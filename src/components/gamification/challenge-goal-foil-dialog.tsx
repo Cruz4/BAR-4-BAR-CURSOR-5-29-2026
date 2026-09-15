@@ -71,6 +71,7 @@ export function ChallengeGoalFoilDialog({
         title: 'Shared to your feed',
         description: 'Goal card posted on your wall / The Scene.',
       });
+      onOpenChange(false);
     } catch (e) {
       toast({
         variant: 'destructive',

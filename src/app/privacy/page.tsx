@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">1. Overview</h2>
             <p>AKAsheet (&quot;we&quot;, &quot;us&quot;) respects your creative privacy. This policy explains what data we collect when you use our web app at akasheet.com (the &quot;Service&quot;) and how we use it. By using the Service you also agree to our <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link>.</p>
-            <p>The Service includes a lyric studio, The Scene, Artist Home pages, DNA Drops, music Releases, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
+            <p>The Service includes a lyric studio, The Scene, Artist Home pages, Lyrics DNA Drops, music Releases, Library, Msgs (private in-app messages), Lock pages, and related tools. What we collect depends on which of those you use.</p>
           </section>
 
           <section className="space-y-3">
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-5 space-y-2">
               <li><strong className="text-foreground">Account data:</strong> email, display name, photo URL (if provided by Google), authentication identifiers (via Firebase Auth), and account status.</li>
               <li><strong className="text-foreground">Creative data:</strong> albums, tracks, lyrics, style profiles, DNA/vibe settings, cover art, and project metadata stored in Firebase Firestore and Storage.</li>
-              <li><strong className="text-foreground">Audio &amp; media:</strong> Release song files and 30-second previews, DNA Drop images, Artist Home media, and voice notes / Auto-Tune takes you record. Audio you sell is stored privately and streamed in-app; we do not sell your masters.</li>
+              <li><strong className="text-foreground">Audio &amp; media:</strong> Release song files and 30-second previews, Lyrics DNA Drop images, Artist Home media, and voice notes / Auto-Tune takes you record. Audio you sell is stored privately and streamed in-app; we do not sell your masters.</li>
               <li><strong className="text-foreground">Social data:</strong> Artist Home settings, wall posts, comments, likes, guestbook entries, friend requests/friendships, foil cards you share, unique post-view counts, and similar Scene activity. Public Artist Home and share links are visible to anyone with the link (and may be indexed if you make them public).</li>
               <li><strong className="text-foreground">Msgs:</strong> private in-app messages and related delivery metadata, stored on our servers so the inbox can work. Msgs are not end-to-end encrypted.</li>
               <li><strong className="text-foreground">Usage &amp; billing data:</strong> Ink balances and ledgers, AI action costs, subscription tier/status, Stripe customer and subscription identifiers, and (for Release sellers) Stripe Connect payout account identifiers, earnings totals, and payout status (we do not store full card or bank numbers—Stripe does).</li>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">3. How We Use Data</h2>
             <ul className="list-disc pl-5 space-y-2">
               <li>Provide, sync, and secure the studio (auth, vault, AI tools, gamification).</li>
-              <li>Host and stream music Releases, DNA Drops, Artist Home, The Scene, Library, and Msgs.</li>
+              <li>Host and stream music Releases, Lyrics DNA Drops, Artist Home, The Scene, Library, and Msgs.</li>
               <li>Process payments, fulfill Ink and Pro entitlements, pay artists through Stripe, and prevent billing or stream abuse.</li>
               <li>Count unique views, plays, and similar engagement so owners can see reach.</li>
               <li>Measure product performance and conversion (funnels, feature use, admin growth metrics).</li>
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">4. Public vs Private</h2>
-            <p>Vault drafts stay in your account until you publish or share them. Live Artist Home pages, The Scene posts, guestbook, and similar social surfaces are public or semi-public when you use them. DNA Drops are opt-in lyric snapshots: they are not your Vault, they do not go live until you confirm a Drop, they can be taken offline, and opening or importing the lyric page is limited to signed-in Studio Pro members. Share links for music releases stream to buyers and may include a short preview for visitors. Treat anything you post to The Scene or a live Artist Home as public.</p>
+            <p>Vault drafts stay in your account until you publish or share them. Live Artist Home pages, The Scene posts, guestbook, and similar social surfaces are public or semi-public when you use them. Lyrics DNA Drops are opt-in lyric snapshots: they are not your Vault, they do not go live until you confirm a Drop, they can be taken offline, and opening or importing the lyric page is limited to signed-in Studio Pro members. Share links for music releases stream to buyers and may include a short preview for visitors. Treat anything you post to The Scene or a live Artist Home as public.</p>
           </section>
 
           <section className="space-y-3">

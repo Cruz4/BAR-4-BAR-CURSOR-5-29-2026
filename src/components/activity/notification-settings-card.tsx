@@ -126,7 +126,7 @@ export function NotificationSettingsCard() {
                 ['relationships', 'Followers + Inner Circle support'],
                 ['postLoves', 'Loves on your posts'],
                 ['postReplies', 'Replies on your posts'],
-                ['dnaImports', 'DNA Drop imports'],
+                ['dnaImports', 'Lyrics DNA Drop imports'],
                 ['collabSheets', 'Collab Sheet invites, edits & chat'],
                 ['firstDrops', 'Release loves, replies, unlocks'],
               ] as const

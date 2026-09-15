@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   try {
     const shareId = new URL(req.url).searchParams.get('shareId')?.trim().toUpperCase() || '';
     if (!safeId(shareId)) {
-      return NextResponse.json({ error: 'Invalid DNA Drop.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid Lyrics DNA Drop.' }, { status: 400 });
     }
     const db = await getDb();
     const visibility = await canonicalShareVisibility(db, shareId);
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json(visibility);
   } catch (error) {
     console.error('[dna/manage visibility]', error);
-    return NextResponse.json({ error: 'Could not verify this DNA Drop.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not verify this Lyrics DNA Drop.' }, { status: 500 });
   }
 }
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       !safeId(shareId) ||
       (type === 'track' && !safeId(albumId))
     ) {
-      return NextResponse.json({ error: 'Invalid DNA Drop request.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid Lyrics DNA Drop request.' }, { status: 400 });
     }
 
     try {
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'This project was not found in your Vault.' }, { status: 404 });
     }
     if (currentShareSnap.exists && currentShareSnap.data()?.ownerId !== userId) {
-      return NextResponse.json({ error: 'You can only take your own DNA Drops offline.' }, { status: 403 });
+      return NextResponse.json({ error: 'You can only take your own Lyrics DNA Drops offline.' }, { status: 403 });
     }
 
     const targetData = currentShareSnap.exists
@@ -120,6 +120,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, hiddenShareCount: matching.length });
   } catch (error) {
     console.error('[dna/manage]', error);
-    return NextResponse.json({ error: 'Could not take this DNA Drop offline.' }, { status: 500 });
+    return NextResponse.json({ error: 'Could not take this Lyrics DNA Drop offline.' }, { status: 500 });
   }
 }
