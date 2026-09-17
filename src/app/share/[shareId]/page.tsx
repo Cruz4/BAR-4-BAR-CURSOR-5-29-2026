@@ -73,7 +73,7 @@ import {
   dnaDropSharePath,
   resolveDnaDropImportPath,
 } from '@/lib/dna-drop-access';
-import { pressedSongHref } from '@/lib/pressed-song';
+import { pressedSongHref, resolveAlbumHubShareId } from '@/lib/pressed-song';
 import {
   Tooltip,
   TooltipContent,
@@ -81,7 +81,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { manageRelease } from '@/lib/release-management-client';
-import { shareDocumentVisibility } from '@/lib/release-management';
+import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 
@@ -101,6 +101,7 @@ function SharedProjectPageInner() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [isTakingOffline, setIsTakingOffline] = useState(false);
     const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false);
+    const [hubVisibility, setHubVisibility] = useState<{ dnaLive: boolean; releaseLive: boolean } | null>(null);
 
     useEffect(() => {
         const fetchShare = async () => {
@@ -170,8 +171,37 @@ function SharedProjectPageInner() {
                     dnaLive: Boolean(fromApi?.dnaLive ?? fromShare.dnaLive),
                     releaseLive: Boolean(fromApi?.releaseLive ?? fromShare.releaseLive),
                 };
+                if (data.type === 'album') {
+                    const releaseHubId = releaseShareIdFromShareDocument(
+                        data as unknown as Record<string, unknown>
+                    );
+                    if (
+                        !visibility.releaseLive &&
+                        releaseHubId &&
+                        releaseHubId.toUpperCase() !== normalizedShareId
+                    ) {
+                        try {
+                            const altRes = await fetch(
+                                `/api/shares/${encodeURIComponent(releaseHubId)}`,
+                                { cache: 'no-store' }
+                            );
+                            if (altRes.ok) {
+                                const altPayload = (await altRes.json()) as {
+                                    visibility?: { releaseLive?: boolean };
+                                };
+                                if (altPayload.visibility?.releaseLive) {
+                                    visibility.releaseLive = true;
+                                }
+                            }
+                        } catch {
+                            /* optional sibling release hub */
+                        }
+                    }
+                }
                 const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
-                const isPublic = Boolean(visibility?.dnaLive || visibility?.releaseLive);
+                const isPublic = Boolean(
+                    visibility?.dnaLive || visibility?.releaseLive || (data.type === 'album' && isOwner)
+                );
                 const musicPublic = Boolean(visibility?.releaseLive);
                 const canViewDna = isOwner || isCloudSyncActive;
                 if (data.type !== 'album' && musicPublic && !visibility?.dnaLive) {
@@ -183,7 +213,7 @@ function SharedProjectPageInner() {
                     router.replace('/discover');
                     return;
                 }
-                if (!canViewDna && !musicPublic) {
+                if (!canViewDna && !musicPublic && data.type !== 'album') {
                     const dest = user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view');
                     setDnaAccessRedirecting(true);
                     router.replace(dest);
@@ -194,6 +224,7 @@ function SharedProjectPageInner() {
                     }, 1200);
                     return;
                 }
+                setHubVisibility(visibility);
                 setShare(data);
                 if (canViewDna || musicPublic) {
                     const docRef = doc(db, 'shares', normalizedShareId);
@@ -226,6 +257,24 @@ function SharedProjectPageInner() {
           ?? albumPayload.tracks?.find((track) => track.id === snapshotTrackId);
     }, [albumPayload, snapshotTrackId]);
     const viewingAlbumHub = Boolean(isAlbum && !snapshotTrack);
+    const albumHubShareId = useMemo(() => {
+        if (!isAlbum) return shareId;
+        const payload = project as DnaDropAlbumPayload | undefined;
+        const releaseShareId =
+            releaseShareIdFromShareDocument({
+                ...(share ? (share as unknown as Record<string, unknown>) : {}),
+                data: payload,
+            }) || payload?.releaseShareId;
+        return (
+            resolveAlbumHubShareId({
+                releaseShareId,
+                releaseLive: hubVisibility?.releaseLive,
+                dnaShareId: shareId,
+                dnaLive: hubVisibility?.dnaLive,
+                fallbackShareId: shareId,
+            }) || shareId
+        );
+    }, [isAlbum, share, shareId, project, hubVisibility]);
     const trackProject: DnaDropTrackPayload | undefined =
       snapshotTrack || (!isAlbum ? (project as DnaDropTrackPayload | undefined) : undefined);
     const direction = (snapshotTrack || project) ? resolveSharedDirection(snapshotTrack || project!) : undefined;
@@ -518,12 +567,14 @@ function SharedProjectPageInner() {
                         </h1>
                         <p className="text-[7px] sm:text-[8px] text-muted-foreground uppercase tracking-[0.18em] mt-0.5 truncate">
                             {snapshotTrack
-                              ? `Song Lyrics DNA Drop · ${albumPayload?.title || 'snapshot'}`
+                              ? `Lyric DNA strand · ${albumPayload?.title || 'album'}`
                               : viewingAlbumHub
-                                ? 'Lyrics DNA Drop snapshot'
+                                ? hasFirstDropAudio
+                                  ? 'Album release hub'
+                                  : 'Album · Lyrics DNA Drop'
                                 : hasFirstDropAudio
                                   ? 'Song · 30s preview · buy to stream'
-                                  : 'Lyrics DNA Drop Snapshot'}
+                                  : 'Lyrics DNA Drop'}
                         </p>
                     </div>
                 </Link>
@@ -678,6 +729,37 @@ function SharedProjectPageInner() {
             )}
 
             <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
+                {viewingAlbumHub && hubVisibility ? (
+                  <div className="lg:col-span-12 -mt-2 mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-black/35 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em]">
+                    <span
+                      className={cn(
+                        'rounded-full border px-2.5 py-1',
+                        hubVisibility.releaseLive
+                          ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
+                          : 'border-white/15 text-muted-foreground'
+                      )}
+                    >
+                      Music release {hubVisibility.releaseLive ? 'live' : 'not shared'}
+                    </span>
+                    <span
+                      className={cn(
+                        'rounded-full border px-2.5 py-1',
+                        hubVisibility.dnaLive
+                          ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100'
+                          : canViewDnaLyrics
+                            ? 'border-white/15 text-muted-foreground'
+                            : 'border-amber-400/35 bg-amber-500/10 text-amber-100'
+                      )}
+                    >
+                      Lyrics DNA:{' '}
+                      {hubVisibility.dnaLive
+                        ? 'live'
+                        : canViewDnaLyrics
+                          ? 'not shared'
+                          : 'Pro only'}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="lg:col-span-4 space-y-6">
                     {snapshotTrack && isAlbum && albumPayload ? (
                       <nav
@@ -703,7 +785,7 @@ function SharedProjectPageInner() {
                       {viewingAlbumHub && hasFirstDropAudio ? (
                         <AlbumReleasePlaylist
                           album={project as DnaDropAlbumPayload}
-                          shareId={shareId}
+                          shareId={albumHubShareId}
                           ownerId={share.ownerId}
                           ownerName={share.ownerName}
                           houseRelease={share.houseRelease === true}
@@ -973,6 +1055,7 @@ function SharedProjectPageInner() {
                         <DnaDropAlbumHub
                             album={project as DnaDropAlbumPayload}
                             shareId={shareId}
+                            hubShareId={albumHubShareId}
                             ownerId={share.ownerId}
                             ownerName={share.ownerName}
                             houseRelease={share.houseRelease === true}

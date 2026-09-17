@@ -18,6 +18,21 @@ export function dropPromotePath(opts: {
   return `/share/${encodeURIComponent(shareId)}`;
 }
 
+/** Prefer live album music hub id, else live Lyrics DNA album id. */
+export function resolveAlbumHubShareId(opts: {
+  releaseShareId?: string | null;
+  releaseLive?: boolean;
+  dnaShareId?: string | null;
+  dnaLive?: boolean;
+  fallbackShareId?: string | null;
+}): string | undefined {
+  const releaseId = opts.releaseShareId?.trim();
+  if (opts.releaseLive && releaseId) return releaseId;
+  const dnaId = opts.dnaShareId?.trim();
+  if (opts.dnaLive && dnaId) return dnaId;
+  return releaseId || dnaId || opts.fallbackShareId?.trim() || undefined;
+}
+
 /** Public album hub that lists every playable track — never Discover search. */
 export function albumHubHref(albumShareId?: string | null): string | undefined {
   const id = albumShareId?.trim();

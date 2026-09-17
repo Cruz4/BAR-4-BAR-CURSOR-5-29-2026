@@ -223,6 +223,16 @@ export function canonicalDnaShareIds(records: ShareDocumentRecord[]): Set<string
  * dnaStatus. A legacy snapshot with neither status remains visible in both
  * places when it has audio, matching the old combined release page behavior.
  */
+export function releaseShareIdFromShareDocument(document: Record<string, unknown>): string | undefined {
+  const payload = document.data && typeof document.data === 'object'
+    ? document.data as Record<string, unknown>
+    : {};
+  const raw = document.releaseShareId ?? payload.releaseShareId;
+  if (typeof raw !== 'string') return undefined;
+  const id = raw.trim();
+  return id || undefined;
+}
+
 export function shareDocumentVisibility(document: Record<string, unknown>): ShareDocumentVisibility {
   const payload = document.data && typeof document.data === 'object'
     ? document.data as Record<string, unknown>

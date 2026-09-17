@@ -1,7 +1,11 @@
 import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
-import { canonicalDnaShareIds, shareDocumentVisibility } from '@/lib/release-management';
+import {
+  canonicalDnaShareIds,
+  releaseShareIdFromShareDocument,
+  shareDocumentVisibility,
+} from '@/lib/release-management';
 
 export async function canonicalLiveDnaShareIds(
   db: Firestore,
@@ -39,8 +43,17 @@ export async function canonicalShareVisibility(db: Firestore, shareId: string) {
   const data = shareSnap.data() as Record<string, unknown>;
   const visibility = shareDocumentVisibility(data);
   const liveDnaIds = await canonicalLiveDnaShareIds(db, [shareId]);
-  return {
-    dnaLive: visibility.dnaLive && liveDnaIds.has(shareId),
-    releaseLive: visibility.releaseLive,
-  };
+  const dnaLive = visibility.dnaLive && liveDnaIds.has(shareId);
+  let releaseLive = visibility.releaseLive;
+  if (data.type === 'album' && !dnaLive && !releaseLive) {
+    const releaseHubId = releaseShareIdFromShareDocument(data);
+    if (releaseHubId && releaseHubId.toUpperCase() !== shareId.toUpperCase()) {
+      const altSnap = await db.doc(`shares/${releaseHubId}`).get();
+      if (altSnap.exists) {
+        const altVisibility = shareDocumentVisibility(altSnap.data() as Record<string, unknown>);
+        if (altVisibility.releaseLive) releaseLive = true;
+      }
+    }
+  }
+  return { dnaLive, releaseLive };
 }

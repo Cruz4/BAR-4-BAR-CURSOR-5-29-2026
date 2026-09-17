@@ -19,6 +19,8 @@ import { dnaDropSnapshotTrackPath } from '@/lib/dna-drop-access';
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
   shareId: string;
+  /** Public music hub id when it differs from the Lyrics DNA album share. */
+  hubShareId?: string;
   ownerId: string;
   ownerName: string;
   houseRelease?: boolean;
@@ -87,10 +89,12 @@ function LyricsDnaTrackButton({
 export function DnaDropAlbumHub({
   album,
   shareId,
+  hubShareId,
   ownerName,
   houseRelease = false,
   canViewDna = true,
 }: DnaDropAlbumHubProps) {
+  const listenHubId = hubShareId?.trim() || shareId;
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = orderAlbumTracks(album.tracks ?? [], album);
   const strandCount = tracks.length;
@@ -134,7 +138,7 @@ export function DnaDropAlbumHub({
               const hasLyricDna = canViewDna && trackLyricBarCount(track) > 0;
               const lyricDnaHref = hasLyricDna ? dnaDropSnapshotTrackPath(shareId, track.id) : undefined;
               const songListenHref =
-                firstDropsOn && hasAudio ? pressedSongHref(shareId, { trackId: track.id }) : undefined;
+                firstDropsOn && hasAudio ? pressedSongHref(listenHubId, { trackId: track.id }) : undefined;
               const rowHref = songListenHref || lyricDnaHref;
               const trackTitle = track.title || `Untitled ${idx + 1}`;
 

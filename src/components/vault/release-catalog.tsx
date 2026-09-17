@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { auth } from '@/lib/firebase/client/firebase';
 import { attachReleaseToSheet, manageRelease } from '@/lib/release-management-client';
 import {
+  dnaStatusOf,
   findVaultReleaseByShareId,
   groupVaultReleases,
   hasLyrics,
@@ -619,6 +620,21 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
                     {row.type === 'album' ? ` · Album · ${row.trackCount || 0} tracks` : row.albumTitle ? ` · ${row.albumTitle}` : ' · Single'}
                     {row.releaseLive ? ' · live' : ' · Library only'}
                     {album ? '' : ' · Linked to your page'}
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    <span className="rounded-full border border-cyan-400/35 bg-cyan-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.14em] text-cyan-100">
+                      House
+                    </span>
+                    {row.releaseLive ? (
+                      <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.14em] text-emerald-100">
+                        Music live
+                      </span>
+                    ) : null}
+                    {album && (track ? dnaStatusOf(track) === 'live' : dnaStatusOf(album) === 'live') ? (
+                      <span className="rounded-full border border-fuchsia-400/35 bg-fuchsia-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.14em] text-fuchsia-100">
+                        Lyric DNA
+                      </span>
+                    ) : null}
                   </span>
                 </span>
               </div>

@@ -147,7 +147,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <TikTokPixel />
               {isMarketingCapture || isMarketingShell || isPublicProfilePage || isPublicPostPage ? null : isSettingsRoute ? (
                 <SettingsControlAtmosphere />
-              ) : (
+              ) : isMsgsPage ? null : (
                 <StudioPageBackground />
               )}
               <div

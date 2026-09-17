@@ -60,6 +60,7 @@ function EmojiGrid({
           key={`${keyPrefix}-${emoji}`}
           type="button"
           className="flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10"
+          onPointerDown={(e) => e.preventDefault()}
           onClick={() => onPick(emoji)}
           aria-label={`Insert ${emoji}`}
         >
@@ -109,7 +110,7 @@ export function EmojiPickerButton({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -132,6 +133,8 @@ export function EmojiPickerButton({
       <PopoverContent
         align={align}
         side={side}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onFocusOutside={(e) => e.preventDefault()}
         className="w-[min(18rem,calc(100vw-1.5rem))] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl"
       >
         <Input

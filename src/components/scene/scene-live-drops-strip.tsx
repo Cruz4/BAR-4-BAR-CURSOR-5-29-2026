@@ -5,7 +5,7 @@
  * Used on The Scene, Vault, and Edit Public Page.
  */
 
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Dna, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataContext } from '@/context/data-context';
@@ -13,8 +13,16 @@ import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { dropPriceSummary, isCommerceLive, normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { cn } from '@/lib/utils';
-import { dnaStatusOf, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import {
+  dnaStatusOf,
+  findVaultReleaseByShareId,
+  releaseShareIdOf,
+  releaseStatusOf,
+} from '@/lib/release-management';
 import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/client/firebase';
+import type { LinkedHouseRelease } from '@/lib/house-artist-link';
 
 type ManagedAlbumDrop = {
   kind: 'album';
@@ -26,6 +34,7 @@ type ManagedAlbumDrop = {
   audioTrackCount: number;
   isForSale: boolean;
   dropPriceSummary: string;
+  houseLinked?: boolean;
 };
 
 type ManagedTrackDrop = {
@@ -38,16 +47,46 @@ type ManagedTrackDrop = {
   fromAlbumHub: boolean;
   hasDropAudio: boolean;
   dropPriceSummary: string;
+  houseLinked?: boolean;
 };
 
 export function SceneLiveDropsStrip({ className }: { className?: string }) {
   const { albums, loading } = useContext(DataContext);
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [linkedHouse, setLinkedHouse] = useState<LinkedHouseRelease[]>([]);
 
-  const { total, saleCount, lyricPreviewCount } = useMemo(() => {
+  useEffect(() => {
+    if (!user?.id) {
+      setLinkedHouse([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const current = auth.currentUser;
+        if (!current || current.uid !== user.id) return;
+        const token = await current.getIdToken();
+        const houseRes = await fetch(`/api/profile/house-releases?userId=${encodeURIComponent(user.id)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = (await houseRes.json().catch(() => ({}))) as { releases?: LinkedHouseRelease[] };
+        if (cancelled) return;
+        setLinkedHouse(houseRes.ok && Array.isArray(data.releases) ? data.releases : []);
+      } catch {
+        if (!cancelled) setLinkedHouse([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const { total, saleCount, lyricPreviewCount, houseLinkedCount, dnaLiveCount, musicLiveCount } = useMemo(() => {
     const albumsOut: ManagedAlbumDrop[] = [];
     const tracksOut: ManagedTrackDrop[] = [];
     const seenTracks = new Set<string>();
+    const seenAlbumHubs = new Set<string>();
 
     for (const album of albums) {
       if (album.id === 'unassigned') continue;
@@ -58,6 +97,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
         const tracks = album.tracks || [];
         const audioTrackCount = tracks.filter((track) => normalizeDropAudio(track.dropAudio)).length;
         const albumPrice = normalizeDropPrice(album.dropPrice);
+        seenAlbumHubs.add(albumReleaseId);
         albumsOut.push({
           kind: 'album',
           shareId: albumReleaseId,
@@ -72,11 +112,14 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
       }
       if (albumDnaLive && album.shareId && album.shareId !== albumReleaseId) {
         const tracks = album.tracks || [];
-        albumsOut.push({
-          kind: 'album', shareId: album.shareId, title: album.title || 'Untitled album',
-          trackCount: tracks.length, liveTrackCount: tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length,
-          albumId: album.id, audioTrackCount: 0, isForSale: false, dropPriceSummary: '',
-        });
+        if (!seenAlbumHubs.has(album.shareId)) {
+          seenAlbumHubs.add(album.shareId);
+          albumsOut.push({
+            kind: 'album', shareId: album.shareId, title: album.title || 'Untitled album',
+            trackCount: tracks.length, liveTrackCount: tracks.filter((t) => hasActiveDnaDrop(t.shareId)).length,
+            albumId: album.id, audioTrackCount: 0, isForSale: false, dropPriceSummary: '',
+          });
+        }
       }
 
       for (const track of album.tracks || []) {
@@ -98,20 +141,95 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
       }
     }
 
+    let houseLinkedCount = 0;
+    let extraDna = 0;
+    for (const item of linkedHouse) {
+      const vault = findVaultReleaseByShareId(albums, item.shareId);
+      const vaultAlbum = vault?.album;
+      const vaultTrack = vault?.track;
+      const dnaLive = vaultAlbum
+        ? vaultTrack
+          ? dnaStatusOf(vaultTrack) === 'live'
+          : dnaStatusOf(vaultAlbum) === 'live'
+        : false;
+      if (dnaLive) extraDna += 1;
+
+      if (item.type === 'album') {
+        if (seenAlbumHubs.has(item.shareId)) continue;
+        if (!item.releaseLive) continue;
+        seenAlbumHubs.add(item.shareId);
+        houseLinkedCount += 1;
+        albumsOut.push({
+          kind: 'album',
+          shareId: item.shareId,
+          title: item.title || 'Untitled album',
+          trackCount: item.trackCount || 0,
+          liveTrackCount: dnaLive ? item.trackCount || 0 : 0,
+          albumId: vaultAlbum?.id || `house:${item.shareId}`,
+          audioTrackCount: item.trackCount || 0,
+          isForSale: false,
+          dropPriceSummary: 'House · free',
+          houseLinked: true,
+        });
+        continue;
+      }
+
+      if (seenTracks.has(item.shareId)) continue;
+      if (!item.releaseLive) continue;
+      seenTracks.add(item.shareId);
+      houseLinkedCount += 1;
+      tracksOut.push({
+        kind: 'track',
+        shareId: item.shareId,
+        title: item.title || 'Untitled track',
+        albumTitle: item.albumTitle || 'Album',
+        albumId: vaultAlbum?.id || `house:${item.shareId}`,
+        trackId: vaultTrack?.id || item.shareId,
+        fromAlbumHub: false,
+        hasDropAudio: true,
+        dropPriceSummary: 'House · free',
+        houseLinked: true,
+      });
+    }
+
+    const musicLiveCount =
+      tracksOut.filter((track) => track.hasDropAudio).length +
+      albumsOut.filter((album) => album.audioTrackCount > 0).length;
+    const saleCount =
+      tracksOut.filter((track) => track.hasDropAudio && !track.houseLinked).length +
+      albumsOut.filter((album) => album.isForSale).length +
+      tracksOut.filter((track) => track.houseLinked).length +
+      albumsOut.filter((album) => album.houseLinked && album.audioTrackCount > 0).length;
+    const lyricPreviewCount =
+      albumsOut.filter((album) => !album.isForSale && !album.houseLinked).length +
+      tracksOut.filter((track) => !track.hasDropAudio).length;
+    const dnaLiveCount =
+      albumsOut.filter((album) => album.liveTrackCount > 0).length +
+      tracksOut.filter((track) => !track.hasDropAudio).length +
+      extraDna;
+
     return {
       albumDrops: albumsOut,
       trackDrops: tracksOut,
       total: albumsOut.length + tracksOut.length,
-      saleCount:
-        tracksOut.filter((track) => track.hasDropAudio).length +
-        albumsOut.filter((album) => album.isForSale).length,
-      lyricPreviewCount:
-        albumsOut.filter((album) => !album.isForSale).length +
-        tracksOut.filter((track) => !track.hasDropAudio).length,
+      saleCount,
+      lyricPreviewCount,
+      houseLinkedCount,
+      dnaLiveCount,
+      musicLiveCount,
     };
-  }, [albums]);
+  }, [albums, linkedHouse]);
 
   if (loading) return null;
+
+  const summaryLine =
+    total === 0
+      ? houseLinkedCount > 0
+        ? `${houseLinkedCount} House linked · open Release Catalog to manage`
+        : 'Nothing live yet. New release = music (free). Lyrics DNA Drop = share lyrics from The Vault (Pro).'
+      : houseLinkedCount > 0
+        ? `${houseLinkedCount} House linked · ${musicLiveCount} music live · ${dnaLiveCount} Lyrics DNA Drop${dnaLiveCount === 1 ? '' : 's'}`
+        : `${saleCount} for sale · ${lyricPreviewCount} Lyrics DNA Drop${lyricPreviewCount === 1 ? '' : 's'}`;
 
   return (
     <>
@@ -140,9 +258,7 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
             Release Catalog
           </span>
           <span className="block text-xs leading-snug text-foreground/90 sm:text-sm sm:leading-relaxed">
-            {total === 0
-              ? 'Nothing live yet. New release = music (free). Lyrics DNA Drop = share lyrics from The Vault (Pro).'
-              : `${saleCount} for sale · ${lyricPreviewCount} Lyrics DNA Drop${lyricPreviewCount === 1 ? '' : 's'}`}
+            {summaryLine}
           </span>
         </span>
         <span className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">

@@ -7,8 +7,30 @@ import { albumTrackOrderIds, orderAlbumTracks } from '@/lib/album-track-order';
 import { resolveHouseArtistId } from '@/lib/house-artist-link';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import { libraryAlbumHref } from '@/lib/drop-library';
+import { albumHubHref, resolveAlbumHubShareId } from '@/lib/pressed-song';
 
 type OrderedPayloadTrack = Record<string, unknown> & { id: string; createdAt: string };
+
+function albumHubPathFromShare(shareId: string, share?: Record<string, unknown>): string | undefined {
+  if (!share) return albumHubHref(shareId);
+  const visibility = shareDocumentVisibility(share);
+  const payload = share.data && typeof share.data === 'object'
+    ? share.data as Record<string, unknown>
+    : {};
+  const hubId = resolveAlbumHubShareId({
+    releaseShareId:
+      typeof share.releaseShareId === 'string'
+        ? share.releaseShareId
+        : typeof payload.releaseShareId === 'string'
+          ? payload.releaseShareId
+          : undefined,
+    releaseLive: visibility.releaseLive,
+    dnaShareId: share.type === 'album' ? shareId : undefined,
+    dnaLive: visibility.dnaLive,
+    fallbackShareId: shareId,
+  });
+  return albumHubHref(hubId);
+}
 
 function creditedArtistUserId(share: Record<string, unknown> | undefined, ownerId: string): string {
   if (!share) return ownerId;
@@ -342,7 +364,11 @@ function libraryItemFromShare(
       ? { albumTitle: String((payload.sharedAlbumContext as { title?: string }).title).trim() }
       : {}),
     ...(typeof (payload.sharedAlbumContext as { shareId?: string } | undefined)?.shareId === 'string'
-      ? { albumHref: `/share/${encodeURIComponent(String((payload.sharedAlbumContext as { shareId?: string }).shareId).trim())}` }
+      ? {
+          albumHref: albumHubPathFromShare(
+            String((payload.sharedAlbumContext as { shareId?: string }).shareId).trim()
+          ),
+        }
       : {}),
     ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
   };

@@ -423,17 +423,18 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const peerName = peer?.name || 'Artist';
 
   return (
-    <div className="relative mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-hidden lg:max-w-5xl">
-      <InboxPageAtmosphere variant="msgs-thread" />
+    <div className="relative flex min-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
+      <InboxPageAtmosphere variant="msgs" />
       <div
         className="pointer-events-none absolute inset-0 z-[1]"
         aria-hidden
         style={{
           background:
-            'radial-gradient(ellipse 70% 58% at 50% 42%, rgba(12,9,6,0.18), transparent 72%)',
+            'radial-gradient(ellipse 70% 58% at 50% 42%, rgba(12,9,6,0.22), transparent 72%)',
         }}
       />
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-hidden lg:max-w-5xl">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <header
         className="flex items-center gap-2 px-2 py-2"
         style={{
@@ -540,6 +541,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       <div
         ref={scrollerRef}
         className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6"
+        style={{
+          background:
+            'linear-gradient(180deg, transparent 0%, rgba(12,9,6,0.06) 35%, rgba(12,9,6,0.06) 65%, transparent 100%)',
+        }}
       >
         {sealedForMe ? (
           <div className="mb-6 border border-amber-400/30 bg-amber-500/10 px-4 py-3">
@@ -758,6 +763,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           </div>
         </form>
       )}
+      </div>
       </div>
     </div>
   );

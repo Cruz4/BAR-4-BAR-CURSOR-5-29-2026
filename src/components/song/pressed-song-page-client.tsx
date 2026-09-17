@@ -219,7 +219,6 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                {lyricsDnaHref ? <LyricsDnaStatusBadge active href={lyricsDnaHref} /> : null}
                 <p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Music release</p>
                 {summary.houseRelease ? (
                   <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.16em] text-cyan-100">
@@ -235,7 +234,12 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
                   </Link>
                 ) : null}
               </div>
-              <h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
+              <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+                <h1 className="min-w-0 flex-1 font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
+                {lyricsDnaHref ? (
+                  <LyricsDnaStatusBadge active href={lyricsDnaHref} variant="title" className="shrink-0" />
+                ) : null}
+              </div>
               <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p>
             </div>
           </div>

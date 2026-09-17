@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Gauge, Layers3, Music2, Waves } from 'lucide-react';
 import { discoverySearchHref } from '@/lib/discovery-search';
+import { albumHubHref } from '@/lib/pressed-song';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 import { cn } from '@/lib/utils';
 
@@ -63,7 +64,7 @@ export function MusicDiscoveryTags({
       ) : null}
       {!hideAlbum && metadata.albumTitle && metadata.albumShareId ? (
         <Link
-          href={`/share/${encodeURIComponent(metadata.albumShareId)}`}
+          href={albumHubHref(metadata.albumShareId) || '#'}
           className={cn(chipClass, 'border-emerald-400/30 text-emerald-200')}
           title={`Open ${metadata.albumTitle}`}
         >

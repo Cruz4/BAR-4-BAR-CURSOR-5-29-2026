@@ -4,14 +4,26 @@ import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore'
 import { normalizeDropPrice } from '@/lib/drop-commerce';
 import { audioForPlay, isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
-import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
+import { resolveAlbumHubShareId, type PressedSongSummary, type PressedSongSupporter } from '@/lib/pressed-song';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
-import { shareDocumentVisibility } from '@/lib/release-management';
+import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 
 function nonnegative(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function albumHubShareIdFromDocument(shareId: string, shareRaw: Record<string, unknown>): string | undefined {
+  const visibility = shareDocumentVisibility(shareRaw);
+  const type = shareRaw.type === 'album' ? 'album' : 'track';
+  return resolveAlbumHubShareId({
+    releaseShareId: releaseShareIdFromShareDocument(shareRaw),
+    releaseLive: visibility.releaseLive,
+    dnaShareId: type === 'album' ? shareId : undefined,
+    dnaLive: visibility.dnaLive,
+    fallbackShareId: shareId,
+  });
 }
 
 function timestamp(value: unknown): string {
@@ -115,7 +127,7 @@ export async function getPressedSongSummary(
       : '';
   const albumShareId =
     share.type === 'album'
-      ? shareId
+      ? albumHubShareIdFromDocument(shareId, shareRaw)
       : publicMusicMetadataFromTrack(selectedTrack || share.data).albumShareId ||
         contextAlbumShareId ||
         undefined;
@@ -202,11 +214,12 @@ export async function getPressedSongSummary(
         if (!track) return [];
         return [{
           shareId: doc.id,
+          shareRaw: data,
           albumTitle: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Album',
         }];
       })[0];
     if (parent) {
-      base.albumShareId = parent.shareId;
+      base.albumShareId = albumHubShareIdFromDocument(parent.shareId, parent.shareRaw) || parent.shareId;
       if (!base.albumTitle) base.albumTitle = parent.albumTitle;
     }
   }
