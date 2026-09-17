@@ -26,6 +26,7 @@ export type DropLibraryItem = DropLibraryEntry & {
   albumId?: string;
   /** Public album hub when this entitlement is an album pressing. */
   albumHref?: string;
+  albumTitle?: string;
 };
 
 export type DeckSort = 'release' | 'fresh' | 'az' | 'artist' | 'paid' | 'played';
@@ -163,6 +164,7 @@ export function flattenLibraryItems(items: DropLibraryItem[]): DeckPlayable[] {
       durationSec: item.durationSec,
       scope: item.scope,
       albumId: item.albumId,
+      ...(item.albumTitle ? { albumTitle: item.albumTitle } : {}),
       ...(albumHref ? { albumHref } : {}),
       detailsHref: `/song/${encodeURIComponent(item.shareId)}`,
       purchasedAt: item.purchasedAt,

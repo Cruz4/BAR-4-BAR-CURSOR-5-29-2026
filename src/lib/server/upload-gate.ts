@@ -16,6 +16,8 @@ const DAILY_QUOTAS: Record<UploadKind, QuotaSpec> = {
   drop_audio: { free: 12, pro: 60 },
   sheet_take: { free: 40, pro: 200 },
   profile_preview: { free: 20, pro: 100 },
+  fold_image: { free: 40, pro: 160 },
+  fold_voice: { free: 40, pro: 160 },
 };
 
 const MAX_BYTES: Record<UploadKind, number> = {
@@ -25,6 +27,8 @@ const MAX_BYTES: Record<UploadKind, number> = {
   drop_audio: 40 * 1024 * 1024,
   sheet_take: 12 * 1024 * 1024,
   profile_preview: 12 * 1024 * 1024,
+  fold_image: 8 * 1024 * 1024,
+  fold_voice: 5 * 1024 * 1024,
 };
 
 const CONTENT_TYPE_PATTERN: Record<UploadKind, string> = {
@@ -34,6 +38,8 @@ const CONTENT_TYPE_PATTERN: Record<UploadKind, string> = {
   drop_audio: 'audio/.*',
   sheet_take: 'audio/.*',
   profile_preview: 'audio/.*',
+  fold_image: 'image/.*',
+  fold_voice: 'audio/.*',
 };
 
 function utcDayKey(d = new Date()): string {
@@ -53,7 +59,17 @@ function pathPrefixForKind(kind: UploadKind, uid: string): string {
       return `sheet-takes/${uid}/`;
     case 'profile_preview':
       return `profile-previews/${uid}/`;
+    case 'fold_image':
+    case 'fold_voice':
+      return 'folds/';
   }
+}
+
+function uidOwnsFoldStoragePath(uid: string, storagePath: string): boolean {
+  const match = storagePath.match(/^folds\/([^/]+)\//);
+  const foldId = match?.[1] || '';
+  if (!foldId || !uid) return false;
+  return foldId.startsWith(`${uid}_`) || foldId.endsWith(`_${uid}`);
 }
 
 export function assertOwnedStoragePath(kind: UploadKind, uid: string, storagePath: string): void {
@@ -64,6 +80,9 @@ export function assertOwnedStoragePath(kind: UploadKind, uid: string, storagePat
   const prefix = pathPrefixForKind(kind, uid);
   if (!clean.startsWith(prefix)) {
     throw new Error('Storage path must stay under your account folder.');
+  }
+  if ((kind === 'fold_image' || kind === 'fold_voice') && !uidOwnsFoldStoragePath(uid, clean)) {
+    throw new Error('Storage path must stay under your conversation.');
   }
 }
 

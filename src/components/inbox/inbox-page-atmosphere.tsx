@@ -25,12 +25,12 @@ const VARIANT: Record<
     grain: 'opacity-[0.4]',
   },
   'msgs-thread': {
-    base: 'bg-[#0a0806]',
-    glowA: 'bg-amber-400/14',
-    glowB: 'bg-amber-600/10',
-    glowC: 'bg-sky-500/6',
-    grid: 'from-amber-200/[0.06] via-transparent to-amber-500/[0.04]',
-    grain: 'opacity-[0.32]',
+    base: 'bg-[#0c0906]',
+    glowA: 'bg-amber-500/15',
+    glowB: 'bg-orange-500/10',
+    glowC: 'bg-fuchsia-500/7',
+    grid: 'from-amber-300/[0.07] via-transparent to-orange-400/[0.05]',
+    grain: 'opacity-[0.38]',
   },
   'public-post': {
     base: 'bg-[#060a14]',

@@ -143,7 +143,11 @@ export async function uploadVoiceClip(opts: {
   }
   const contentType = normalizeAudioContentType(opts.clip.contentType || opts.clip.blob.type || 'audio/webm');
   const storagePath = opts.storagePath.slice(0, 400);
-  const kind = storagePath.startsWith('sheet-takes/') ? 'sheet_take' : 'voice';
+  const kind = storagePath.startsWith('sheet-takes/')
+    ? 'sheet_take'
+    : storagePath.startsWith('folds/')
+      ? 'fold_voice'
+      : 'voice';
   const ticket = await requestUploadTicket({
     kind,
     storagePath,

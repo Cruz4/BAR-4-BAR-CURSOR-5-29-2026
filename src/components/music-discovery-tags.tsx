@@ -8,11 +8,13 @@ export function MusicDiscoveryTags({
   metadata,
   compact = false,
   soundAsText = false,
+  hideAlbum = false,
   className,
 }: {
   metadata?: PublicMusicMetadata | null;
   compact?: boolean;
   soundAsText?: boolean;
+  hideAlbum?: boolean;
   className?: string;
 }) {
   if (!metadata) return null;
@@ -21,7 +23,7 @@ export function MusicDiscoveryTags({
     metadata.moods.length ||
     metadata.bpm ||
     metadata.instrumentation ||
-    metadata.albumTitle
+    (!hideAlbum && metadata.albumTitle)
   );
   if (!hasDetails) return null;
   const chipClass = cn(
@@ -59,16 +61,18 @@ export function MusicDiscoveryTags({
           <Gauge className="h-3 w-3 shrink-0" /> {metadata.bpm} BPM
         </Link>
       ) : null}
-      {metadata.albumTitle ? (
+      {!hideAlbum && metadata.albumTitle && metadata.albumShareId ? (
         <Link
-          href={metadata.albumShareId
-            ? `/share/${encodeURIComponent(metadata.albumShareId)}`
-            : discoverySearchHref({ resultKinds: ['drop'] }, metadata.albumTitle)}
+          href={`/share/${encodeURIComponent(metadata.albumShareId)}`}
           className={cn(chipClass, 'border-emerald-400/30 text-emerald-200')}
-          title={metadata.albumShareId ? `Open ${metadata.albumTitle}` : `Discover ${metadata.albumTitle}`}
+          title={`Open ${metadata.albumTitle}`}
         >
           <Layers3 className="h-3 w-3 shrink-0" /> Album · {metadata.albumTitle}
         </Link>
+      ) : !hideAlbum && metadata.albumTitle ? (
+        <span className={cn(chipClass, 'border-emerald-400/30 text-emerald-200')}>
+          <Layers3 className="h-3 w-3 shrink-0" /> Album · {metadata.albumTitle}
+        </span>
       ) : null}
       {!compact && metadata.instrumentation ? (
         soundAsText ? (

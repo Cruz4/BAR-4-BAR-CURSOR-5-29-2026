@@ -30,12 +30,11 @@ export function isLastBarFromSender(bars: FoldBar[], bar: FoldBar, senderId: str
 export function outgoingReadReceiptAt(
   fold: FoldDoc | null | undefined,
   peerId: string,
-  bars: FoldBar[],
+  _bars: FoldBar[],
   bar: FoldBar,
   myId: string
 ): string | null {
   if (!fold || !peerId || bar.senderId !== myId) return null;
-  if (!isLastBarFromSender(bars, bar, myId)) return null;
   const peerReadAt = fold.lastReadAt?.[peerId];
   if (!peerReadAt) return null;
   if (Date.parse(peerReadAt) < Date.parse(bar.createdAt)) return null;

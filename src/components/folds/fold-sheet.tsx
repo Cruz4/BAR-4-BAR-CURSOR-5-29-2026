@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CornerUpLeft, Loader2, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, BarChart3, CornerUpLeft, Loader2, MoreHorizontal, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -39,16 +39,47 @@ import {
   type FoldDoc,
   type FoldPresence,
 } from '@/lib/folds/types';
+import { foldBarPreviewText, foldImageStoragePath, foldVoiceStoragePath } from '@/lib/folds/attachments';
 import { outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
 import { foldMessageTimestamp, isSameMessageDay } from '@/lib/folds/message-dates';
 import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
+import { FoldPollCard } from '@/components/folds/fold-poll-card';
+import { FoldReactions } from '@/components/folds/fold-reactions';
 import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
+import { MentionText } from '@/components/profile/mention-text';
+import { ExpandableMedia } from '@/components/profile/expandable-image';
+import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
+import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
+import { ImageAttachComposer } from '@/components/profile/image-attach-composer';
+import { PollComposerFields } from '@/components/profile/poll-composer-fields';
+import { QuotePressCard } from '@/components/profile/quote-press-card';
+import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
+import { useImprintComposer } from '@/hooks/use-imprint-composer';
+import { isProOrTrial } from '@/lib/subscription';
+import { quotePressSlotLabel } from '@/lib/profile/quote-press';
+import {
+  extForVoiceType,
+  revokeVoiceObjectUrl,
+  uploadVoiceClip,
+  type RecordedVoiceClip,
+} from '@/lib/profile/voice-notes';
+import {
+  POST_POLL_MIN_OPTIONS,
+  type PostPollResultsVisibility,
+} from '@/lib/profile/post-polls';
+import {
+  revokePostImagePreview,
+  uploadPostImage,
+  type PendingPostImage,
+} from '@/lib/profile/post-images';
 
 function BarStanza({
   bar,
   mine,
   peerName,
+  foldId,
+  viewerId,
   onAnswer,
   readAt,
   timestamp,
@@ -56,6 +87,8 @@ function BarStanza({
   bar: FoldBar;
   mine: boolean;
   peerName: string;
+  foldId: string;
+  viewerId: string;
   onAnswer: (bar: FoldBar) => void;
   readAt?: string | null;
   timestamp: string;
@@ -83,19 +116,51 @@ function BarStanza({
             mine ? 'text-right' : 'text-left'
           )}
         >
-          replying to “{bar.replyTo.text}”
+          replying to “<MentionText text={bar.replyTo.text} />”
         </p>
       ) : null}
       <div
         className={cn(
-          'mt-1 max-w-full min-w-0 border-amber-200/25 py-1',
-          mine ? 'border-r-2 pr-3 text-right' : 'border-l-2 pl-3 text-left'
+          'mt-1 max-w-full min-w-0 rounded-2xl bg-amber-950/25 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,236,210,0.08)]',
+          mine ? 'text-right' : 'text-left'
         )}
       >
-        <p className="whitespace-pre-wrap break-words font-serif text-[17px] leading-relaxed text-amber-50 [overflow-wrap:anywhere]">
-          {bar.text}
-        </p>
+        {bar.quotePress && bar.text.trim() ? (
+          <div className={cn(mine ? 'ml-auto' : 'mr-auto', 'max-w-sm')}>
+            <QuotePressCard text={bar.text} config={bar.quotePress} compact withMentions />
+          </div>
+        ) : bar.text.trim() ? (
+          <p className="whitespace-pre-wrap break-words font-serif text-[17px] leading-relaxed text-amber-50 [overflow-wrap:anywhere]">
+            <MentionText text={bar.text} />
+          </p>
+        ) : null}
+        {bar.image ? (
+          <div className={cn('mt-2 max-w-xs', mine ? 'ml-auto' : 'mr-auto')}>
+            <ExpandableMedia src={bar.image.url} alt="Attached photo" className="overflow-hidden rounded-xl" />
+          </div>
+        ) : null}
+        {bar.voice ? (
+          <div className={cn('mt-2 max-w-sm', mine ? 'ml-auto' : 'mr-auto')}>
+            <VoiceNotePlayer
+              src={bar.voice.url}
+              contentType={bar.voice.contentType}
+              transcript={bar.voice.transcript}
+              durationSec={bar.voice.durationSec}
+              compact
+            />
+          </div>
+        ) : null}
+        {bar.poll ? (
+          <FoldPollCard foldId={foldId} barId={bar.id} poll={bar.poll} viewerId={viewerId} />
+        ) : null}
       </div>
+      <FoldReactions
+        foldId={foldId}
+        barId={bar.id}
+        reactions={bar.reactions}
+        viewerId={viewerId}
+        mine={mine}
+      />
       {!mine ? (
         <button
           type="button"
@@ -124,12 +189,29 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const [replyTo, setReplyTo] = useState<FoldBarReply | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [missing, setMissing] = useState(false);
+  const [voice, setVoice] = useState<RecordedVoiceClip | null>(null);
+  const [image, setImage] = useState<PendingPostImage | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
   const scrollerRef = useRef<HTMLDivElement>(null);
   const composeRef = useRef<HTMLTextAreaElement>(null);
   const typingTimer = useRef<number | null>(null);
   const typingRef = useRef(false);
   const lastReadBarRef = useRef<string | null>(null);
   const markedOpenRef = useRef(false);
+  const isPro = isProOrTrial(user);
+  const {
+    imprintOn,
+    toggleImprint,
+    resetImprint,
+    imprintFaders,
+    setImprintFaders,
+    imprintSlots,
+    slotBusy,
+    activeImprintConfig,
+    persistImprintSlots,
+  } = useImprintComposer(text, isPro, summary.quotePressSlots);
 
   const onType = useCallback((value: string) => {
     setText(value.slice(0, FOLD_BAR_MAX_CHARS));
@@ -152,6 +234,11 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const sealedForMe = fold?.status === 'pending' && fold.initiatedBy !== me;
   const inkMoving =
     presence?.typing && presence.at && Date.now() - Date.parse(presence.at) < 6000;
+  const pollReady =
+    !pollOpen ||
+    (pollOptions.length >= POST_POLL_MIN_OPTIONS && pollOptions.every((option) => option.trim()));
+  const imprintReady = !imprintOn || Boolean(text.trim());
+  const canSend = Boolean(text.trim() || voice || image || pollOpen) && pollReady && imprintReady;
 
   const shownBars = useMemo(() => {
     const ids = new Set(bars.map((b) => b.clientId).filter(Boolean));
@@ -232,26 +319,62 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     el.scrollTop = el.scrollHeight;
   }, [shownBars.length, inkMoving]);
 
+  const clearComposerAttachments = () => {
+    revokePostImagePreview(image);
+    setImage(null);
+    revokeVoiceObjectUrl(voice);
+    setVoice(null);
+    setPollOpen(false);
+    setPollOptions(['', '']);
+    setPollVisibility('after_vote');
+    resetImprint();
+  };
+
   const send = async () => {
-    if (!user || !peerId || !text.trim() || busy) return;
+    if (!user || !peerId || busy || !canSend) return;
     if (fold?.status === 'declined') return;
     const clientId = `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
-    const optimistic: FoldBar = {
-      id: clientId,
-      senderId: user.id,
-      text: text.trim(),
-      createdAt: new Date().toISOString(),
-      clientId,
-      replyTo,
-    };
-    setLocalBars((prev) => [...prev, optimistic]);
     const outgoing = text;
     const quote = replyTo;
-    setText('');
-    setReplyTo(undefined);
-    typingRef.current = false;
+    const outgoingVoice = voice;
+    const outgoingImage = image;
+    const outgoingPoll = pollOpen
+      ? { options: pollOptions.map((option) => option.trim()), resultsVisibility: pollVisibility }
+      : undefined;
+    const outgoingPress = imprintOn && outgoing.trim() ? activeImprintConfig : undefined;
     setBusy(true);
     try {
+      let sentImage: FoldBar['image'];
+      let sentVoice: FoldBar['voice'];
+      if (outgoingImage) {
+        sentImage = await uploadPostImage({
+          storagePath: foldImageStoragePath(foldId, clientId),
+          image: outgoingImage,
+          kind: 'fold_image',
+        });
+      }
+      if (outgoingVoice) {
+        sentVoice = await uploadVoiceClip({
+          storagePath: foldVoiceStoragePath(foldId, clientId, extForVoiceType(outgoingVoice.contentType)),
+          clip: outgoingVoice,
+        });
+      }
+      const optimistic: FoldBar = {
+        id: clientId,
+        senderId: user.id,
+        text: outgoing.trim(),
+        createdAt: new Date().toISOString(),
+        clientId,
+        replyTo: quote,
+        ...(sentImage ? { image: sentImage } : {}),
+        ...(sentVoice ? { voice: sentVoice } : {}),
+        ...(outgoingPress ? { quotePress: outgoingPress } : {}),
+      };
+      setLocalBars((prev) => [...prev, optimistic]);
+      setText('');
+      setReplyTo(undefined);
+      clearComposerAttachments();
+      typingRef.current = false;
       await passBarClient({
         peerId,
         text: outgoing,
@@ -259,6 +382,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         senderSlug: summary.profileSlug || undefined,
         clientId,
         replyTo: quote,
+        image: sentImage,
+        voice: sentVoice,
+        poll: outgoingPoll,
+        quotePress: outgoingPress,
       });
       void writeFoldPresence(foldId, { viewing: true, typing: false }).catch(() => undefined);
     } catch (error) {
@@ -298,8 +425,23 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   return (
     <div className="relative mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-hidden lg:max-w-5xl">
       <InboxPageAtmosphere variant="msgs-thread" />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1]"
+        aria-hidden
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 58% at 50% 42%, rgba(12,9,6,0.18), transparent 72%)',
+        }}
+      />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex items-center gap-2 border-b border-amber-500/25 bg-[#100c09]/85 px-2 py-2 backdrop-blur-md">
+      <header
+        className="flex items-center gap-2 px-2 py-2"
+        style={{
+          background: 'linear-gradient(180deg, rgba(12,9,6,0.72), rgba(12,9,6,0.08) 86%, transparent)',
+          maskImage: 'linear-gradient(180deg, black 58%, transparent)',
+          WebkitMaskImage: 'linear-gradient(180deg, black 58%, transparent)',
+        }}
+      >
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
           <Link href="/msgs" aria-label="Back to Msgs">
             <ArrowLeft className="h-4 w-4" />
@@ -398,10 +540,6 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       <div
         ref={scrollerRef}
         className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6"
-        style={{
-          backgroundImage:
-            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,191,36,0.08), transparent 65%), linear-gradient(180deg, rgba(255,236,210,0.06), rgba(8,6,4,0.2)), repeating-linear-gradient(180deg, transparent 0, transparent 27px, rgba(251,191,36,0.06) 28px)',
-        }}
       >
         {sealedForMe ? (
           <div className="mb-6 border border-amber-400/30 bg-amber-500/10 px-4 py-3">
@@ -446,10 +584,16 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                   bar={bar}
                   mine={bar.senderId === me}
                   peerName={peerName}
+                  foldId={foldId}
+                  viewerId={me}
                   readAt={readAt}
                   timestamp={foldMessageTimestamp(bar.createdAt, firstOfDay)}
                   onAnswer={(next) =>
-                    setReplyTo({ barId: next.id, text: next.text, senderId: next.senderId })
+                    setReplyTo({
+                      barId: next.id,
+                      text: foldBarPreviewText(next),
+                      senderId: next.senderId,
+                    })
                   }
                 />
               </React.Fragment>
@@ -464,12 +608,15 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       </div>
 
       {fold.status === 'declined' ? (
-        <div className="border-t border-white/10 px-4 py-3 text-center text-xs text-muted-foreground">
+        <div className="px-4 py-3 text-center text-xs text-muted-foreground">
           This conversation is closed. Send a new message from their Artist Home to try again.
         </div>
       ) : (
         <form
-          className="border-t border-amber-500/25 bg-[#100c09]/90 px-3 py-2.5 backdrop-blur-md"
+          className="px-3 pb-3 pt-1"
+          style={{
+            background: 'linear-gradient(0deg, rgba(12,9,6,0.82), rgba(12,9,6,0.22) 70%, transparent)',
+          }}
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -489,13 +636,103 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               </button>
             </div>
           ) : null}
-          <div className="flex items-end gap-2">
+          {imprintOn && text.trim() ? (
+            <div className="mb-2 space-y-2">
+              <QuotePressCard text={text} config={activeImprintConfig} compact withMentions />
+              <QuotePressComposerPanel
+                faders={activeImprintConfig.faders}
+                onFadersChange={(next) => {
+                  if (!isPro) return;
+                  setImprintFaders(next);
+                }}
+                slots={imprintSlots}
+                isPro={isPro}
+                busy={busy || slotBusy}
+                onLockSlot={() => {
+                  if (!isPro) return;
+                  void persistImprintSlots([
+                    ...imprintSlots,
+                    {
+                      id: `qp-${Date.now()}`,
+                      faders: { ...imprintFaders },
+                      lockedAt: new Date().toISOString(),
+                      label: quotePressSlotLabel(imprintFaders),
+                    },
+                  ]);
+                }}
+                onLoadSlot={(slot) => {
+                  if (!isPro) return;
+                  setImprintFaders(slot.faders);
+                }}
+                onClearSlot={(slotId) => {
+                  void persistImprintSlots(imprintSlots.filter((slot) => slot.id !== slotId));
+                }}
+              />
+            </div>
+          ) : null}
+          {pollOpen ? (
+            <PollComposerFields
+              options={pollOptions}
+              onOptionsChange={setPollOptions}
+              resultsVisibility={pollVisibility}
+              onResultsVisibilityChange={setPollVisibility}
+              onRemovePoll={() => {
+                setPollOpen(false);
+                setPollOptions(['', '']);
+                setPollVisibility('after_vote');
+              }}
+              disabled={busy}
+            />
+          ) : null}
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto pb-1">
+            <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
+              <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+            </div>
+            <ImageAttachComposer
+              image={image}
+              onImageChange={setImage}
+              disabled={busy}
+              compact
+              onError={(message) =>
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not attach photo',
+                  description: message,
+                })
+              }
+            />
             <EmojiPickerButton
               compact
               disabled={busy}
               onInsert={insertEmoji}
-              className="mb-1 shrink-0 text-amber-200/80 hover:text-amber-100"
+              className="shrink-0 text-amber-200/80 hover:text-amber-100"
             />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn('h-8 gap-1 px-2 text-[10px] font-bold uppercase tracking-wider', pollOpen && 'text-amber-200')}
+              onClick={() => setPollOpen((value) => !value)}
+              disabled={busy}
+            >
+              <BarChart3 className="h-3.5 w-3.5" /> Poll
+            </Button>
+            <button
+              type="button"
+              onClick={toggleImprint}
+              disabled={busy}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                imprintOn
+                  ? 'border-amber-400/55 bg-amber-500/20 text-amber-100'
+                  : 'border-transparent text-amber-200/60 hover:border-amber-500/35 hover:text-amber-100'
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Imprint
+            </button>
+          </div>
+          <div className="flex items-end gap-2">
             <textarea
               ref={composeRef}
               value={text}
@@ -513,7 +750,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             />
             <Button
               type="submit"
-              disabled={busy || !text.trim()}
+              disabled={busy || !canSend}
               className="h-10 rounded-none bg-amber-700 px-4 font-bold uppercase tracking-[0.22em] text-amber-50 hover:bg-amber-600"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send'}

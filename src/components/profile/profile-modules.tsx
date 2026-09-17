@@ -46,7 +46,7 @@ import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
-import { firstDropTracks, LiveDnaDropsGroupedList, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
+import { firstDropTracks, LiveDnaDropsGroupedList, selectDropShelfDna } from '@/components/profile/live-dna-drop-card';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import type { AchievementDef } from '@/lib/gamification/achievements';
 import {
@@ -572,25 +572,15 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
 // ---------------------------------------------------------------------------
 
 export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
-  const drops = ctx.liveDnaDrops || [];
-  const { enabled: firstDropsOn } = useFirstDropsFeature();
-  if (!drops.length) return null;
-  const releaseCount = musicReleaseItems(drops).length;
-  const hideFirstDropStrip = firstDropsOn && releaseCount > 0;
-  const dnaDrops = lyricDnaItems(drops);
-  if (hideFirstDropStrip && !dnaDrops.length) return null;
+  const dnaDrops = selectDropShelfDna(ctx.liveDnaDrops || [], ctx.featured.dropShelfShareIds);
 
   return (
-    <ModuleShell
-      icon={Dna}
-      title={hideFirstDropStrip ? 'Lyrics DNA Drops' : releaseCount > 0 ? 'Listen / Buy' : 'Live Lyrics DNA Drops'}
-      ctx={ctx}
-    >
-      <LiveDnaDropsGroupedList
-        drops={hideFirstDropStrip ? dnaDrops : drops}
-        layout="shelf"
-        hideFirstDropStrip={hideFirstDropStrip}
-      />
+    <ModuleShell icon={Dna} title="Live Lyrics DNA Drops" ctx={ctx}>
+      {dnaDrops.length ? (
+        <LiveDnaDropsGroupedList drops={dnaDrops} layout="shelf" hideFirstDropStrip />
+      ) : (
+        <p className="text-sm text-muted-foreground">No live Lyrics DNA Drops yet</p>
+      )}
     </ModuleShell>
   );
 }

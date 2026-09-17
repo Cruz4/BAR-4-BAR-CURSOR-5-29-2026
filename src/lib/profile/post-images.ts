@@ -164,6 +164,7 @@ export async function pendingImageToDataUrl(image: PendingPostImage): Promise<st
 export async function uploadPostImage(opts: {
   storagePath: string;
   image: PendingPostImage;
+  kind?: 'wall_image' | 'fold_image';
 }): Promise<{ url: string; storagePath: string }> {
   if (opts.image.blob.size > POST_IMAGE_MAX_BYTES) {
     throw new Error('Image is too large to post.');
@@ -171,7 +172,7 @@ export async function uploadPostImage(opts: {
   const storagePath = opts.storagePath.slice(0, 400);
   const contentType = opts.image.contentType || 'image/jpeg';
   const ticket = await requestUploadTicket({
-    kind: 'wall_image',
+    kind: opts.kind || 'wall_image',
     storagePath,
     byteSize: opts.image.blob.size,
     contentType,

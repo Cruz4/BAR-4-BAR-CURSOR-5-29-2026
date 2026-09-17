@@ -420,6 +420,16 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Song / album Reverb pointers (wall post id for a First Drop share)
+      match /dropReverbs/{shareId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.wallPostId is string
+          && request.resource.data.wallPostId.size() <= 80
+          && request.resource.data.updatedAt is string;
+        allow delete: if isOwner(userId);
+      }
+
       // Personal imprint collection — server writes via Admin SDK
       match /imprintCollection/{postId} {
         allow read: if isOwner(userId);

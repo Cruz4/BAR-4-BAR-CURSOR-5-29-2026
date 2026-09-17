@@ -9,7 +9,16 @@ export const runtime = 'nodejs';
 const TICKET_MAX_PER_WINDOW = 30;
 const TICKET_WINDOW_MS = 60 * 1000;
 
-const KINDS = new Set<UploadKind>(['wall_image', 'wall_video', 'voice', 'drop_audio', 'sheet_take', 'profile_preview']);
+const KINDS = new Set<UploadKind>([
+  'wall_image',
+  'wall_video',
+  'voice',
+  'drop_audio',
+  'sheet_take',
+  'profile_preview',
+  'fold_image',
+  'fold_voice',
+]);
 
 /** Issue a short-lived upload ticket after quota + App Check gates. */
 export async function POST(req: Request) {

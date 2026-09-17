@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Loader, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { cn } from '@/lib/utils';
 import { DropRepeatControl } from '@/components/drop-repeat-control';
-
-const artistAvatarCache = new Map<string, string | null>();
+import { LivingPressField } from '@/components/profile/living-press-field';
+import { albumHubHref } from '@/lib/pressed-song';
+import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
 
 export function shouldHideDropNowPlayingBar(pathname: string | null): boolean {
   if (!pathname) return true;
@@ -28,37 +29,7 @@ export function DropNowPlayingBar() {
   const player = useOptionalDropPlayer();
   const pathname = usePathname();
   const currentShareId = player?.current?.shareId;
-  const [artistAvatarUrl, setArtistAvatarUrl] = useState<string>();
-
-  useEffect(() => {
-    if (!currentShareId) {
-      setArtistAvatarUrl(undefined);
-      return;
-    }
-    if (artistAvatarCache.has(currentShareId)) {
-      setArtistAvatarUrl(artistAvatarCache.get(currentShareId) || undefined);
-      return;
-    }
-
-    let cancelled = false;
-    setArtistAvatarUrl(undefined);
-    void fetch(`/api/songs/${encodeURIComponent(currentShareId)}`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((summary) => {
-        const avatarUrl = typeof summary?.artist?.avatarUrl === 'string' && summary.artist.avatarUrl.trim()
-          ? summary.artist.avatarUrl.trim()
-          : null;
-        artistAvatarCache.set(currentShareId, avatarUrl);
-        if (!cancelled) setArtistAvatarUrl(avatarUrl || undefined);
-      })
-      .catch(() => {
-        artistAvatarCache.set(currentShareId, null);
-        if (!cancelled) setArtistAvatarUrl(undefined);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentShareId]);
+  const { chrome, pressingStyle } = useDropArtistChrome(currentShareId, player?.current?.trackId);
 
   if (!player?.current) return null;
   if (shouldHideDropNowPlayingBar(pathname)) return null;
@@ -78,7 +49,9 @@ export function DropNowPlayingBar() {
     setRepeat,
     toggleMute,
   } = player;
-  const playerImageUrl = artistAvatarUrl || current.coverArtUrl;
+  const playerImageUrl = chrome?.avatarUrl || current.coverArtUrl;
+  const albumTitle = current.albumTitle || chrome?.albumTitle;
+  const albumHref = current.albumHref || albumHubHref(chrome?.albumShareId);
   const liftForEditor =
     pathname.startsWith('/albums/') || pathname.startsWith('/tracks/');
 
@@ -91,12 +64,19 @@ export function DropNowPlayingBar() {
           : 'bottom-[max(0.65rem,env(safe-area-inset-bottom))]'
       )}
     >
-      <div className="pointer-events-auto mx-auto flex max-w-lg items-center gap-2 rounded-2xl border border-fuchsia-400/30 bg-zinc-950/95 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
-        <Link
-          href="/library"
-          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-0.5 hover:bg-white/5"
-        >
-          <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/25 bg-black">
+      <div
+        className="pointer-events-auto relative mx-auto flex max-w-lg overflow-hidden rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.3))] bg-black/50 px-2.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-md"
+        style={pressingStyle as React.CSSProperties | undefined}
+      >
+        {chrome?.pressing ? (
+          <>
+            <LivingPressField config={chrome.pressing} compact className="[&>p]:hidden" />
+            <div className="absolute inset-0 bg-black/45" aria-hidden />
+          </>
+        ) : null}
+        <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-0.5">
+          <Link href="/library" className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/20 bg-black hover:bg-white/5">
             {playerImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -105,28 +85,36 @@ export function DropNowPlayingBar() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="flex h-full w-full items-center justify-center font-headline text-sm font-bold text-fuchsia-200">
+              <span className="flex h-full w-full items-center justify-center font-headline text-sm font-bold text-white">
                 {current.artistName.trim().charAt(0).toUpperCase() || 'B'}
               </span>
             )}
-          </span>
+          </Link>
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-headline text-sm font-bold uppercase leading-tight">
+            <Link href={current.detailsHref || '/library'} className="block truncate font-headline text-sm font-bold uppercase leading-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,.7)] hover:underline">
               {current.title}
-            </span>
-            <span className="block truncate font-code text-[10px] uppercase text-muted-foreground">
+            </Link>
+            <span className="block truncate font-code text-[10px] uppercase text-white/80 [text-shadow:0_1px_8px_rgba(0,0,0,.7)]">
               {current.artistName}
               {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
             </span>
+            {albumTitle && albumHref ? (
+              <Link
+                href={albumHref}
+                className="block truncate font-code text-[10px] text-white/70 [text-shadow:0_1px_8px_rgba(0,0,0,.7)] hover:text-white hover:underline"
+              >
+                {albumTitle}
+              </Link>
+            ) : null}
           </span>
-        </Link>
-        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={prev} aria-label="Previous">
+        </div>
+        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-white hover:bg-white/10" onClick={prev} aria-label="Previous">
           <SkipBack className="h-4 w-4" />
         </Button>
         <Button
           type="button"
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-full"
+          className="h-10 w-10 shrink-0 rounded-full bg-[var(--ph-accent,#e879f9)] text-black hover:brightness-110"
           onClick={togglePlay}
           aria-label={playing ? 'Pause' : 'Play'}
         >
@@ -138,16 +126,18 @@ export function DropNowPlayingBar() {
             <Play className="h-4 w-4" />
           )}
         </Button>
-        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0" onClick={skipNext} aria-label="Next">
+        <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-white hover:bg-white/10" onClick={skipNext} aria-label="Next">
           <SkipForward className="h-4 w-4" />
         </Button>
-        <DropRepeatControl repeat={repeat} onChange={setRepeat} />
+        <DropRepeatControl repeat={repeat} onChange={setRepeat} className="text-white" />
         <AudioVolumeControl
           compact
+          className="text-white"
           volume={volume}
           onVolumeChange={setVolume}
           onToggleMute={toggleMute}
         />
+        </div>
       </div>
     </div>
   );

@@ -246,6 +246,11 @@ export function profileSongsHref(slug?: string | null): string | undefined {
   return base ? `${base}/songs` : undefined;
 }
 
+export function profileDnaHref(slug?: string | null): string | undefined {
+  const base = profileHref(slug);
+  return base ? `${base}/dna` : undefined;
+}
+
 export function isAppRootSegment(segment: string | null | undefined): boolean {
   const s = (segment || '').trim().toLowerCase();
   return Boolean(s) && APP_ROOT_SEGMENTS.has(s);
@@ -266,7 +271,8 @@ export function isPublicArtistHomePath(pathname: string | null | undefined): boo
     (parts[1] === 'friends' ||
       parts[1] === 'reverbs' ||
       parts[1] === 'images' ||
-      parts[1] === 'songs')
+      parts[1] === 'songs' ||
+      parts[1] === 'dna')
   );
 }
 

@@ -1,4 +1,20 @@
+import { houseReleaseShareIdKey } from '@/lib/house-artist-link';
+
 export const HOUSE_RELEASE_HOME_MAX = 48;
+export const HOUSE_RELEASE_HOME_CHANGED = 'b4b:house-release-home-changed';
+
+/** Add or remove a House share from the Artist Home hidden list. */
+export function applyHouseReleaseHomeVisibility(
+  hiddenShareIds: string[] | undefined,
+  shareId: string,
+  visible: boolean
+): string[] {
+  const key = houseReleaseShareIdKey(shareId);
+  if (!key) return normalizeHiddenHouseReleaseShareIds(hiddenShareIds) || [];
+  const prev = normalizeHiddenHouseReleaseShareIds(hiddenShareIds) || [];
+  const next = visible ? prev.filter((id) => id !== key) : [...new Set([...prev, key])];
+  return next.slice(0, HOUSE_RELEASE_HOME_MAX);
+}
 
 function cleanShareId(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;

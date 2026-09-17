@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Images, LayoutGrid, Music2, Repeat2 } from 'lucide-react';
+import { Dna, Images, LayoutGrid, Music2, Repeat2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
+  profileDnaHref,
   profileHref,
   profileImagesHref,
   profileReverbsHref,
@@ -18,6 +19,7 @@ export function ProfileSectionTabs({ slug, className }: { slug?: string; classNa
     { label: 'Overview', href: profileHref(slug) || '/', suffix: '', icon: LayoutGrid },
     { label: 'Images', href: profileImagesHref(slug) || '/', suffix: '/images', icon: Images },
     { label: 'Releases', href: profileSongsHref(slug) || '/', suffix: '/songs', icon: Music2 },
+    { label: 'DNA Drops', href: profileDnaHref(slug) || '/', suffix: '/dna', icon: Dna },
     { label: 'Reverbs', href: profileReverbsHref(slug) || '/', suffix: '/reverbs', icon: Repeat2 },
   ];
   return (
@@ -26,7 +28,7 @@ export function ProfileSectionTabs({ slug, className }: { slug?: string; classNa
       className={cn('flex max-w-full gap-1 overflow-x-auto border-b border-[var(--ph-border,rgba(255,255,255,.12))] pb-1', className)}
     >
       {tabs.map((tab) => {
-        const active = tab.suffix ? pathname.endsWith(tab.suffix) : !/\/(images|songs|reverbs)$/.test(pathname);
+        const active = tab.suffix ? pathname.endsWith(tab.suffix) : !/\/(images|songs|reverbs|dna)$/.test(pathname);
         const Icon = tab.icon;
         return (
           <Link

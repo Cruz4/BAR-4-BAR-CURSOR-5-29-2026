@@ -61,6 +61,8 @@ type DropSocialPanelProps = {
   trackId?: string;
   ownerName?: string;
   ownerSlug?: string;
+  albumTitle?: string;
+  albumShareId?: string;
 };
 
 export function DropSocialPanel({
@@ -75,6 +77,8 @@ export function DropSocialPanel({
   isAlbum = false,
   trackId,
   ownerName,
+  albumTitle,
+  albumShareId,
 }: DropSocialPanelProps) {
   const { user } = useAuth();
   const { summary } = useGamification();
@@ -266,11 +270,14 @@ export function DropSocialPanel({
         text: [
           `${kindLabel} · ${title}`,
           ownerName ? `Original · ${ownerName}` : '',
+          albumTitle ? `Album · ${albumTitle}` : '',
         ].filter(Boolean).join('\n'),
         embedUrl: dropPath,
         sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
         ownerSlug: summary.profileSlug,
+        ...(albumShareId ? { albumShareId } : {}),
+        ...(albumTitle ? { albumTitle } : {}),
       });
       await recordDropReverb(shareId, post.id);
       setWalled(true);
@@ -302,11 +309,14 @@ export function DropSocialPanel({
           quoteText.trim(),
           `${kindLabel} · ${title}`,
           ownerName ? `Original · ${ownerName}` : '',
+          albumTitle ? `Album · ${albumTitle}` : '',
         ].filter(Boolean).join('\n'),
         embedUrl: dropPath,
         sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
         ownerSlug: summary.profileSlug,
+        ...(albumShareId ? { albumShareId } : {}),
+        ...(albumTitle ? { albumTitle } : {}),
         ...(quoteVoice ? { voice: quoteVoice } : {}),
         ...(quoteImage ? { image: quoteImage } : {}),
         ...(quoteClip ? { video: quoteClip } : {}),
@@ -360,35 +370,32 @@ export function DropSocialPanel({
           <MessageCircle className="h-3.5 w-3.5" />
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void toggleReverb()}
-          className={cn(
-            'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
-            walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300'
-          )}
-          title={walled ? 'Undo Reverb' : 'Reverb this release'}
-        >
-          <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} />
-          {walled ? 'Reverbed' : 'Reverb'}
-        </button>
-        {!walled ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                disabled={busy}
-                className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-violet-300"
-              >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              disabled={busy}
+              className={cn(
+                'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
+                walled ? 'text-violet-300' : 'text-muted-foreground hover:text-violet-300'
+              )}
+              title="Reverb — pass this onto your wall"
+            >
+              <Repeat2 className={cn('h-3.5 w-3.5', walled && 'stroke-[2.5]')} />
+              {walled ? 'Reverbed' : 'Reverb'}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
+            <DropdownMenuItem disabled={busy} onSelect={() => void toggleReverb()}>
+              {walled ? 'Undo Reverb' : 'Reverb'}
+            </DropdownMenuItem>
+            {!walled ? (
+              <DropdownMenuItem disabled={busy} onSelect={() => setQuoteOpen(true)}>
                 Quote
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={() => setQuoteOpen(true)}>Quote Reverb</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <button
           type="button"
           onClick={() => void nativeShare()}

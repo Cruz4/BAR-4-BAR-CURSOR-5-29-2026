@@ -128,10 +128,15 @@ export function toLinkedHouseRelease(
   };
 }
 
+export function houseReleaseShareIdKey(shareId: string | null | undefined): string {
+  return typeof shareId === 'string' ? shareId.trim().toUpperCase() : '';
+}
+
 export function isHouseReleaseVisibleOnHome(
   shareId: string,
   hiddenShareIds?: string[] | null
 ): boolean {
-  if (!hiddenShareIds?.length) return true;
-  return !hiddenShareIds.includes(shareId);
+  const key = houseReleaseShareIdKey(shareId);
+  if (!key || !hiddenShareIds?.length) return true;
+  return !hiddenShareIds.some((id) => houseReleaseShareIdKey(id) === key);
 }

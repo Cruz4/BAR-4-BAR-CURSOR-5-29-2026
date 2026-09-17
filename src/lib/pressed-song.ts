@@ -18,6 +18,12 @@ export function dropPromotePath(opts: {
   return `/share/${encodeURIComponent(shareId)}`;
 }
 
+/** Public album hub that lists every playable track — never Discover search. */
+export function albumHubHref(albumShareId?: string | null): string | undefined {
+  const id = albumShareId?.trim();
+  return id ? `/share/${encodeURIComponent(id)}` : undefined;
+}
+
 export function pressedSongHref(
   shareId: string,
   options: { referralPostId?: string; trackId?: string } = {}
@@ -45,6 +51,8 @@ export type PressedSongSummary = {
   shareId: string;
   trackId?: string;
   albumTitle?: string;
+  /** Album hub share id when this song belongs to a live album. */
+  albumShareId?: string;
   /** Live Lyrics DNA Drop for this song (track share), when one exists. */
   dnaShareId?: string;
   /** Album hub post (no specific track in the URL) still returns a playable first track. */

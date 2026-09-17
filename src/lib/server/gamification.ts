@@ -56,7 +56,7 @@ import {
   canonicalDnaShareIds,
   shareDocumentVisibility,
 } from '@/lib/release-management';
-import { resolveHouseArtistId } from '@/lib/house-artist-link';
+import { isHouseReleaseCreditedToUser, resolveHouseArtistId } from '@/lib/house-artist-link';
 import {
   allocateUniqueProfileSlug,
   assertProfileSlugAvailable,
@@ -1616,14 +1616,23 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
     byShareId.set(doc.id, entry);
   }
 
-  // House releases linked to this artist profile (admin may set houseArtistId ≠ ownerId).
-  const linkedHouseSnap = await db
-    .collection('shares')
-    .where('houseRelease', '==', true)
-    .where('houseArtistId', '==', userId)
-    .get();
+  // Same scan as /api/profile/house-releases so a linked artist sees the drop
+  // without a composite houseRelease+houseArtistId index.
+  const linkedHouseSnap = await db.collection('shares').where('houseRelease', '==', true).get();
   for (const doc of linkedHouseSnap.docs) {
-    if (byShareId.has(doc.id)) continue;
+    const share = (doc.data() || {}) as Record<string, unknown>;
+    if (!isHouseReleaseCreditedToUser(share, userId)) continue;
+    const existing = byShareId.get(doc.id);
+    if (existing) {
+      byShareId.set(doc.id, {
+        ...existing,
+        houseRelease: true,
+        ...(existing.releaseLive || shareDocumentVisibility(share).releaseLive
+          ? { releaseLive: true }
+          : {}),
+      });
+      continue;
+    }
     shareDocsById.set(doc.id, doc);
     const data = doc.data();
     const visibility = shareDocumentVisibility(data as Record<string, unknown>);

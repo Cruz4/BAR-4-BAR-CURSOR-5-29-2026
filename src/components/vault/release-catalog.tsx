@@ -21,7 +21,7 @@ import {
 } from '@/lib/release-management';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
-import { fetchArtistHomeConfig, saveArtistHomeConfigClient } from '@/lib/profile/artist-home-client';
+import { fetchArtistHomeConfig, setHouseReleaseOnHome, subscribeHouseReleaseHome } from '@/lib/profile/artist-home-client';
 import { isHouseReleaseVisibleOnHome, type LinkedHouseRelease } from '@/lib/house-artist-link';
 import { pressedSongHref } from '@/lib/pressed-song';
 import type { Album, Track } from '@/lib/types';
@@ -247,6 +247,8 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
     };
   }, [user?.id]);
 
+  useEffect(() => subscribeHouseReleaseHome(setHiddenHouseIds), []);
+
   const houseRows = useMemo(() => {
     const byId = new Map<string, HouseCatalogRow>();
     for (const row of vaultHouseRows(albums)) byId.set(row.shareId, row);
@@ -387,6 +389,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   };
 
   const [showEmptySections, setShowEmptySections] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const groupRows = useMemo(
     () =>
@@ -419,24 +422,24 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   );
 
   const scrollToGroup = (key: GroupKey | 'house') => {
-    document.getElementById(`release-catalog-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const node = document.getElementById(`release-catalog-${key}`) as HTMLDetailsElement | null;
-    if (node) node.open = true;
+    setExpandedSection(key);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`release-catalog-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
+
+  const toggleSection = (key: string) => {
+    setExpandedSection((current) => (current === key ? null : key));
   };
 
   const setHouseOnHome = async (shareId: string, visible: boolean) => {
     setHouseHomeBusy(shareId);
     try {
-      const config = await fetchArtistHomeConfig();
-      const prev = [...(config.featured.hiddenHouseReleaseShareIds || [])];
-      const next = visible ? prev.filter((id) => id !== shareId) : [...new Set([...prev, shareId])];
-      if (!next.length) delete config.featured.hiddenHouseReleaseShareIds;
-      else config.featured.hiddenHouseReleaseShareIds = next;
-      await saveArtistHomeConfigClient(config);
+      const next = await setHouseReleaseOnHome(shareId, visible);
       setHiddenHouseIds(next);
       toast({
         title: visible ? 'Showing on Artist Home' : 'Hidden from Artist Home',
-        description: 'Members keep this House release in Library either way.',
+        description: 'Same switch as Module Deck. Members keep this House release in Library either way.',
       });
     } catch (error) {
       toast({
@@ -450,7 +453,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   };
 
   const renderRows = (key: GroupKey, rows: Row[]) => (
-    <ul className="space-y-2 border-t border-white/10 p-2.5">
+    <ul className="max-h-[min(42vh,380px)] space-y-2 overflow-y-auto overscroll-contain border-t border-white/10 p-2.5">
       {rows.map(({ album, track }) => {
         const dnaGroup = key === 'dnaPreviews';
         const dnaId = track?.shareId || album.shareId;
@@ -536,14 +539,20 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
       key={key}
       id={`release-catalog-${key}`}
       className={cn(
-        'group h-fit scroll-mt-3 self-start overflow-hidden rounded-xl border shadow-sm',
+        'group w-full scroll-mt-3 overflow-hidden rounded-xl border shadow-sm',
         style.border,
         style.surface,
         rows.length === 0 && opts?.compactEmpty && 'opacity-70'
       )}
-      open={rows.length > 0}
+      open={expandedSection === key}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden">
+      <summary
+        className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden"
+        onClick={(event) => {
+          event.preventDefault();
+          toggleSection(key);
+        }}
+      >
         <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border', style.iconWrap, style.icon)}>
           <Icon className="h-4 w-4" />
         </span>
@@ -569,10 +578,16 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
   const renderHouseCard = () => (
     <details
       id="release-catalog-house"
-      className="group h-fit scroll-mt-3 self-start overflow-hidden rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-500/[0.14] via-cyan-950/25 to-black/30 shadow-sm"
-      open
+      className="group w-full scroll-mt-3 overflow-hidden rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-500/[0.14] via-cyan-950/25 to-black/30 shadow-sm"
+      open={expandedSection === 'house'}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden">
+      <summary
+        className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden"
+        onClick={(event) => {
+          event.preventDefault();
+          toggleSection('house');
+        }}
+      >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/15 text-cyan-200">
           <Gift className="h-4 w-4" />
         </span>
@@ -587,7 +602,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
       </summary>
-      <ul className="space-y-2 border-t border-white/10 p-2.5">
+      <ul className="max-h-[min(42vh,380px)] space-y-2 overflow-y-auto overscroll-contain border-t border-white/10 p-2.5">
         {houseRows.map((row) => {
           const vault = row.vault;
           const album = vault?.album;
@@ -732,7 +747,7 @@ function ReleaseCatalogBody({ className }: { className?: string }) {
             ))}
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2">
             {houseRows.length ? renderHouseCard() : null}
             {activeGroups.map((group) => renderGroupCard(group))}
           </div>

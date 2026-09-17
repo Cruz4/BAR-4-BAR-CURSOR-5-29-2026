@@ -2,6 +2,10 @@
 
 import { auth } from '@/lib/firebase/client/firebase';
 import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/modules';
+import {
+  applyHouseReleaseHomeVisibility,
+  HOUSE_RELEASE_HOME_CHANGED,
+} from '@/lib/profile/house-release-home';
 
 async function authHeaders() {
   const user = auth.currentUser;
@@ -49,4 +53,28 @@ export async function saveArtistHomeConfigClient(
   }
   const data = await res.json();
   return normalizeArtistHomeConfig(data.config);
+}
+
+/** Persist On your page / Hidden on page and notify Release Catalog + Module Deck. */
+export async function setHouseReleaseOnHome(shareId: string, visible: boolean): Promise<string[]> {
+  const config = await fetchArtistHomeConfig();
+  const next = applyHouseReleaseHomeVisibility(config.featured.hiddenHouseReleaseShareIds, shareId, visible);
+  if (!next.length) delete config.featured.hiddenHouseReleaseShareIds;
+  else config.featured.hiddenHouseReleaseShareIds = next;
+  const saved = await saveArtistHomeConfigClient(config);
+  const hidden = saved.featured.hiddenHouseReleaseShareIds || [];
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(HOUSE_RELEASE_HOME_CHANGED, { detail: { hiddenShareIds: hidden } }));
+  }
+  return hidden;
+}
+
+export function subscribeHouseReleaseHome(onChange: (hiddenShareIds: string[]) => void): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  const handler = (event: Event) => {
+    const hidden = (event as CustomEvent<{ hiddenShareIds?: string[] }>).detail?.hiddenShareIds;
+    if (Array.isArray(hidden)) onChange(hidden);
+  };
+  window.addEventListener(HOUSE_RELEASE_HOME_CHANGED, handler);
+  return () => window.removeEventListener(HOUSE_RELEASE_HOME_CHANGED, handler);
 }

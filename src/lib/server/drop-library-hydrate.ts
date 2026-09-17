@@ -338,6 +338,12 @@ function libraryItemFromShare(
     title: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Untitled track',
     trackIds: [projectId],
     albumId: typeof payload.albumId === 'string' ? payload.albumId : undefined,
+    ...(typeof (payload.sharedAlbumContext as { title?: string } | undefined)?.title === 'string'
+      ? { albumTitle: String((payload.sharedAlbumContext as { title?: string }).title).trim() }
+      : {}),
+    ...(typeof (payload.sharedAlbumContext as { shareId?: string } | undefined)?.shareId === 'string'
+      ? { albumHref: `/share/${encodeURIComponent(String((payload.sharedAlbumContext as { shareId?: string }).shareId).trim())}` }
+      : {}),
     ...(audio.durationSec ? { durationSec: audio.durationSec } : {}),
   };
 }

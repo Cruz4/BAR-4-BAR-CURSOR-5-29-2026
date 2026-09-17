@@ -18,6 +18,18 @@ import {
   type FoldMember,
   type FoldStatus,
 } from '@/lib/folds/types';
+import {
+  assertFoldMediaPath,
+  foldBarPreviewText,
+  isFoldReactionKind,
+  parseFoldBarImage,
+  parseFoldPoll,
+  parseFoldReactions,
+  type FoldReactionKind,
+} from '@/lib/folds/attachments';
+import { buildPostPoll } from '@/lib/profile/post-polls';
+import { parseVoiceNote, voiceNoteToFirestore } from '@/lib/profile/voice-notes';
+import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
 
 function chronoId(): string {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -261,10 +273,32 @@ export async function passBar(opts: {
   text: string;
   clientId?: string;
   replyTo?: FoldBarReply;
+  image?: unknown;
+  voice?: unknown;
+  poll?: unknown;
+  quotePress?: unknown;
 }): Promise<{ fold: FoldDoc; bar: FoldBar; opened: boolean; firstPass: boolean }> {
   if (opts.senderId === opts.peerId) throw new Error('That is you.');
   const text = opts.text.trim().slice(0, FOLD_BAR_MAX_CHARS);
-  if (!text) throw new Error('Write a message first.');
+  const image = parseFoldBarImage(opts.image);
+  const voice = parseVoiceNote(opts.voice);
+  const quotePress = text ? normalizeQuotePressConfig(opts.quotePress) : undefined;
+  let poll: ReturnType<typeof parseFoldPoll>;
+  const pollRaw = opts.poll && typeof opts.poll === 'object' ? (opts.poll as Record<string, unknown>) : null;
+  if (pollRaw) {
+    const optionsUnknown = Array.isArray(pollRaw.options) ? pollRaw.options : [];
+    const stringOptions = optionsUnknown.filter((value): value is string => typeof value === 'string');
+    if (stringOptions.length && stringOptions.length === optionsUnknown.length) {
+      const built = buildPostPoll({
+        options: stringOptions,
+        resultsVisibility: pollRaw.resultsVisibility === 'always' ? 'always' : 'after_vote',
+      });
+      poll = built ? { ...built, votes: {} } : undefined;
+    } else {
+      poll = parseFoldPoll(pollRaw);
+    }
+  }
+  if (!text && !image && !voice && !poll) throw new Error('Write a message first.');
   if (await isBlockedEitherWay(opts.senderId, opts.peerId)) {
     throw new Error('You can’t message this artist.');
   }
@@ -274,6 +308,8 @@ export async function passBar(opts: {
   if (!peerSnap.exists) throw new Error('Artist not found.');
 
   const foldId = foldIdFor(opts.senderId, opts.peerId);
+  if (image) assertFoldMediaPath(foldId, image.storagePath);
+  if (voice) assertFoldMediaPath(foldId, voice.storagePath);
   const friends = await areFriends(opts.senderId, opts.peerId);
   const [senderMember, peerMember] = await Promise.all([
     memberProfile(opts.senderId, opts.senderName, opts.senderSlug),
@@ -297,6 +333,10 @@ export async function passBar(opts: {
           },
         }
       : {}),
+    ...(image ? { image } : {}),
+    ...(voice ? { voice: voiceNoteToFirestore(voice) } : {}),
+    ...(poll ? { poll } : {}),
+    ...(quotePress ? { quotePress } : {}),
   };
 
   const ref = db.doc(`folds/${foldId}`);
@@ -337,6 +377,7 @@ export async function passBar(opts: {
 
   const memberIds: [string, string] = [opts.senderId, opts.peerId].sort() as [string, string];
   const peerUnread = asUnreadCount(existing?.unread?.[opts.peerId]) + 1;
+  const lastBar = foldBarPreviewText(bar);
   const payload: Record<string, unknown> = {
     memberIds,
     members: {
@@ -346,7 +387,7 @@ export async function passBar(opts: {
     },
     status,
     initiatedBy: existing && existing.status !== 'declined' ? existing.initiatedBy : opts.senderId,
-    lastBar: text,
+    lastBar,
     lastAt: now,
     lastSenderId: opts.senderId,
     lastBarId: barId,
@@ -369,6 +410,10 @@ export async function passBar(opts: {
     createdAt: bar.createdAt,
     ...(bar.clientId ? { clientId: bar.clientId } : {}),
     ...(bar.replyTo ? { replyTo: bar.replyTo } : {}),
+    ...(bar.image ? { image: bar.image } : {}),
+    ...(bar.voice ? { voice: bar.voice } : {}),
+    ...(bar.poll ? { poll: bar.poll } : {}),
+    ...(bar.quotePress ? { quotePress: bar.quotePress } : {}),
   });
   await batch.commit();
 
@@ -383,6 +428,70 @@ export async function passBar(opts: {
   }).catch((err) => console.warn('[folds/notify]', err));
 
   return { fold, bar, opened, firstPass };
+}
+
+export async function voteFoldPoll(opts: {
+  foldId: string;
+  barId: string;
+  userId: string;
+  optionId: string;
+}): Promise<FoldBar> {
+  const fold = await getFold(opts.foldId);
+  if (!fold) throw new Error('Conversation not found.');
+  assertMember(fold, opts.userId);
+  const db = await getDb();
+  const ref = db.doc(`folds/${opts.foldId}/bars/${opts.barId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Message not found.');
+  const poll = parseFoldPoll(snap.data()?.poll);
+  if (!poll) throw new Error('That poll is gone.');
+  if (!poll.options.some((option) => option.id === opts.optionId)) {
+    throw new Error('Pick a poll choice.');
+  }
+  if (poll.votes[opts.userId]) throw new Error('Your vote was already locked in.');
+  const next = { ...poll, votes: { ...poll.votes, [opts.userId]: opts.optionId } };
+  await ref.set({ poll: next }, { merge: true });
+  return {
+    id: opts.barId,
+    senderId: String(snap.data()?.senderId || ''),
+    text: String(snap.data()?.text || ''),
+    createdAt: String(snap.data()?.createdAt || ''),
+    poll: next,
+  };
+}
+
+export async function reactToFoldBar(opts: {
+  foldId: string;
+  barId: string;
+  userId: string;
+  kind: string | null;
+}): Promise<FoldBar> {
+  const fold = await getFold(opts.foldId);
+  if (!fold) throw new Error('Conversation not found.');
+  assertMember(fold, opts.userId);
+  const db = await getDb();
+  const ref = db.doc(`folds/${opts.foldId}/bars/${opts.barId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error('Message not found.');
+  const current = parseFoldReactions(snap.data()?.reactions) || {};
+  const next: Record<string, FoldReactionKind> = { ...current };
+  if (!opts.kind) {
+    delete next[opts.userId];
+  } else if (!isFoldReactionKind(opts.kind)) {
+    throw new Error('Pick a reaction.');
+  } else if (current[opts.userId] === opts.kind) {
+    delete next[opts.userId];
+  } else {
+    next[opts.userId] = opts.kind;
+  }
+  await ref.set({ reactions: next }, { merge: true });
+  return {
+    id: opts.barId,
+    senderId: String(snap.data()?.senderId || ''),
+    text: String(snap.data()?.text || ''),
+    createdAt: String(snap.data()?.createdAt || ''),
+    reactions: Object.keys(next).length ? next : undefined,
+  };
 }
 
 async function recentlyViewing(foldId: string, uid: string): Promise<boolean> {
@@ -416,7 +525,7 @@ async function notifyPeer(opts: {
       actorSlug: opts.fold.members[opts.bar.senderId]?.slug,
       recipientId: peerId,
       recipientName: opts.fold.members[peerId]?.name || 'Artist',
-      preview: foldPreview(opts.bar.text),
+      preview: foldBarPreviewText(opts.bar),
       href: `/msgs/${opts.fold.id}`,
     });
   }
@@ -438,7 +547,7 @@ async function notifyPeer(opts: {
   await sendWebPushToTokens({
     tokens,
     title,
-    body: foldPreview(opts.bar.text),
+    body: foldBarPreviewText(opts.bar),
     href,
     type: opts.firstPass ? 'fold_pass' : 'fold_bar',
   });

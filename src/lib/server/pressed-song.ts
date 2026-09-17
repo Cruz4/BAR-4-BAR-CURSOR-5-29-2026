@@ -106,10 +106,29 @@ export async function getPressedSongSummary(
   const dnaShareId =
     trackDnaShareId ||
     (share.type === 'track' && shareDnaLive ? shareId : undefined);
+  const contextAlbumShareId =
+    typeof (share.data as Record<string, unknown> | undefined)?.sharedAlbumContext === 'object'
+      ? String(
+          ((share.data as Record<string, unknown>).sharedAlbumContext as Record<string, unknown>)
+            ?.shareId || ''
+        ).trim()
+      : '';
+  const albumShareId =
+    share.type === 'album'
+      ? shareId
+      : publicMusicMetadataFromTrack(selectedTrack || share.data).albumShareId ||
+        contextAlbumShareId ||
+        undefined;
+  const albumTitle =
+    share.type === 'album' && typeof share.data?.title === 'string'
+      ? share.data.title
+      : publicMusicMetadataFromTrack(selectedTrack || share.data).albumTitle ||
+        (typeof share.data?.albumTitle === 'string' ? share.data.albumTitle : undefined);
   const base: PressedSongSummary = {
     shareId,
     ...(trackId ? { trackId } : {}),
-    ...(share.type === 'album' && typeof share.data?.title === 'string' ? { albumTitle: share.data.title } : {}),
+    ...(albumTitle ? { albumTitle } : {}),
+    ...(albumShareId ? { albumShareId } : {}),
     ...(dnaShareId ? { dnaShareId } : {}),
     ...(albumLevel ? { scope: 'album' as const } : { scope: 'track' as const }),
     ownerId: share.ownerId,
@@ -163,6 +182,32 @@ export async function getPressedSongSummary(
     if (successor) {
       const { updatedAt: _updatedAt, ...currentRelease } = successor;
       base.currentRelease = currentRelease;
+      if (!base.albumShareId) {
+        base.albumShareId = successor.shareId;
+        base.albumTitle = successor.albumTitle;
+      }
+    }
+  }
+  if (!base.albumShareId && share.type === 'track') {
+    const ownerShares = await db.collection('shares').where('ownerId', '==', share.ownerId).get();
+    const parent = ownerShares.docs
+      .flatMap((doc) => {
+        const data = doc.data() as Record<string, unknown>;
+        if (data.type !== 'album' || !shareDocumentVisibility(data).releaseLive) return [];
+        const payload = data.data && typeof data.data === 'object'
+          ? data.data as Record<string, unknown>
+          : {};
+        const tracks = Array.isArray(payload.tracks) ? payload.tracks as Array<Record<string, unknown>> : [];
+        const track = tracks.find((row) => row.id === share.projectId || row.releaseShareId === shareId);
+        if (!track) return [];
+        return [{
+          shareId: doc.id,
+          albumTitle: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : 'Album',
+        }];
+      })[0];
+    if (parent) {
+      base.albumShareId = parent.shareId;
+      if (!base.albumTitle) base.albumTitle = parent.albumTitle;
     }
   }
   if (!viewerId) return base;

@@ -18,6 +18,7 @@ import {
   type FoldDoc,
   type FoldPresence,
 } from '@/lib/folds/types';
+import { foldBarAttachmentsFromData, type FoldReactionKind } from '@/lib/folds/attachments';
 
 async function authHeaders(): Promise<HeadersInit> {
   const user = auth.currentUser;
@@ -73,6 +74,7 @@ function barFromData(id: string, data: Record<string, unknown>): FoldBar {
             senderId: String(reply.senderId || ''),
           }
         : undefined,
+    ...foldBarAttachmentsFromData(data),
   };
 }
 
@@ -156,6 +158,10 @@ export async function passBarClient(opts: {
   senderSlug?: string;
   clientId?: string;
   replyTo?: FoldBarReply;
+  image?: FoldBar['image'];
+  voice?: FoldBar['voice'];
+  poll?: { options: string[]; resultsVisibility?: 'after_vote' | 'always' };
+  quotePress?: FoldBar['quotePress'];
 }): Promise<{ fold: FoldDoc; bar: FoldBar }> {
   const user = auth.currentUser;
   if (!user) throw new Error('Sign in required');
@@ -171,11 +177,61 @@ export async function passBarClient(opts: {
       ...(opts.senderSlug ? { senderSlug: opts.senderSlug } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+      ...(opts.image ? { image: opts.image } : {}),
+      ...(opts.voice ? { voice: opts.voice } : {}),
+      ...(opts.poll ? { poll: opts.poll } : {}),
+      ...(opts.quotePress ? { quotePress: opts.quotePress } : {}),
     }),
   });
   const data = (await res.json().catch(() => ({}))) as { fold?: FoldDoc; bar?: FoldBar; error?: string };
   if (!res.ok || !data.fold || !data.bar) throw new Error(data.error || 'Could not send');
   return { fold: data.fold, bar: data.bar };
+}
+
+export async function voteFoldPollClient(opts: {
+  foldId: string;
+  barId: string;
+  optionId: string;
+}): Promise<FoldBar> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in required');
+  const res = await fetch('/api/folds', {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({
+      action: 'vote_poll',
+      userId: user.uid,
+      foldId: opts.foldId,
+      barId: opts.barId,
+      optionId: opts.optionId,
+    }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { bar?: FoldBar; error?: string };
+  if (!res.ok || !data.bar) throw new Error(data.error || 'Could not vote');
+  return data.bar;
+}
+
+export async function reactToFoldBarClient(opts: {
+  foldId: string;
+  barId: string;
+  kind: FoldReactionKind | null;
+}): Promise<FoldBar> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in required');
+  const res = await fetch('/api/folds', {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({
+      action: 'react',
+      userId: user.uid,
+      foldId: opts.foldId,
+      barId: opts.barId,
+      kind: opts.kind,
+    }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { bar?: FoldBar; error?: string };
+  if (!res.ok || !data.bar) throw new Error(data.error || 'Could not react');
+  return data.bar;
 }
 
 async function foldAction(

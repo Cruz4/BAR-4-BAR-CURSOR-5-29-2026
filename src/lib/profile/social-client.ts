@@ -188,6 +188,8 @@ export type ProfilePost = {
   ownerStarMarkUseStar?: boolean;
   ownerStarMarkSeed?: number;
   ownerStudioBadge?: 'pro' | 'free';
+  albumShareId?: string;
+  albumTitle?: string;
 };
 
 export type PostComment = {
@@ -327,6 +329,8 @@ export async function createPost(input: {
   sourceKind?: 'post' | 'song' | 'dna';
   poll?: CreatePostPoll;
   quotePress?: QuotePressConfig;
+  albumShareId?: string;
+  albumTitle?: string;
 }): Promise<ProfilePost> {
   const user = requireUser();
   const liveProfile = await requireLiveProfileForPosting(user.uid);
@@ -421,6 +425,8 @@ export async function createPost(input: {
     ...(input.sourceKind ? { sourceKind: input.sourceKind } : {}),
     ...(poll ? { poll } : {}),
     ...(quotePress ? { quotePress } : {}),
+    ...(input.albumShareId ? { albumShareId: input.albumShareId.slice(0, 160) } : {}),
+    ...(input.albumTitle ? { albumTitle: input.albumTitle.slice(0, 120) } : {}),
     createdAt: new Date().toISOString(),
   };
   const { id: postId, ...data } = post;

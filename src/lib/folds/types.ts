@@ -36,6 +36,19 @@ export type FoldBarReply = {
   senderId: string;
 };
 
+export type FoldBarImage = {
+  url: string;
+  storagePath: string;
+};
+
+export type FoldPoll = {
+  options: Array<{ id: string; label: string }>;
+  resultsVisibility: 'after_vote' | 'always';
+  votes: Record<string, string>;
+};
+
+export type FoldReactionKind = 'heart' | 'mic' | 'handwriting' | 'hundred' | 'laugh';
+
 export type FoldBar = {
   id: string;
   senderId: string;
@@ -43,6 +56,18 @@ export type FoldBar = {
   createdAt: string;
   clientId?: string;
   replyTo?: FoldBarReply;
+  image?: FoldBarImage;
+  voice?: {
+    url: string;
+    storagePath: string;
+    contentType: string;
+    durationSec: number;
+    byteSize: number;
+    transcript?: string;
+  };
+  poll?: FoldPoll;
+  quotePress?: { faders: { heat: number; grain: number; pace: number; ink: number } };
+  reactions?: Record<string, FoldReactionKind>;
 };
 
 export type FoldPresence = {

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { CheckoutAuthError, verifyCheckoutUser } from '@/lib/stripe-server';
-import { checkRateLimit } from '@/lib/server/rate-limit';
 import {
   acceptFold,
   declineFold,
@@ -11,6 +10,8 @@ import {
   markAllFoldsUnread,
   markFoldRead,
   passBar,
+  reactToFoldBar,
+  voteFoldPoll,
 } from '@/lib/server/folds';
 import { isFoldsFeatureEnabled } from '@/lib/server/folds-feature';
 import type { FoldBarReply } from '@/lib/folds/types';
@@ -65,10 +66,6 @@ export async function POST(req: Request) {
     }
 
     if (action === 'pass') {
-      const { allowed } = await checkRateLimit(`fold-pass:${userId}`, 40, 60 * 60 * 1000);
-      if (!allowed) {
-        return NextResponse.json({ error: 'Slow down — too many messages this hour.' }, { status: 429 });
-      }
       const peerId = typeof body.peerId === 'string' ? body.peerId.trim() : '';
       const text = typeof body.text === 'string' ? body.text : '';
       if (!peerId) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -89,6 +86,10 @@ export async function POST(req: Request) {
         text,
         clientId: typeof body.clientId === 'string' ? body.clientId : undefined,
         replyTo,
+        image: body.image,
+        voice: body.voice,
+        poll: body.poll,
+        quotePress: body.quotePress,
       });
       return NextResponse.json(result);
     }
@@ -125,6 +126,20 @@ export async function POST(req: Request) {
       const fold = await deleteFoldForUser({ foldId, userId });
       return NextResponse.json({ fold });
     }
+    if (action === 'vote_poll') {
+      const barId = typeof body.barId === 'string' ? body.barId.trim() : '';
+      const optionId = typeof body.optionId === 'string' ? body.optionId.trim() : '';
+      if (!barId || !optionId) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      const bar = await voteFoldPoll({ foldId, barId, userId, optionId });
+      return NextResponse.json({ bar });
+    }
+    if (action === 'react') {
+      const barId = typeof body.barId === 'string' ? body.barId.trim() : '';
+      if (!barId) return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+      const kind = typeof body.kind === 'string' ? body.kind : null;
+      const bar = await reactToFoldBar({ foldId, barId, userId, kind });
+      return NextResponse.json({ bar });
+    }
 
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   } catch (err) {
@@ -136,9 +151,20 @@ export async function POST(req: Request) {
       message === 'Artist not found.' ||
       message === 'That conversation isn’t yours.' ||
       message === 'Wait for them to open it.' ||
-      message === 'They haven’t accepted yet.'
+      message === 'They haven’t accepted yet.' ||
+      message === 'Invalid attachment.' ||
+      message === 'That poll is gone.' ||
+      message === 'Pick a poll choice.' ||
+      message === 'Your vote was already locked in.' ||
+      message === 'Pick a reaction.' ||
+      message === 'Message not found.' ||
+      message.startsWith('Add at least') ||
+      message.startsWith('Every poll') ||
+      message.startsWith('Polls need') ||
+      message.startsWith('Poll choices')
     ) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      const status = message === 'Your vote was already locked in.' ? 409 : 400;
+      return NextResponse.json({ error: message }, { status });
     }
     if (message === 'Conversation not found.') {
       return NextResponse.json({ error: message }, { status: 404 });

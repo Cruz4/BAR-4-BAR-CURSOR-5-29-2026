@@ -231,7 +231,16 @@ export function musicReleaseItems(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
 }
 
 export function lyricDnaItems(drops: LiveDnaDropItem[]): LiveDnaDropItem[] {
-  return drops.filter((d) => d.dnaLive === true || (d.dnaLive === undefined && !d.hasDropAudio));
+  return drops.filter((d) => d.dnaLive === true);
+}
+
+/** Empty picker means every live DNA drop; otherwise only the chosen share ids. */
+export function selectDropShelfDna(drops: LiveDnaDropItem[], shareIds?: string[]): LiveDnaDropItem[] {
+  const dna = lyricDnaItems(drops);
+  const ids = (shareIds || []).map((id) => id.trim()).filter(Boolean);
+  if (!ids.length) return dna;
+  const selected = new Set(ids);
+  return dna.filter((drop) => selected.has(drop.shareId) || (drop.albumShareId ? selected.has(drop.albumShareId) : false));
 }
 
 export function LiveDnaDropsGroupedList({

@@ -13,7 +13,7 @@ import { profileHref } from '@/lib/profile/profile-slug';
 import { PublicProfileSectionShell } from '@/components/profile/public-profile-section-shell';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import type { DropPrice } from '@/lib/drop-commerce';
-import { pressedSongHref } from '@/lib/pressed-song';
+import { albumHubHref, pressedSongHref } from '@/lib/pressed-song';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { manageRelease } from '@/lib/release-management-client';
@@ -80,7 +80,7 @@ export default function ProfileSongsPage() {
       {songs.length ? (
         <div className="space-y-4">
           {songs.map((song, index) => (
-            <article key={song.shareId} className="space-y-2">
+            <article key={`${song.shareId}:${song.trackId}`} className="space-y-2">
               <div className="flex items-center gap-3 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200">
                   {String(index + 1).padStart(2, '0')}
@@ -124,6 +124,7 @@ export default function ProfileSongsPage() {
               <Suspense fallback={<div className="h-40 animate-pulse rounded-2xl border border-fuchsia-400/20 bg-black/35" />}>
                 <DropListenPanel
                   shareId={song.shareId}
+                  trackId={song.trackId || undefined}
                   title={song.title}
                   artistName={displayName}
                   ownerId={song.ownerId}
@@ -133,6 +134,8 @@ export default function ProfileSongsPage() {
                   source="artist_home"
                   presentation="playlist"
                   playbackGroup={`profile-pressed:${slug}`}
+                  albumTitle={song.metadata?.albumTitle}
+                  albumHref={albumHubHref(song.metadata?.albumShareId)}
                 />
               </Suspense>
             </article>

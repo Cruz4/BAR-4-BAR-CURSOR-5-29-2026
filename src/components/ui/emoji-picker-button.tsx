@@ -106,8 +106,6 @@ export function EmojiPickerButton({
   const pick = (emoji: string) => {
     onInsert(emoji);
     setRecent(rememberRecentEmoji(emoji));
-    setQuery('');
-    setOpen(false);
   };
 
   return (

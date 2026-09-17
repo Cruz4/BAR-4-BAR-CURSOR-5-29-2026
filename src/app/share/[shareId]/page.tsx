@@ -749,6 +749,8 @@ function SharedProjectPageInner() {
                       isAlbum={viewingAlbumHub}
                       trackId={snapshotTrack?.id}
                       ownerName={share.ownerName}
+                      albumTitle={snapshotTrack ? albumPayload?.title : trackProject?.sharedAlbumContext?.title || albumPayload?.title}
+                      albumShareId={viewingAlbumHub ? shareId : (trackProject?.sharedAlbumContext?.shareId || (snapshotTrack ? shareId : undefined))}
                     />
                     ) : null}
                     <Card className="border-2 border-cyan-400/20 overflow-hidden bg-card/50 backdrop-blur-md">

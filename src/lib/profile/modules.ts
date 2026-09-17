@@ -114,7 +114,7 @@ export type ArtistHomeFeatured = {
   theCatch?: unknown;
   /** @deprecated Prefer barBoard. */
   albumRooms?: AlbumRoomCard[];
-  /** @deprecated Live Lyrics DNA Drops auto-list from shares; kept for older configs. */
+  /** Curated live Lyrics DNA Drop share ids for the Drop Shelf (empty = all live). */
   dropShelfShareIds?: string[];
   /** Optional outbound socials — only filled ones appear under the portrait. */
   socials?: ArtistHomeSocials;
@@ -248,7 +248,7 @@ const MAX_BIO = 600;
 const MAX_BAR = 280;
 const MAX_DNA_LINES = 2;
 const MAX_ALBUM_ROOMS = 4;
-const MAX_DROPS = 8;
+const MAX_DROPS = 40;
 const MAX_FINGERPRINT_LINES = 16;
 
 function normalizeFeaturedTrack(raw: unknown): FeaturedTrackSelection | undefined {

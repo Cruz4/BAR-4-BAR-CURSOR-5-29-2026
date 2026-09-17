@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Loader, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
@@ -12,13 +12,8 @@ import { DropRepeatControl } from '@/components/drop-repeat-control';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { profileHref } from '@/lib/profile/profile-slug';
-import {
-  normalizePressingConfig,
-  pressTokens,
-  pressingCssVars,
-  type PressingConfig,
-} from '@/lib/profile/pressing';
-import { parseStudioBadge, type StudioNameChrome } from '@/lib/studio-tier-chrome';
+import { albumHubHref } from '@/lib/pressed-song';
+import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
 
 const MINI_EQ_BANDS = [
   { lowHz: 35, highHz: 130, gain: 0.72 },
@@ -27,17 +22,6 @@ const MINI_EQ_BANDS = [
   { lowHz: 1_600, highHz: 5_200, gain: 1.02 },
   { lowHz: 5_200, highHz: 13_000, gain: 1.12 },
 ] as const;
-
-const artistChromeCache = new Map<string, MiniArtistChrome | null>();
-
-type MiniArtistChrome = {
-  avatarUrl?: string;
-  useStarMark: boolean;
-  starMarkSeed?: number;
-  studioChrome?: StudioNameChrome;
-  slug?: string;
-  pressing?: PressingConfig;
-};
 
 function clampMeter(value: number): number {
   return Math.max(0.12, Math.min(0.96, value));
@@ -133,58 +117,7 @@ export function TopNavDropMiniPlayer() {
   const currentShareId = player?.current?.shareId;
   const currentTrackId = player?.current?.trackId;
   const coverArtUrl = player?.current?.coverArtUrl;
-  const [chrome, setChrome] = useState<MiniArtistChrome | null>(null);
-
-  useEffect(() => {
-    if (!currentShareId) {
-      setChrome(null);
-      return;
-    }
-    if (artistChromeCache.has(currentShareId)) {
-      setChrome(artistChromeCache.get(currentShareId) || null);
-      return;
-    }
-
-    let cancelled = false;
-    setChrome(null);
-    const query = currentTrackId ? `?trackId=${encodeURIComponent(currentTrackId)}` : '';
-    void fetch(`/api/songs/${encodeURIComponent(currentShareId)}${query}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((summary) => {
-        const artist = summary?.artist as Record<string, unknown> | undefined;
-        if (!artist) {
-          artistChromeCache.set(currentShareId, null);
-          if (!cancelled) setChrome(null);
-          return;
-        }
-        const studioChrome = parseStudioBadge(artist.studioBadge);
-        const next: MiniArtistChrome = {
-          ...(typeof artist.avatarUrl === 'string' && artist.avatarUrl.trim()
-            ? { avatarUrl: artist.avatarUrl.trim() }
-            : {}),
-          useStarMark: artist.starMarkUseStar === true,
-          ...(typeof artist.starMarkSeed === 'number' ? { starMarkSeed: artist.starMarkSeed } : {}),
-          ...(studioChrome ? { studioChrome } : {}),
-          ...(typeof artist.slug === 'string' && artist.slug.trim() ? { slug: artist.slug.trim() } : {}),
-          pressing: normalizePressingConfig(artist.pressing),
-        };
-        artistChromeCache.set(currentShareId, next);
-        if (!cancelled) setChrome(next);
-      })
-      .catch(() => {
-        artistChromeCache.set(currentShareId, null);
-        if (!cancelled) setChrome(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentShareId, currentTrackId]);
-
-  const pressingStyle = useMemo(
-    () => (chrome?.pressing ? pressingCssVars(pressTokens(chrome.pressing)) : undefined),
-    [chrome?.pressing]
-  );
+  const { chrome, pressingStyle } = useDropArtistChrome(currentShareId, currentTrackId);
 
   if (!player?.current) return null;
 
@@ -209,6 +142,8 @@ export function TopNavDropMiniPlayer() {
 
   const artistHref = profileHref(chrome?.slug);
   const avatarUrl = chrome?.useStarMark ? chrome.avatarUrl : (chrome?.avatarUrl || coverArtUrl);
+  const albumTitle = current.albumTitle || chrome?.albumTitle;
+  const albumHref = current.albumHref || albumHubHref(chrome?.albumShareId);
 
   return (
     <div
@@ -226,7 +161,7 @@ export function TopNavDropMiniPlayer() {
       <div className="absolute inset-0 bg-black/35" aria-hidden />
       <div className="relative z-10 px-2 sm:px-4 md:px-6">
         <div className="relative mx-auto w-full max-w-6xl py-1">
-          <div className="flex h-9 items-center gap-1.5">
+          <div className="flex min-h-9 items-center gap-1.5">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-[calc(50%-28px)]">
               <ArtistStarAvatar
                 name={current.artistName}
@@ -238,19 +173,29 @@ export function TopNavDropMiniPlayer() {
                 size={22}
                 className="shrink-0"
               />
-              <Link
-                href={current.detailsHref}
-                className="min-w-0 flex-1 rounded-md px-0.5 hover:bg-white/5"
-                aria-label={`Open ${current.title}`}
-              >
-                <span className="block truncate font-headline text-[13px] font-bold uppercase leading-none text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
-                  {current.title}
-                </span>
-                <span className="mt-0.5 block truncate font-code text-[11px] uppercase leading-none text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
-                  {current.artistName}
-                  {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
-                </span>
-              </Link>
+              <div className="min-w-0 flex-1 rounded-md px-0.5">
+                <Link
+                  href={current.detailsHref}
+                  className="block min-w-0 hover:bg-white/5"
+                  aria-label={`Open ${current.title}`}
+                >
+                  <span className="block truncate font-headline text-[13px] font-bold uppercase leading-none text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+                    {current.title}
+                  </span>
+                  <span className="mt-0.5 block truncate font-code text-[11px] uppercase leading-none text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                    {current.artistName}
+                    {duration > 0 ? ` · ${formatDeckTime(elapsed)} / ${formatDeckTime(duration)}` : ''}
+                  </span>
+                </Link>
+                {albumTitle && albumHref ? (
+                  <Link
+                    href={albumHref}
+                    className="mt-0.5 block truncate font-code text-[10px] leading-none text-white/75 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] hover:text-white hover:underline"
+                  >
+                    {albumTitle}
+                  </Link>
+                ) : null}
+              </div>
             </div>
             <MiniDropEqualizer analyser={analyser} playing={playing} />
             <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">

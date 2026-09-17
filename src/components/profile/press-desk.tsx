@@ -19,7 +19,6 @@ import {
   ExternalLink,
   Eye,
   Fingerprint,
-  Gift,
   LayoutGrid,
   Loader2,
   Lock,
@@ -98,6 +97,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import {
   fetchArtistHomeConfig,
   saveArtistHomeConfigClient,
+  subscribeHouseReleaseHome,
 } from '@/lib/profile/artist-home-client';
 import { fetchGamificationSummary, patchGamificationSettings } from '@/lib/gamification-client';
 import type { GamificationSummary } from '@/lib/gamification/types';
@@ -227,6 +227,91 @@ function DeskSection({
       {hint && <p className="mt-1.5 text-xs text-muted-foreground/80">{hint}</p>}
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+function DropShelfPicker({
+  config,
+  update,
+  candidates,
+}: {
+  config: ArtistHomeConfig;
+  update: (mutate: (draft: ArtistHomeConfig) => void) => void;
+  candidates: Array<{ shareId: string; title: string; kind: string }>;
+}) {
+  const selected = config.featured.dropShelfShareIds || [];
+  const selectedSet = new Set(selected);
+  const showingAll = selected.length === 0;
+
+  const toggle = (shareId: string) => {
+    update((draft) => {
+      const allIds = candidates.map((drop) => drop.shareId);
+      const current = draft.featured.dropShelfShareIds || [];
+      const base = current.length ? current : allIds;
+      const next = base.includes(shareId)
+        ? base.filter((id) => id !== shareId)
+        : [...base, shareId];
+      if (!next.length || next.length === allIds.length) delete draft.featured.dropShelfShareIds;
+      else draft.featured.dropShelfShareIds = next;
+      const mod = draft.modules.find((module) => module.id === 'dropShelf');
+      if (mod) mod.enabled = true;
+    });
+  };
+
+  const showAll = () => {
+    update((draft) => {
+      delete draft.featured.dropShelfShareIds;
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Choose which live Lyrics DNA Drops appear on the shelf. Leave none selected to show every live drop.
+      </p>
+      <button
+        type="button"
+        onClick={showAll}
+        className={cn(
+          'rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest',
+          showingAll
+            ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+            : 'border-white/15 text-muted-foreground hover:border-white/30 hover:text-white'
+        )}
+      >
+        All live
+      </button>
+      {candidates.length ? (
+        <div className="space-y-2">
+          {candidates.map((drop) => {
+            const on = showingAll || selectedSet.has(drop.shareId);
+            return (
+              <button
+                key={drop.shareId}
+                type="button"
+                onClick={() => toggle(drop.shareId)}
+                className={cn(
+                  'flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-colors',
+                  on
+                    ? 'border-emerald-400/35 bg-emerald-500/10'
+                    : 'border-white/10 bg-black/20 opacity-70 hover:opacity-100'
+                )}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-white/90">{drop.title}</span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{drop.kind}</span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-200">
+                  {on ? 'On shelf' : 'Hidden'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">No live Lyrics DNA Drops yet.</p>
+      )}
+    </div>
   );
 }
 
@@ -866,10 +951,12 @@ export function PressDesk() {
             ...(typeof d.trackCount === 'number' ? { trackCount: d.trackCount } : {}),
             ...(d.hasDropAudio ? { hasDropAudio: true } : {}),
             ...(d.dropPriceSummary ? { dropPriceSummary: d.dropPriceSummary } : {}),
+            dnaLive: true,
           });
         }
         for (const drop of linkedHousePreviewDrops) {
-          if (!byId.has(drop.shareId)) byId.set(drop.shareId, drop);
+          const existing = byId.get(drop.shareId);
+          byId.set(drop.shareId, { ...existing, ...drop, houseRelease: true });
         }
         return [...byId.values()] as PublicProfileData['liveDnaDrops'];
       })(),
@@ -904,6 +991,22 @@ export function PressDesk() {
     });
     setDirty(true);
   };
+
+  const patchHomeConfig = useCallback((mutate: (draft: ArtistHomeConfig) => void) => {
+    setConfig((prev) => {
+      if (!prev) return prev;
+      const next: ArtistHomeConfig = JSON.parse(JSON.stringify(prev));
+      mutate(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => subscribeHouseReleaseHome((hiddenShareIds) => {
+    patchHomeConfig((draft) => {
+      if (!hiddenShareIds.length) delete draft.featured.hiddenHouseReleaseShareIds;
+      else draft.featured.hiddenHouseReleaseShareIds = hiddenShareIds;
+    });
+  }), [patchHomeConfig]);
 
   const reorderModule = (from: number, to: number) => {
     if (from === to || from < 0 || to < 0) return;
@@ -2381,18 +2484,6 @@ export function PressDesk() {
         <LiveDnaDropsManage />
       </DeskSection>
 
-      {/* 8a. House releases on home */}
-      <DeskSection
-        id="artist-home-house-releases"
-        icon={Gift}
-        title="House releases on your home"
-        hint="AKAsheet can link a House drop to your profile. You choose whether it shows on your public Artist Home — members keep it in Library either way."
-      >
-        {user?.id ? (
-          <HouseReleaseHomeEditor userId={user.id} config={config} update={update} />
-        ) : null}
-      </DeskSection>
-
       {/* 8b. Imprint Shelf */}
       <DeskSection
         id="artist-home-imprints"
@@ -2411,11 +2502,21 @@ export function PressDesk() {
         ) : null}
       </DeskSection>
 
+      {/* 8c. Lyrics DNA Drop shelf picker */}
+      <DeskSection
+        id="artist-home-dna-shelf"
+        icon={Dna}
+        title="Lyrics DNA Drop shelf"
+        hint="Choose which live Lyrics DNA Drops appear on Artist Home. Leave none selected to show all live drops. Toggle Live Lyrics DNA Drops in the deck below."
+      >
+        <DropShelfPicker config={config} update={update} candidates={publicShares} />
+      </DeskSection>
+
       {/* 9. Module deck */}
       <DeskSection
         icon={SlidersHorizontal}
         title="Module Deck"
-        hint="Stack your page — toggle, drag to reorder, and size each die-cut plate."
+        hint="Stack your page — toggle, drag to reorder, and size each die-cut plate. Linked House releases use the same On your page switch as Release Catalog."
       >
         <div className="mb-3 flex justify-end">
           <Button
@@ -2535,6 +2636,11 @@ export function PressDesk() {
             );
           })}
         </div>
+        {user?.id ? (
+          <div id="artist-home-house-releases" className="mt-4 border-t border-white/10 pt-3">
+            <HouseReleaseHomeEditor userId={user.id} config={config} update={patchHomeConfig} />
+          </div>
+        ) : null}
       </DeskSection>
 
         </div>

@@ -15,7 +15,7 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { centsToUsdLabel } from '@/lib/drop-commerce';
 import { buildLoginUrl } from '@/lib/login-links';
 import { profileHref } from '@/lib/profile/profile-slug';
-import type { PressedSongSummary, PressedSongSupporter } from '@/lib/pressed-song';
+import { albumHubHref, type PressedSongSummary, type PressedSongSupporter } from '@/lib/pressed-song';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { pressTokens, pressingCssVars } from '@/lib/profile/pressing';
 import type { MusicChartsResponse } from '@/lib/music-charts';
@@ -136,6 +136,8 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
       { icon: BarChart3, label: 'Current 7-day chart', value: chartRank ? `#${chartRank}` : '—' },
     ] : []),
   ];
+  const albumHref = albumHubHref(summary.albumShareId || (summary.scope === 'album' ? summary.shareId : undefined));
+  const albumTitle = summary.albumTitle || summary.metadata.albumTitle;
   const lyricsDnaHref = useMemo(() => {
     if (!summary.dnaShareId) return undefined;
     if (summary.trackId && summary.albumTitle && summary.dnaShareId === summary.shareId) {
@@ -198,9 +200,9 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
             <Button variant="outline" asChild className="font-bold uppercase"><Link href="/">The Scene</Link></Button>
-            {summary.albumTitle && summary.trackId ? (
+            {albumHref && albumTitle ? (
               <Button variant="outline" asChild className="font-bold uppercase">
-                <Link href={`/share/${encodeURIComponent(summary.shareId)}`}>
+                <Link href={albumHref}>
                   <Disc3 className="mr-1.5 h-4 w-4" /> Album hub
                 </Link>
               </Button>
@@ -216,39 +218,28 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
           <div className="mb-5 flex items-start gap-4">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-400/40 bg-fuchsia-500/15"><Disc3 className="h-8 w-8 text-fuchsia-300" /></span>
             <div>
-              <div className="mb-3">
-                <LyricsDnaStatusBadge active={Boolean(lyricsDnaHref)} href={lyricsDnaHref} />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                {lyricsDnaHref ? <LyricsDnaStatusBadge active href={lyricsDnaHref} /> : null}
                 <p className="text-[10px] font-bold uppercase tracking-[.25em] text-muted-foreground">Music release</p>
                 {summary.houseRelease ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.18em] text-cyan-100">
-                    <Gift className="h-2.5 w-2.5" /> House release · free
+                  <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.16em] text-cyan-100">
+                    <Gift className="h-2.5 w-2.5" /> House · free
                   </span>
+                ) : null}
+                {albumHref && albumTitle ? (
+                  <Link
+                    href={albumHref}
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[.16em] text-emerald-100 hover:border-emerald-300/55"
+                  >
+                    <Disc3 className="h-2.5 w-2.5" /> From the album · {albumTitle}
+                  </Link>
                 ) : null}
               </div>
               <h1 className="font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
-              {summary.albumTitle && summary.trackId ? (
-                <Link
-                  href={`/share/${encodeURIComponent(summary.shareId)}`}
-                  className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-400/35 bg-emerald-500/10 p-4 transition hover:border-emerald-300/55 hover:bg-emerald-500/15"
-                >
-                  <Disc3 className="h-9 w-9 shrink-0 text-emerald-300" aria-hidden />
-                  <div className="min-w-0 text-left">
-                    <p className="text-[10px] font-bold uppercase tracking-[.2em] text-emerald-200/90">
-                      From the album
-                    </p>
-                    <p className="text-sm font-bold text-white sm:text-base">
-                      {summary.artist.name}&rsquo;s &ldquo;{summary.albumTitle}&rdquo;
-                    </p>
-                    <p className="text-xs text-muted-foreground">See all tracks on the album hub</p>
-                  </div>
-                </Link>
-              ) : null}
               <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p>
             </div>
           </div>
-          <MusicDiscoveryTags metadata={summary.metadata} soundAsText className="mb-5" />
+          <MusicDiscoveryTags metadata={summary.metadata} soundAsText hideAlbum={Boolean(albumHref && albumTitle)} className="mb-5" />
           {summary.ownerControls ? (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2">
               <span className="font-code text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -269,7 +260,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             </div>
           ) : null}
           {canPlayCurrentRelease ? (
-            <DropListenPanel shareId={summary.shareId} trackId={summary.trackId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio houseRelease={summary.houseRelease} source="direct" presentation="song" songMetadata={summary.metadata} firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} />
+            <DropListenPanel shareId={summary.shareId} trackId={summary.trackId} title={summary.title} artistName={summary.artist.name} ownerId={summary.ownerId} price={summary.price} hasAudio houseRelease={summary.houseRelease} source="direct" presentation="song" songMetadata={summary.metadata} firstPressRank={viewer?.firstPressRank} onPlaybackStateChange={setPlayback} pressing={summary.artist.pressing} albumTitle={albumTitle} albumHref={albumHref} />
           ) : (
             <div className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] px-4 py-4">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-200">Original release offline</p>
@@ -288,6 +279,8 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               trackId={summary.scope === 'track' ? summary.trackId : undefined}
               ownerName={summary.artist.name}
               ownerSlug={summary.artist.slug}
+              albumTitle={albumTitle}
+              albumShareId={summary.albumShareId}
             />
           </div>
         </section>

@@ -22,6 +22,7 @@ import {
   canManageReleaseShare,
   houseReleaseVaultRef,
   isHouseReleaseCreditedToUser,
+  isHouseReleaseVisibleOnHome,
   toLinkedHouseRelease,
 } from '../src/lib/house-artist-link';
 
@@ -126,9 +127,21 @@ assert.equal(
   'song-1',
 );
 assert.equal(
-  isHouseReleaseCreditedToUser({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'other'),
+  isHouseReleaseVisibleOnHome('abc', ['ABC']),
   false,
+  'On your page must treat share ids as case-insensitive',
 );
+assert.equal(isHouseReleaseVisibleOnHome('abc', ['OTHER']), true);
+
+const pressDesk = readFileSync(new URL('../src/components/profile/press-desk.tsx', import.meta.url), 'utf8');
+const catalogUi = readFileSync(new URL('../src/components/vault/release-catalog.tsx', import.meta.url), 'utf8');
+const houseHomeEditor = readFileSync(new URL('../src/components/profile/house-release-home-editor.tsx', import.meta.url), 'utf8');
+assert.match(pressDesk, /id="artist-home-house-releases"/, 'Module Deck must include House release On your page switches');
+assert.match(pressDesk, /HouseReleaseHomeEditor/, 'Module Deck must render the House home editor');
+assert.match(catalogUi, /setHouseReleaseOnHome/, 'Release Catalog On your page must persist the same Artist Home field');
+assert.match(houseHomeEditor, /setHouseReleaseOnHome/, 'Module Deck On your page must persist the same Artist Home field');
+assert.match(houseHomeEditor, /On your page/, 'Module Deck labels must match Release Catalog');
+assert.match(houseHomeEditor, /Hidden on page/, 'Module Deck labels must match Release Catalog');
 assert.equal(
   toLinkedHouseRelease('HOUSE-ALBUM', {
     houseRelease: true,
@@ -305,7 +318,7 @@ const dropSocial = readFileSync(new URL('../src/components/drop-social-panel.tsx
 assert.match(pressedSong, /audioForPlay\(share, trackId\)/, 'album share posts must resolve playable album audio');
 assert.match(pressedSong, /albumLevel \? \{ scope: 'album'/, 'album posts must keep album scope for the feed player');
 assert.match(embedPlayer, /song\.scope === 'album'/, 'feed album posts must open the album page');
-assert.match(dropSocial, /isAlbum \|\| !hasAudio \? `\/share\/\$\{shareId\}`/, 'album Reverbs must attach the album page');
+assert.match(dropSocial, /dropPromotePath\(\{ shareId, isAlbum, hasAudio, trackId \}\)/, 'album Reverbs must attach the album page');
 assert.match(dropSocial, /VoiceNoteComposer/, 'Quote Reverb must include rec');
 assert.match(dropSocial, /ImageAttachComposer/, 'Quote Reverb must include camera and photo');
 assert.match(dropSocial, /EmojiPickerButton/, 'Quote Reverb must include emoji');
@@ -318,5 +331,24 @@ assert.match(housePingLib, /houseReleasePingEventId/);
 assert.match(housePingRoute, /houseReleasePingEventId\(shareId\)/);
 assert.match(housePingRoute, /pingedAt:\s*now/);
 assert.doesNotMatch(housePingRoute, /if \(!existingPing\.exists\)/, 'House pings must refresh on every admin send');
+
+const albumHrefLib = readFileSync(new URL('../src/lib/pressed-song.ts', import.meta.url), 'utf8');
+const discoveryTags = readFileSync(new URL('../src/components/music-discovery-tags.tsx', import.meta.url), 'utf8');
+const foldsRoute = readFileSync(new URL('../src/app/api/folds/route.ts', import.meta.url), 'utf8');
+const profileSongsRoute = readFileSync(new URL('../src/app/api/profile/[slug]/songs/route.ts', import.meta.url), 'utf8');
+const dropShelf = readFileSync(new URL('../src/components/profile/profile-modules.tsx', import.meta.url), 'utf8');
+const profileTabs = readFileSync(new URL('../src/components/profile/profile-section-tabs.tsx', import.meta.url), 'utf8');
+assert.match(albumHrefLib, /export function albumHubHref/);
+assert.doesNotMatch(albumHrefLib, /discover\?/);
+assert.match(discoveryTags, /\/share\/\$\{encodeURIComponent\(metadata\.albumShareId\)\}/, 'album chips must open the album hub');
+assert.match(discoveryTags, /: !hideAlbum && metadata\.albumTitle \?/, 'album without a hub id is a label, not a Discover search');
+assert.doesNotMatch(foldsRoute, /Slow down — too many messages this hour/, 'fold-pass must not have an hourly send cap');
+assert.doesNotMatch(foldsRoute, /fold-pass/, 'fold-pass rate limit key must be gone');
+assert.match(firestoreRules, /match \/dropReverbs\/\{shareId\}/, 'song Reverb pointers need dropReverbs rules');
+assert.match(profileSongsRoute, /where\('houseRelease', '==', true\)/, 'Releases tab must include linked House shares');
+assert.match(profileSongsRoute, /hiddenHouseReleaseShareIds/, 'Releases tab must honor hidden House rows');
+assert.match(profileSongsRoute, /flattenHouseAlbum/, 'live House albums must flatten into playable rows');
+assert.match(dropShelf, /No live Lyrics DNA Drops yet/, 'DNA shelf must stay visible when empty');
+assert.match(profileTabs, /DNA Drops/, 'Artist Home must expose a DNA Drops tab');
 
 console.log('Release management verification passed.');

@@ -31,10 +31,12 @@ import {
   type DropListenMilestone,
   type DropListenSource,
 } from '@/lib/drop-listen-analytics';
-import { pressedSongHref } from '@/lib/pressed-song';
+import { albumHubHref, pressedSongHref } from '@/lib/pressed-song';
 import { cn } from '@/lib/utils';
 import { useDropCart } from '@/context/drop-cart-context';
+import { LivingPressField } from '@/components/profile/living-press-field';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
 import { studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 
@@ -83,6 +85,9 @@ export function DropListenPanel({
   houseRelease = false,
   songMetadata,
   purchaseOnly = false,
+  pressing,
+  albumTitle,
+  albumHref,
 }: {
   shareId: string;
   title: string;
@@ -116,12 +121,18 @@ export function DropListenPanel({
   songMetadata?: PublicMusicMetadata;
   /** Render entitlement and album checkout controls without a second inline audio player. */
   purchaseOnly?: boolean;
+  pressing?: import('@/lib/profile/pressing').PressingConfig;
+  albumTitle?: string;
+  albumHref?: string;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const cart = useDropCart();
   const { volume, setVolume, toggleMute } = useAudioVolume();
+  const { chrome, pressingStyle } = useDropArtistChrome(shareId, trackId, pressing ? { pressing } : undefined);
+  const resolvedAlbumTitle = albumTitle || chrome?.albumTitle || songMetadata?.albumTitle;
+  const resolvedAlbumHref = albumHref || albumHubHref(chrome?.albumShareId || songMetadata?.albumShareId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -476,19 +487,29 @@ export function DropListenPanel({
     : timelineEndSec;
 
   const presentationClass = presentation === 'song'
-      ? 'space-y-3 rounded-2xl border border-fuchsia-300/45 bg-black/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
+      ? 'relative overflow-hidden space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.45))] bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
       : presentation === 'playlist'
-        ? 'space-y-3 rounded-2xl border border-fuchsia-400/40 bg-gradient-to-r from-fuchsia-500/15 via-black/65 to-blue-500/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07),0_14px_38px_rgba(0,0,0,.28)] transition-colors hover:border-fuchsia-300/60 sm:p-5'
+        ? 'relative overflow-hidden space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/35 p-4 sm:p-5'
       : compactPresentation
-        ? 'min-w-0 space-y-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-2.5'
-        : 'min-w-0 rounded-xl border border-fuchsia-500/40 bg-fuchsia-500/10 p-3 space-y-3 sm:p-4';
+        ? 'relative overflow-hidden min-w-0 space-y-2 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-2.5'
+        : 'relative overflow-hidden min-w-0 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-3 space-y-3 sm:p-4';
 
   return (
-    <div className={cn(
+    <div
+      className={cn(
       presentationClass,
       firstPressEdition &&
         'relative overflow-hidden border-amber-300/70 bg-[linear-gradient(128deg,rgba(40,25,3,.96),rgba(8,11,18,.97)_48%,rgba(73,46,4,.86))] shadow-[inset_0_1px_0_rgba(255,244,185,.35),0_0_0_1px_rgba(251,191,36,.16),0_18px_60px_rgba(245,158,11,.24)]'
-    )}>
+    )}
+      style={pressingStyle as React.CSSProperties | undefined}
+    >
+      {chrome?.pressing && !firstPressEdition ? (
+        <>
+          <LivingPressField config={chrome.pressing} compact className="[&>p]:hidden" />
+          <div className="absolute inset-0 bg-black/45" aria-hidden />
+        </>
+      ) : null}
+      <div className="relative z-10 space-y-3">
       {firstPressEdition ? (
         <div className="relative mb-1 flex items-center justify-between gap-3 rounded-xl border border-amber-200/25 bg-gradient-to-r from-amber-400/20 via-yellow-100/10 to-amber-500/15 px-3 py-2 text-amber-100">
           <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em]">
@@ -500,7 +521,7 @@ export function DropListenPanel({
         </div>
       ) : null}
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <p className={cn('text-[10px] font-bold uppercase tracking-widest', firstPressEdition ? 'text-amber-200' : 'text-fuchsia-200')}>
+        <p className={cn('text-[10px] font-bold uppercase tracking-widest', firstPressEdition ? 'text-amber-200' : 'text-white/80 [text-shadow:0_1px_8px_rgba(0,0,0,.7)]')}>
           {purchaseOnly
             ? 'Album access'
             : isHouseRelease
@@ -560,7 +581,7 @@ export function DropListenPanel({
               href={trackDetailsHref}
               className={cn(
                 'block truncate text-sm font-headline font-bold uppercase transition-colors hover:underline',
-                firstPressEdition ? 'text-amber-50 hover:text-amber-200' : 'hover:text-fuchsia-300'
+                firstPressEdition ? 'text-amber-50 hover:text-amber-200' : 'text-white [text-shadow:0_1px_8px_rgba(0,0,0,.7)] hover:text-white'
               )}
             >
               {title}
@@ -573,7 +594,7 @@ export function DropListenPanel({
                   <Link
                     href={artistAttribution.href}
                     className={cn(
-                      'min-w-0 truncate transition-colors hover:text-fuchsia-300 hover:underline',
+                      'min-w-0 truncate transition-colors hover:text-white hover:underline',
                       studioNameClass(artistAttribution.studioChrome)
                     )}
                   >
@@ -585,6 +606,14 @@ export function DropListenPanel({
                   </span>
                 )}
               </p>
+            ) : null}
+            {resolvedAlbumTitle && resolvedAlbumHref ? (
+              <Link
+                href={resolvedAlbumHref}
+                className="mt-0.5 block truncate text-[10px] font-medium text-white/75 [text-shadow:0_1px_8px_rgba(0,0,0,.7)] hover:text-white hover:underline"
+              >
+                {resolvedAlbumTitle}
+              </Link>
             ) : null}
             <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
               {previewCapped
@@ -762,7 +791,7 @@ export function DropListenPanel({
           )}
           <div className={cn('grid gap-2', compactPresentation ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')}>
           <Button
-            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300' : 'h-9 min-w-0 px-3 text-xs font-bold uppercase bg-fuchsia-400 text-black hover:bg-fuchsia-300'}
+            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase bg-[var(--ph-accent,#e879f9)] text-black hover:brightness-110' : 'h-9 min-w-0 px-3 text-xs font-bold uppercase bg-[var(--ph-accent,#e879f9)] text-black hover:brightness-110'}
             disabled={busy || (Boolean(user) && !authReady)}
             onClick={buy}
           >
@@ -778,7 +807,7 @@ export function DropListenPanel({
           <Button
             type="button"
             variant="outline"
-            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase' : 'h-9 min-w-0 border-fuchsia-300/40 bg-fuchsia-300/5 px-3 text-xs font-bold uppercase text-fuchsia-100 hover:bg-fuchsia-300/15'}
+            className={compactPresentation ? 'h-8 min-w-0 px-2 text-[10px] font-bold uppercase' : 'h-9 min-w-0 border-[var(--ph-accent,#e879f9)]/40 bg-[var(--ph-accent,#e879f9)]/10 px-3 text-xs font-bold uppercase text-white hover:bg-[var(--ph-accent,#e879f9)]/20'}
             onClick={addToCart}
           >
             {cart.hasItem(shareId, effectiveTrackId) ? <Check className="mr-1.5 h-4 w-4" /> : <ShoppingCart className="mr-1.5 h-4 w-4" />}
@@ -790,6 +819,7 @@ export function DropListenPanel({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

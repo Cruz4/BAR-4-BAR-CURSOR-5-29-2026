@@ -9,17 +9,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Compass, Dna, Flame, Gift, Globe, Music, PenLine, Repeat2, Settings2, Star, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { CopyProfileLinkButton } from '@/components/profile/copy-profile-link-button';
-import { FirstDropsStorefront, LiveDnaDropsGroupedList, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
+import { FirstDropsStorefront, lyricDnaItems, musicReleaseItems } from '@/components/profile/live-dna-drop-card';
+import { isHouseReleaseVisibleOnHome } from '@/lib/house-artist-link';
 import { AlbumCoverCollage } from '@/components/gamification/album-cover-collage';
 import { ProfileInitialsStar } from '@/components/profile/profile-initials-star';
 import { rankBadgeClass, rankIdFromLabel } from '@/lib/gamification/badge-styles';
@@ -64,7 +59,7 @@ import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbo
 import { ArtistHomeGuestClaim } from '@/components/profile/artist-home-guest-claim';
 import { VesperfoldMark } from '@/components/profile/vesperfold-mark';
 import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
-import { profileHref, profileReverbsHref } from '@/lib/profile/profile-slug';
+import { profileHref, profileDnaHref, profileReverbsHref } from '@/lib/profile/profile-slug';
 import { buildLoginUrl } from '@/lib/login-links';
 import { useLockFeature } from '@/hooks/use-lock-feature';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
@@ -139,7 +134,6 @@ export function ArtistHome({
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
-  const [dropsOpen, setDropsOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
   const [tokens, setTokens] = useState<PressingTokens>(() => pressTokens(config.theme));
@@ -178,9 +172,9 @@ export function ArtistHome({
   const rankLabel =
     savedRankLabel || STUDIO_RANKS.find((rank) => rank.id === rankId)?.label || computedRank.label;
   const liveDnaDrops = useMemo(() => {
-    const hidden = new Set(config.featured.hiddenHouseReleaseShareIds || []);
+    const hidden = config.featured.hiddenHouseReleaseShareIds;
     return (profile.liveDnaDrops || []).filter(
-      (drop) => !(drop.houseRelease && hidden.has(drop.shareId))
+      (drop) => !(drop.houseRelease && !isHouseReleaseVisibleOnHome(drop.shareId, hidden))
     );
   }, [profile.liveDnaDrops, config.featured.hiddenHouseReleaseShareIds]);
   const saleDrops = useMemo(
@@ -188,7 +182,10 @@ export function ArtistHome({
     [firstDropsOn, liveDnaDrops]
   );
   const dnaDrops = useMemo(() => lyricDnaItems(liveDnaDrops), [liveDnaDrops]);
-  const houseDrops = useMemo(() => saleDrops.filter((drop) => drop.houseRelease), [saleDrops]);
+  const houseDrops = useMemo(
+    () => musicReleaseItems(liveDnaDrops).filter((drop) => drop.houseRelease),
+    [liveDnaDrops]
+  );
   const artistSaleDrops = useMemo(() => saleDrops.filter((drop) => !drop.houseRelease), [saleDrops]);
 
   const useCustomPhoto =
@@ -247,12 +244,10 @@ export function ArtistHome({
   }, [config.modules, lockOn]);
 
   const showLiveDnaDrops = useMemo(
-    () =>
-      dnaDrops.length > 0 &&
-      config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
-    [config.modules, dnaDrops.length]
+    () => config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
+    [config.modules]
   );
-  const showFirstDropsStorefront = saleDrops.length > 0;
+  const showFirstDropsStorefront = artistSaleDrops.length > 0 || houseDrops.length > 0;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -591,6 +586,7 @@ export function ArtistHome({
                 </Button>
               ) : null}
               {showLiveDnaDrops && (() => {
+                const dnaTabHref = profileDnaHref(profile.slug) || `/${profile.slug}/dna`;
                 const albumCount = dnaDrops.filter((d) => d.type === 'album').length;
                 const trackCount = dnaDrops.filter((d) => d.type === 'track').length;
                 if (dnaDrops.length === 1) {
@@ -614,24 +610,27 @@ export function ArtistHome({
                   );
                 }
                 const label =
-                  albumCount > 0 && trackCount > 0
+                  dnaDrops.length === 0
+                    ? 'DNA Drops'
+                    : albumCount > 0 && trackCount > 0
                       ? `${albumCount} album DNA · ${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`
                     : albumCount > 0
                       ? `${albumCount} album DNA live`
                       : `${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`;
                 return (
                   <Button
-                    type="button"
+                    asChild
                     variant="outline"
                     size="sm"
                     className={cn(
                       'h-8 max-w-full gap-1.5 border-[var(--ph-border)] bg-[var(--ph-plate)] px-3 font-bold uppercase tracking-wider text-[var(--ph-accent)] hover:border-[var(--ph-accent)]',
                       showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
                     )}
-                    onClick={() => setDropsOpen(true)}
                   >
-                    <Dna className="h-3.5 w-3.5 shrink-0" />
-                    <span className="min-w-0 truncate">{label}</span>
+                    <Link href={dnaTabHref} className="inline-flex max-w-full items-center gap-1.5">
+                      <Dna className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 truncate">{label}</span>
+                    </Link>
                   </Button>
                 );
               })()}
@@ -908,23 +907,6 @@ export function ArtistHome({
           )
         ) : null}
       </ProfileMediaLightbox>
-
-      <Dialog open={dropsOpen && showLiveDnaDrops} onOpenChange={setDropsOpen}>
-        <DialogContent className="max-w-md border-[var(--ph-border)] bg-[hsl(216_28%_7%)] text-[var(--ph-text,#fff)]">
-          <DialogHeader>
-            <DialogTitle className="font-headline text-xl uppercase tracking-tight">
-              {showFirstDropsStorefront ? 'Lyrics DNA Drops' : 'Live Lyrics DNA Drops'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto pr-1">
-            <LiveDnaDropsGroupedList
-              drops={dnaDrops}
-              layout="dialog"
-              onNavigate={() => setDropsOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {isOwner && profile.userId && !previewMode ? (
         <DoorKnockHomeListener
