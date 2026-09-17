@@ -423,36 +423,20 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const peerName = peer?.name || 'Artist';
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
+    <div className="relative flex h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] w-full flex-col overflow-hidden">
       <InboxPageAtmosphere variant="msgs" />
-      <div
-        className="pointer-events-none absolute inset-0 z-[1]"
-        aria-hidden
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 58% at 50% 42%, rgba(12,9,6,0.22), transparent 72%)',
-        }}
-      />
-      <div className="relative z-10 mx-auto flex h-[calc(100dvh-3.5rem)] w-full min-w-0 max-w-4xl flex-col overflow-hidden lg:max-w-5xl">
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header
-        className="flex items-center gap-2 px-2 py-2"
-        style={{
-          background: 'linear-gradient(180deg, rgba(12,9,6,0.72), rgba(12,9,6,0.08) 86%, transparent)',
-          maskImage: 'linear-gradient(180deg, black 58%, transparent)',
-          WebkitMaskImage: 'linear-gradient(180deg, black 58%, transparent)',
-        }}
-      >
+      <div className="relative z-10 mx-auto flex h-full min-h-0 w-full min-w-0 max-w-4xl flex-col overflow-hidden px-4 py-4 sm:px-6 sm:py-5 lg:max-w-5xl">
+      <header className="mb-3 flex shrink-0 items-center gap-2">
         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-100" asChild>
           <Link href="/msgs" aria-label="Back to Msgs">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-headline text-lg uppercase leading-none tracking-tight">
+          <p className="truncate font-headline text-2xl uppercase leading-none tracking-tight text-amber-50 sm:text-3xl">
             {peer?.name || 'Artist'}
           </p>
-          <p className="mt-1 font-code text-[9px] font-bold uppercase tracking-[0.2em] text-amber-200/60">
+          <p className="mt-1 font-code text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/65">
             {fold.status === 'declined'
               ? 'Closed'
               : sealedForMe
@@ -538,13 +522,12 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         </DropdownMenu>
       </header>
 
+      <article
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden border border-amber-500/15 bg-[#14110d]/75 shadow-[inset_0_0_40px_rgba(251,191,36,0.04)] backdrop-blur-sm"
+      >
       <div
         ref={scrollerRef}
-        className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-6 sm:px-6"
-        style={{
-          background:
-            'linear-gradient(180deg, transparent 0%, rgba(12,9,6,0.06) 35%, rgba(12,9,6,0.06) 65%, transparent 100%)',
-        }}
+        className="relative min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-5"
       >
         {sealedForMe ? (
           <div className="mb-6 border border-amber-400/30 bg-amber-500/10 px-4 py-3">
@@ -618,10 +601,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
         </div>
       ) : (
         <form
-          className="px-3 pb-3 pt-1"
-          style={{
-            background: 'linear-gradient(0deg, rgba(12,9,6,0.82), rgba(12,9,6,0.22) 70%, transparent)',
-          }}
+          className="shrink-0 border-t border-amber-500/15 bg-[#14110d]/90 px-3 pb-3 pt-2"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -763,7 +743,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           </div>
         </form>
       )}
-      </div>
+      </article>
       </div>
     </div>
   );

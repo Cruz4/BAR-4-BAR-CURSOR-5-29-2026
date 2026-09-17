@@ -147,6 +147,7 @@ import {
   vaultLiveFilterLabels,
   type LooseTrackFilter,
 } from '@/lib/track-live-flags';
+import { VaultSectionHeader } from '@/components/vault/vault-section-header';
 import { DowngradeTrackPickerDialog } from '@/components/downgrade-track-picker-dialog';
 import { AddBlankSheetsDialog } from '@/components/add-blank-sheets-dialog';
 import { FirstSongHero } from '@/components/first-song-hero';
@@ -330,6 +331,8 @@ function FreeVisitorVault({
   onDeleteTrack,
   vaultFilter,
   onClearVaultFilter,
+  setVaultFilter,
+  unassignedTracks,
   unassignedTrackCount,
 }: {
   sortedLooseTracks: Track[];
@@ -344,6 +347,8 @@ function FreeVisitorVault({
   onDeleteTrack: (track: Track) => void;
   vaultFilter: LooseTrackFilter;
   onClearVaultFilter: () => void;
+  setVaultFilter: (value: LooseTrackFilter) => void;
+  unassignedTracks: Track[];
   unassignedTrackCount: number;
 }) {
   const { toast } = useToast();
@@ -364,20 +369,36 @@ function FreeVisitorVault({
       />
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4 border-l-4 border-sky-500 pl-6" data-tour="vault-loose-tracks">
-          <Link
-            href="/albums/unassigned"
-            className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
-          >
-            <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
-            Loose Tracks
-          </Link>
-          <Badge variant="outline" className="border-sky-500/30 text-sky-400 font-mono">
-            {hasExtraTracks
-              ? `${totalTrackCount} saved · ${editableLooseCount} editable here`
-              : `${totalTrackCount}/${FREE_TRACK_LIMIT}`}
-          </Badge>
-        </div>
+        <VaultSectionHeader
+          dataTour="vault-loose-tracks"
+          borderClass="border-sky-500"
+          scope="loose"
+          looseTracks={unassignedTracks}
+          albums={realAlbums}
+          vaultFilter={vaultFilter}
+          onFilter={setVaultFilter}
+          title={
+            <Link
+              href="/albums/unassigned"
+              className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+            >
+              <CassetteTape className="text-sky-500 h-8 w-8 shrink-0" />
+              Loose Tracks
+            </Link>
+          }
+          subtitle={
+            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+              Unassigned singles &amp; ideas
+            </p>
+          }
+          countLabel={
+            <Badge variant="outline" className="w-full border-sky-500/30 text-sky-400 font-mono justify-center tabular-nums">
+              {hasExtraTracks
+                ? `${totalTrackCount} saved · ${editableLooseCount} editable here`
+                : `${totalTrackCount}/${FREE_TRACK_LIMIT}`}
+            </Badge>
+          }
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedLooseTracks.length > 0 ? (
           sortedLooseTracks.map((track) => {
@@ -493,12 +514,29 @@ function FreeVisitorVault({
       </div>
 
       <div className="space-y-10" data-tour="vault-collection">
-        <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
-          <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
-            <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
-          </h2>
-          <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono">{realAlbums.length}/{FREE_ALBUM_LIMIT}</Badge>
-        </div>
+        <VaultSectionHeader
+          borderClass="border-emerald-500"
+          scope="albums"
+          looseTracks={unassignedTracks}
+          albums={realAlbums}
+          vaultFilter={vaultFilter}
+          onFilter={setVaultFilter}
+          title={
+            <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
+              <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
+            </h2>
+          }
+          subtitle={
+            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+              Concept Album DNA Architectures
+            </p>
+          }
+          countLabel={
+            <Badge variant="outline" className="w-full border-emerald-500/30 text-emerald-400 font-mono justify-center tabular-nums">
+              {realAlbums.length}/{FREE_ALBUM_LIMIT}
+            </Badge>
+          }
+        />
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
           {filteredAlbums.length > 0 ? (
           filteredAlbums.map((albumItem) => (
@@ -1266,45 +1304,56 @@ export function AlbumList() {
                   onDeleteTrack={setTrackToDelete}
                   vaultFilter={vaultFilter}
                   onClearVaultFilter={clearVaultFilter}
+                  setVaultFilter={setVaultFilter}
+                  unassignedTracks={unassignedTracks}
                   unassignedTrackCount={unassignedTracks.length}
                 />
             ) : (
                 <div className="space-y-12">
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div
-                              data-tour="vault-loose-tracks"
-                              className="flex items-center justify-between border-l-4 border-primary pl-6"
-                            >
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <Link
-                                      href="/albums/unassigned"
-                                      className="text-2xl sm:text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
+                            <VaultSectionHeader
+                              dataTour="vault-loose-tracks"
+                              borderClass="border-primary"
+                              scope="loose"
+                              looseTracks={unassignedTracks}
+                              albums={realAlbums}
+                              vaultFilter={vaultFilter}
+                              onFilter={setVaultFilter}
+                              title={
+                                <div className="flex items-center gap-3">
+                                  <Link
+                                    href="/albums/unassigned"
+                                    className="text-2xl sm:text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3 hover:text-primary transition-colors"
+                                  >
+                                    <CassetteTape className="text-primary h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
+                                    Loose Tracks
+                                  </Link>
+                                  {unassignedTracks.length > 0 ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-10 w-10 min-h-10 min-w-10 rounded-full hover:bg-muted/80"
+                                      onClick={() => setLooseTracksMinimized(!looseTracksMinimized)}
+                                      aria-label={looseTracksMinimized ? 'Expand loose tracks' : 'Collapse loose tracks'}
                                     >
-                                      <CassetteTape className="text-primary h-7 w-7 sm:h-8 sm:w-8 shrink-0" />
-                                      Loose Tracks
-                                    </Link>
-                                    {unassignedTracks.length > 0 && (
-                                      <>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-10 w-10 min-h-10 min-w-10 rounded-full hover:bg-muted/80"
-                                          onClick={() => setLooseTracksMinimized(!looseTracksMinimized)}
-                                          aria-label={looseTracksMinimized ? 'Expand loose tracks' : 'Collapse loose tracks'}
-                                        >
-                                            {looseTracksMinimized ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
-                                        </Button>
-                                        <p className="hidden sm:block text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Unassigned Singles & Ideas</p>
-                                      </>
-                                    )}
-                                    {unassignedTracks.length === 0 && (
-                                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Tap + to capture a single</p>
-                                    )}
+                                      {looseTracksMinimized ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+                                    </Button>
+                                  ) : null}
                                 </div>
-                                <Badge variant="outline" className="border-primary/20 text-primary font-mono shrink-0">
+                              }
+                              subtitle={
+                                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                                  {unassignedTracks.length === 0
+                                    ? 'Tap + to capture a single'
+                                    : 'Unassigned singles & ideas'}
+                                </p>
+                              }
+                              countLabel={
+                                <Badge variant="outline" className="w-full border-primary/20 text-primary font-mono justify-center tabular-nums">
                                   {vaultFilter !== 'all' ? `${sortedLooseTracks.length}/${unassignedTracks.length}` : unassignedTracks.length}
                                 </Badge>
-                            </div>
+                              }
+                            />
                             <AnimatePresence>
                                 {(!looseTracksMinimized || unassignedTracks.length === 0) && (
                                     <motion.div 
@@ -1378,19 +1427,35 @@ export function AlbumList() {
                     <CollabSheetsVaultSection />
 
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200" data-tour="vault-collection">
-                        <div className="flex items-center gap-4 border-l-4 border-emerald-500 pl-6">
-                            <div>
-                                <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
-                                    <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
-                                </h2>
-                                <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Concept Album DNA Architectures</p>
-                            </div>
-                            {(filteredAlbums.length > 0 || vaultFilter !== 'all') && (
-                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 font-mono ml-auto">
+                        <VaultSectionHeader
+                          borderClass="border-emerald-500"
+                          scope="albums"
+                          looseTracks={unassignedTracks}
+                          albums={realAlbums}
+                          vaultFilter={vaultFilter}
+                          onFilter={setVaultFilter}
+                          title={
+                            <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
+                              <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
+                            </h2>
+                          }
+                          subtitle={
+                            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                              Concept Album DNA Architectures
+                            </p>
+                          }
+                          countLabel={
+                            (filteredAlbums.length > 0 || vaultFilter !== 'all') ? (
+                              <Badge variant="outline" className="w-full border-emerald-500/30 text-emerald-400 font-mono justify-center tabular-nums">
                                 {vaultFilter !== 'all' ? `${filteredAlbums.length}/${realAlbums.length}` : filteredAlbums.length}
                               </Badge>
-                            )}
-                        </div>
+                            ) : (
+                              <Badge variant="outline" className="w-full border-emerald-500/30 text-emerald-400/50 font-mono justify-center tabular-nums">
+                                0
+                              </Badge>
+                            )
+                          }
+                        />
                         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-x-12 gap-y-12 px-2 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredAlbums.length > 0 ? (
                             filteredAlbums.map((album) => (

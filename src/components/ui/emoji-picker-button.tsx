@@ -42,6 +42,8 @@ type EmojiPickerButtonProps = {
   className?: string;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** When false, keep placement fixed so the panel does not flip over the composer. */
+  avoidCollisions?: boolean;
 };
 
 function EmojiGrid({
@@ -76,9 +78,12 @@ export function EmojiPickerButton({
   disabled = false,
   compact = false,
   className,
-  align = 'end',
-  side = 'top',
+  align,
+  side,
+  avoidCollisions = false,
 }: EmojiPickerButtonProps) {
+  const resolvedSide = side ?? (compact ? 'left' : 'top');
+  const resolvedAlign = align ?? (compact ? 'start' : 'end');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState<string[]>([]);
@@ -131,11 +136,13 @@ export function EmojiPickerButton({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        align={align}
-        side={side}
+        align={resolvedAlign}
+        side={resolvedSide}
+        sideOffset={8}
+        avoidCollisions={avoidCollisions}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onFocusOutside={(e) => e.preventDefault()}
-        className="w-[min(18rem,calc(100vw-1.5rem))] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl"
+        className="w-[min(18rem,calc(100vw-1.5rem))] max-h-[min(16rem,42vh)] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl"
       >
         <Input
           value={query}
@@ -145,7 +152,7 @@ export function EmojiPickerButton({
           aria-label="Search emoji"
         />
         <div
-          className="max-h-64 overflow-y-auto overscroll-contain pr-1"
+          className="max-h-[min(14rem,36vh)] overflow-y-auto overscroll-contain pr-1"
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="space-y-2.5 pr-1">

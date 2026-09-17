@@ -1,7 +1,7 @@
 import type { Track, Album } from '@/lib/types';
 import { hasActiveDnaDrop } from '@/lib/dna-drop';
 import { normalizeDropAudio } from '@/lib/drop-commerce';
-import { releaseStatusOf } from '@/lib/release-management';
+import { hasLiveDnaDrop, releaseStatusOf } from '@/lib/release-management';
 
 export function hasLiveCollabSheet(track: Pick<Track, 'collabSheetId'>): boolean {
   return Boolean(track.collabSheetId);
@@ -56,7 +56,7 @@ export const vaultLiveFilterLabels: Record<LooseTrackFilter, string> = {
 export function matchesLooseTrackFilter(track: Track, filter: LooseTrackFilter): boolean {
   if (filter === 'all') return true;
   if (filter === 'live') return trackHasLiveFlags(track);
-  if (filter === 'dna') return hasActiveDnaDrop(track.shareId);
+  if (filter === 'dna') return hasLiveDnaDrop(track);
   if (filter === 'first-drop') return hasLiveFirstDrop(track);
   if (filter === 'collab') return hasLiveCollabSheet(track);
   if (filter === 'complete') return track.status === 'complete';

@@ -106,6 +106,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isInsightsPage = pathname === '/insights';
   const isSupportersPage = pathname === '/supporters';
   const isMsgsPage = pathname === '/msgs' || pathname.startsWith('/msgs/');
+  const isMsgsThreadPage = pathname.startsWith('/msgs/') && pathname !== '/msgs';
   const isFriendsPage = pathname === '/friends';
   const isActivityPage = pathname === '/activity' || pathname.startsWith('/activity');
   const isAlbumPage = pathname.startsWith('/albums/');
@@ -128,7 +129,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   // Public home / login / profile / share need document scroll — overflow-hidden
   // traps the Pressing landing and makes the brand mark feel dead.
   const allowPageScroll =
-    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isPublicPostPage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || isMsgsPage || isFriendsPage || isActivityPage || isAlbumPage;
+    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isPublicPostPage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || (isMsgsPage && !isMsgsThreadPage) || isFriendsPage || isActivityPage || isAlbumPage;
 
   return (
     <InviteGateGuard>
