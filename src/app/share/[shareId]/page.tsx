@@ -84,6 +84,8 @@ import { manageRelease } from '@/lib/release-management-client';
 import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { isProOrTrial } from '@/lib/subscription';
+import { useOptionalDropPlayer } from '@/context/drop-player-context';
 
 function SharedProjectPageInner() {
     const params = useParams();
@@ -93,6 +95,8 @@ function SharedProjectPageInner() {
     const { toast } = useToast();
     const { user, authReady, loading: authBooting } = useAuth();
     const { mergeData, isCloudSyncActive, getAlbumById, albums, revokeDNA } = useContext(DataContext);
+    const dropPlayer = useOptionalDropPlayer();
+    const viewerIsPro = isProOrTrial(user);
 
     const [share, setShare] = useState<ProjectShare | null>(null);
     const [loading, setLoading] = useState(true);
@@ -135,6 +139,7 @@ function SharedProjectPageInner() {
                         const payload = (await publicRes.json()) as {
                             share: ProjectShare;
                             visibility?: { dnaLive?: boolean; releaseLive?: boolean };
+                            albumHubShareId?: string;
                         };
                         data = payload.share;
                         visibilityFromPublicApi = payload.visibility ?? null;
@@ -199,11 +204,21 @@ function SharedProjectPageInner() {
                     }
                 }
                 const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
+                const snapshotTrackIdEarly = (searchParams.get(DNA_DROP_SNAPSHOT_TRACK_PARAM) || '').trim();
                 const isPublic = Boolean(
                     visibility?.dnaLive || visibility?.releaseLive || (data.type === 'album' && isOwner)
                 );
                 const musicPublic = Boolean(visibility?.releaseLive);
-                const canViewDna = isOwner || isCloudSyncActive;
+                const canViewDna = isOwner || viewerIsPro;
+                if (data.type === 'album' && !snapshotTrackIdEarly && musicPublic && !isOwner) {
+                    const releaseHubId = releaseShareIdFromShareDocument(
+                        data as unknown as Record<string, unknown>
+                    );
+                    if (releaseHubId && releaseHubId.toUpperCase() !== normalizedShareId) {
+                        router.replace(`/share/${encodeURIComponent(releaseHubId)}`);
+                        return;
+                    }
+                }
                 if (data.type !== 'album' && musicPublic && !visibility?.dnaLive) {
                     router.replace(`/song/${encodeURIComponent(shareId)}`);
                     return;
@@ -238,7 +253,7 @@ function SharedProjectPageInner() {
             }
         };
         void fetchShare();
-    }, [shareId, authBooting, authReady, user, isCloudSyncActive, router]);
+    }, [shareId, authBooting, authReady, user, viewerIsPro, router, searchParams]);
 
     const formattedShareDate = useMemo(() => {
         if (!share?.updatedAt && !share?.createdAt) return 'Recent';
@@ -299,7 +314,7 @@ function SharedProjectPageInner() {
     }, [project, isAlbum]);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
     const canManageShare = Boolean(user && share && canManageReleaseShare(share, user.id));
-    const canViewDnaLyrics = isOwnShare || isCloudSyncActive;
+    const canViewDnaLyrics = isOwnShare || viewerIsPro;
     const isReleaseShare = Boolean(
       project && hasFirstDropAudio && (
         project.releaseShareId === shareId
@@ -312,6 +327,14 @@ function SharedProjectPageInner() {
         if (!trackProject) return null;
         return findTrackInVault(albums, trackProject.id);
     }, [trackProject, albums]);
+
+    useEffect(() => {
+        if (!share || !trackProject || !dropPlayer) return;
+        const trackHasAudio = Boolean(normalizeDropAudio(trackProject.dropAudio));
+        if (!trackHasAudio && dropPlayer.current?.shareId === shareId) {
+            dropPlayer.stop();
+        }
+    }, [share, trackProject, shareId, dropPlayer]);
 
     /** Track art first; else album cover from snapshot context (or vault for older drops). */
     const coverArtSrc = useMemo(() => {
@@ -378,10 +401,10 @@ function SharedProjectPageInner() {
     const handleImportClick = () => {
         if (authBooting) return;
 
-        if (!user || !isCloudSyncActive) {
+        if (!user || !viewerIsPro) {
             router.push(resolveDnaDropImportPath(shareId, {
               signedIn: Boolean(user),
-              isPro: isCloudSyncActive,
+              isPro: viewerIsPro,
             }));
             return;
         }
@@ -396,7 +419,7 @@ function SharedProjectPageInner() {
 
     const handleConfirmImport = async () => {
         if (!share || !project) return;
-        if (!isCloudSyncActive) {
+        if (!viewerIsPro) {
             router.push(DNA_DROP_UPGRADE_PATH);
             return;
         }
@@ -521,7 +544,7 @@ function SharedProjectPageInner() {
         ? hasFirstDropAudio
           ? 'Import lyrics & DNA'
           : 'Sign in to view DNA'
-        : !isCloudSyncActive
+        : !viewerIsPro
           ? 'Upgrade to view DNA'
         : isOwnShare && alreadyInVault
           ? ownerEditLabel
@@ -699,7 +722,7 @@ function SharedProjectPageInner() {
                                   className="text-primary underline underline-offset-2 font-bold"
                                   onClick={() => router.push(resolveDnaDropImportPath(shareId, {
                                     signedIn: Boolean(user),
-                                    isPro: isCloudSyncActive,
+                                    isPro: viewerIsPro,
                                   }))}
                                 >
                                   {user ? 'Upgrade to view & import lyrics' : 'Sign in to check your tier or create an account'}
@@ -715,7 +738,7 @@ function SharedProjectPageInner() {
                                   className="text-primary underline underline-offset-2 font-bold"
                                   onClick={() => router.push(resolveDnaDropImportPath(shareId, {
                                     signedIn: Boolean(user),
-                                    isPro: isCloudSyncActive,
+                                    isPro: viewerIsPro,
                                   }))}
                                 >
                                   {user ? 'Open Studio Tier' : 'Sign in or create an account'}
@@ -782,7 +805,7 @@ function SharedProjectPageInner() {
                       </nav>
                     ) : null}
                     <Suspense fallback={null}>
-                      {viewingAlbumHub && hasFirstDropAudio ? (
+                      {viewingAlbumHub && (hasFirstDropAudio || hubVisibility?.releaseLive) ? (
                         <AlbumReleasePlaylist
                           album={project as DnaDropAlbumPayload}
                           shareId={albumHubShareId}
@@ -1084,7 +1107,7 @@ function SharedProjectPageInner() {
                               className="font-bold uppercase tracking-widest text-[10px]"
                               onClick={() => router.push(resolveDnaDropImportPath(shareId, {
                                 signedIn: Boolean(user),
-                                isPro: isCloudSyncActive,
+                                isPro: viewerIsPro,
                               }))}
                             >
                               {user ? 'Upgrade to view lyrics' : 'Sign in to check tier'}

@@ -25,6 +25,7 @@ import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { dnaDropSnapshotTrackPath, resolveDnaDropHref } from '@/lib/dna-drop-access';
 import { LyricsDnaStatusBadge } from '@/components/song/lyrics-dna-status-badge';
+import { isProOrTrial } from '@/lib/subscription';
 
 async function authorization(): Promise<HeadersInit> {
   const token = await auth.currentUser?.getIdToken();
@@ -52,7 +53,8 @@ function SupporterRow({ supporter, showAmount }: { supporter: PressedSongSupport
 export function PressedSongPageClient({ initial }: { initial: PressedSongSummary }) {
   const router = useRouter();
   const { user, authReady } = useAuth();
-  const { updateTrack, albums, isCloudSyncActive } = useContext(DataContext);
+  const { updateTrack, albums } = useContext(DataContext);
+  const viewerIsPro = isProOrTrial(user);
   const { toast } = useToast();
   const [summary, setSummary] = useState(initial);
   const [savingCredit, setSavingCredit] = useState(false);
@@ -143,14 +145,14 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
     if (summary.trackId && summary.albumTitle && summary.dnaShareId === summary.shareId) {
       return dnaDropSnapshotTrackPath(summary.shareId, summary.trackId);
     }
-    return resolveDnaDropHref(summary.dnaShareId, Boolean(user), isCloudSyncActive);
+    return resolveDnaDropHref(summary.dnaShareId, Boolean(user), viewerIsPro);
   }, [
     summary.dnaShareId,
     summary.trackId,
     summary.albumTitle,
     summary.shareId,
     user,
-    isCloudSyncActive,
+    viewerIsPro,
   ]);
 
   const unpressSong = async () => {
@@ -236,9 +238,12 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               </div>
               <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
                 <h1 className="min-w-0 flex-1 font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
-                {lyricsDnaHref ? (
-                  <LyricsDnaStatusBadge active href={lyricsDnaHref} variant="title" className="shrink-0" />
-                ) : null}
+                <LyricsDnaStatusBadge
+                  active={Boolean(lyricsDnaHref)}
+                  href={lyricsDnaHref}
+                  variant="title"
+                  className="shrink-0"
+                />
               </div>
               <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p>
             </div>

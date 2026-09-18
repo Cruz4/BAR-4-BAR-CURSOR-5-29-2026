@@ -170,6 +170,9 @@ export async function getPressedSongSummary(
       buyers: nonnegative(shareRaw.purchaseCount),
     },
   };
+  if (base.albumShareId) {
+    base.metadata = { ...base.metadata, albumShareId: base.albumShareId };
+  }
   if (!base.releaseLive && share.type === 'track') {
     const ownerShares = await db.collection('shares').where('ownerId', '==', share.ownerId).get();
     const successor = ownerShares.docs

@@ -217,11 +217,16 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
         if (await playOfflineCopy()) return;
         wantPlayingRef.current = false;
         setPlaying(false);
-        toast({
-          variant: 'destructive',
-          title: 'Could not play',
-          description: e instanceof Error ? e.message : undefined,
-        });
+        const message = e instanceof Error ? e.message : '';
+        const lyricOnlyOrStale =
+          /offline|no audio|not public|no longer/i.test(message);
+        if (!lyricOnlyOrStale) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not play',
+            description: message || undefined,
+          });
+        }
       } finally {
         setLoading(false);
       }

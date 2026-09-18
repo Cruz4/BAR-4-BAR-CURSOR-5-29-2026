@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { canonicalShareVisibility } from '@/lib/server/dna-visibility';
+import { resolveAlbumHubShareId } from '@/lib/pressed-song';
+import { releaseShareIdFromShareDocument } from '@/lib/release-management';
 import type { ProjectShare } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -73,7 +75,22 @@ export async function GET(
         : {}),
     };
 
-    return NextResponse.json({ share, visibility });
+    const albumHubShareId =
+      share.type === 'album'
+        ? resolveAlbumHubShareId({
+            releaseShareId: releaseShareIdFromShareDocument(raw),
+            releaseLive: visibility.releaseLive,
+            dnaShareId: shareId,
+            dnaLive: visibility.dnaLive,
+            fallbackShareId: shareId,
+          })
+        : undefined;
+
+    return NextResponse.json({
+      share,
+      visibility,
+      ...(albumHubShareId ? { albumHubShareId } : {}),
+    });
   } catch (error) {
     console.error('[shares/get]', error);
     return NextResponse.json({ error: 'Could not load share.' }, { status: 500 });
