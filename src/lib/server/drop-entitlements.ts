@@ -8,7 +8,7 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import type { Track } from '@/lib/types';
-import { isHouseReleaseDocument } from '@/lib/release-management';
+import { hasReleaseAudio, isHouseReleaseDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { isOwnedDropStoragePath } from '@/lib/server/drop-audio-stream';
 
 export type DropShareDoc = {
@@ -48,9 +48,21 @@ export async function loadShare(db: Firestore, shareId: string): Promise<DropSha
 
 /** Explicitly hidden/draft releases are not discoverable or purchasable. Legacy shares stay live. */
 export function isReleaseShareLive(share: DropShareDoc): boolean {
-  const nested = share.data?.releaseStatus;
-  const status = share.releaseStatus || (nested === 'draft' || nested === 'live' || nested === 'unlisted' ? nested : undefined);
-  return status !== 'draft' && status !== 'unlisted';
+  const payload = share.data ?? {};
+  const nestedStatus = payload.releaseStatus;
+  const releaseStatus =
+    share.releaseStatus ||
+    (nestedStatus === 'draft' || nestedStatus === 'live' || nestedStatus === 'unlisted'
+      ? nestedStatus
+      : undefined);
+  const visibility = shareDocumentVisibility({
+    releaseStatus,
+    dnaStatus: share.dnaStatus,
+    houseRelease: share.houseRelease,
+    data: payload,
+    hasDropAudio: hasReleaseAudio(payload),
+  });
+  return visibility.releaseLive;
 }
 
 /** Explicitly hidden DNA pages stay private. Legacy DNA shares stay live. */

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +15,13 @@ import { cn } from '@/lib/utils';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { orderAlbumTracks } from '@/lib/album-track-order';
 import { pressedSongHref } from '@/lib/pressed-song';
-import { dnaDropSnapshotTrackPath } from '@/lib/dna-drop-access';
+import {
+  DNA_DROP_UPGRADE_PATH,
+  buildDnaDropLoginPath,
+  dnaDropSnapshotTrackPath,
+} from '@/lib/dna-drop-access';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { proLockShell, proLockText } from '@/lib/pro-lock';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
@@ -41,21 +48,51 @@ function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean, canVie
 }
 
 function LyricsDnaTrackButton({
-  active,
-  href,
+  hasStrand,
+  openHref,
+  lockedHref,
   title,
-  canViewDna,
 }: {
-  active: boolean;
-  href?: string;
+  hasStrand: boolean;
+  openHref?: string;
+  lockedHref?: string;
   title: string;
-  canViewDna: boolean;
 }) {
-  const label = 'Lyrics DNA';
-  if (active && href) {
-    return (
+  const noneLabel = 'No DNA';
+  const openLabel = 'Lyrics DNA';
+  const lockedLabel = 'Lyrics DNA';
+
+  const wrap = (node: ReactNode, tip: string) => (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>{node}</TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[16rem] text-[11px] leading-relaxed">
+          {tip}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
+  if (!hasStrand) {
+    return wrap(
+      <span
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em]',
+          'border-white/10 bg-black/20 text-muted-foreground/45 cursor-default'
+        )}
+        aria-disabled
+      >
+        <Dna className="h-3.5 w-3.5 shrink-0 opacity-50" />
+        {noneLabel}
+      </span>,
+      'No Lyrics DNA Drop attached to this track in this snapshot.'
+    );
+  }
+
+  if (openHref) {
+    return wrap(
       <Link
-        href={href}
+        href={openHref}
         className={cn(
           'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] transition-colors',
           'border-cyan-400/55 bg-cyan-400/15 text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] hover:border-cyan-300/70 hover:bg-cyan-400/25'
@@ -63,27 +100,32 @@ function LyricsDnaTrackButton({
         aria-label={`Open Lyrics DNA Drop for ${title}`}
       >
         <Dna className="h-3.5 w-3.5 shrink-0" />
-        {label}
-      </Link>
+        {openLabel}
+      </Link>,
+      `Open ${title}’s lyric snapshot and Creative DNA.`
     );
   }
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em]',
-        'border-white/10 bg-black/20 text-muted-foreground/45 cursor-not-allowed'
-      )}
-      aria-disabled
-      title={
-        !canViewDna
-          ? 'Studio Pro required to open Lyrics DNA Drops'
-          : 'No lyrics strand in this snapshot'
-      }
-    >
-      <Dna className="h-3.5 w-3.5 shrink-0 opacity-50" />
-      {label}
-    </span>
-  );
+
+  if (lockedHref) {
+    return wrap(
+      <Link
+        href={lockedHref}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1.5 rounded-full border border-dashed px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] transition-colors',
+          proLockShell('sm'),
+          'text-pink-200 hover:border-pink-400/70 hover:bg-pink-600/20',
+          proLockText('normal-case tracking-[0.14em]')
+        )}
+        aria-label={`Studio Pro required for Lyrics DNA on ${title}`}
+      >
+        <Dna className="h-3.5 w-3.5 shrink-0" />
+        {lockedLabel}
+      </Link>,
+      'Studio Pro opens Lyrics DNA Drops — upgrade on Studio Tier to read and import strands.'
+    );
+  }
+
+  return null;
 }
 
 export function DnaDropAlbumHub({
@@ -93,6 +135,7 @@ export function DnaDropAlbumHub({
   ownerName,
   houseRelease = false,
   canViewDna = true,
+  signedIn = false,
 }: DnaDropAlbumHubProps) {
   const listenHubId = hubShareId?.trim() || shareId;
   const { enabled: firstDropsOn } = useFirstDropsFeature();
@@ -135,8 +178,16 @@ export function DnaDropAlbumHub({
           <ol className="space-y-2">
             {tracks.map((track, idx) => {
               const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
-              const hasLyricDna = canViewDna && trackLyricBarCount(track) > 0;
-              const lyricDnaHref = hasLyricDna ? dnaDropSnapshotTrackPath(shareId, track.id) : undefined;
+              const hasStrand = trackLyricBarCount(track) > 0;
+              const lyricDnaOpenHref = hasStrand && canViewDna
+                ? dnaDropSnapshotTrackPath(shareId, track.id)
+                : undefined;
+              const lyricDnaLockedHref = hasStrand && !canViewDna
+                ? signedIn
+                  ? DNA_DROP_UPGRADE_PATH
+                  : buildDnaDropLoginPath(shareId, 'view')
+                : undefined;
+              const lyricDnaHref = lyricDnaOpenHref;
               const songListenHref =
                 firstDropsOn && hasAudio ? pressedSongHref(listenHubId, { trackId: track.id }) : undefined;
               const rowHref = songListenHref || lyricDnaHref;
@@ -210,10 +261,10 @@ export function DnaDropAlbumHub({
                       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 opacity-80">{main}</div>
                     )}
                     <LyricsDnaTrackButton
-                      active={hasLyricDna}
-                      href={lyricDnaHref}
+                      hasStrand={hasStrand}
+                      openHref={lyricDnaOpenHref}
+                      lockedHref={lyricDnaLockedHref}
                       title={trackTitle}
-                      canViewDna={canViewDna}
                     />
                   </div>
                 </li>

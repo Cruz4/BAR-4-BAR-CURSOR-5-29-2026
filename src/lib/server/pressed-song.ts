@@ -8,6 +8,8 @@ import { resolveAlbumHubShareId, type PressedSongSummary, type PressedSongSuppor
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
+import { trackLyricBarCount } from '@/lib/dna-drop';
+import type { Track } from '@/lib/types';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 
 function nonnegative(value: unknown): number {
@@ -114,10 +116,20 @@ export async function getPressedSongSummary(
     selectedTrack.dnaStatus !== 'unlisted'
       ? selectedTrack.shareId.trim()
       : undefined;
+  const snapshotStrandBars = selectedTrack
+    ? trackLyricBarCount(selectedTrack as Pick<Track, 'sections'>)
+    : share.type === 'track'
+      ? trackLyricBarCount((share.data ?? {}) as Pick<Track, 'sections'>)
+      : 0;
   const shareDnaLive = shareDocumentVisibility(shareRaw).dnaLive;
   const dnaShareId =
     trackDnaShareId ||
+    (share.type === 'album' && trackId && snapshotStrandBars > 0 ? shareId : undefined) ||
     (share.type === 'track' && shareDnaLive ? shareId : undefined);
+  const lyricsDnaAttached =
+    Boolean(trackDnaShareId) ||
+    snapshotStrandBars > 0 ||
+    (share.type === 'track' && shareDnaLive);
   const contextAlbumShareId =
     typeof (share.data as Record<string, unknown> | undefined)?.sharedAlbumContext === 'object'
       ? String(
@@ -142,6 +154,7 @@ export async function getPressedSongSummary(
     ...(albumTitle ? { albumTitle } : {}),
     ...(albumShareId ? { albumShareId } : {}),
     ...(dnaShareId ? { dnaShareId } : {}),
+    ...(lyricsDnaAttached ? { lyricsDnaAttached: true } : {}),
     ...(albumLevel ? { scope: 'album' as const } : { scope: 'track' as const }),
     ownerId: share.ownerId,
     title: priced.title,

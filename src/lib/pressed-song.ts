@@ -70,6 +70,8 @@ export type PressedSongSummary = {
   albumShareId?: string;
   /** Live Lyrics DNA Drop for this song (track share), when one exists. */
   dnaShareId?: string;
+  /** Lyric snapshot exists on the release (album strand or live drop). */
+  lyricsDnaAttached?: boolean;
   /** Album hub post (no specific track in the URL) still returns a playable first track. */
   scope?: 'album' | 'track';
   ownerId: string;

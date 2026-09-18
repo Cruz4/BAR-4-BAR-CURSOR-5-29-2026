@@ -23,7 +23,12 @@ import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
 import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
-import { dnaDropSnapshotTrackPath, resolveDnaDropHref } from '@/lib/dna-drop-access';
+import {
+  DNA_DROP_UPGRADE_PATH,
+  buildDnaDropLoginPath,
+  dnaDropSnapshotTrackPath,
+  resolveDnaDropHref,
+} from '@/lib/dna-drop-access';
 import { LyricsDnaStatusBadge } from '@/components/song/lyrics-dna-status-badge';
 import { isProOrTrial } from '@/lib/subscription';
 
@@ -140,20 +145,19 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   ];
   const albumHref = albumHubHref(summary.albumShareId || (summary.scope === 'album' ? summary.shareId : undefined));
   const albumTitle = summary.albumTitle || summary.metadata.albumTitle;
-  const lyricsDnaHref = useMemo(() => {
-    if (!summary.dnaShareId) return undefined;
-    if (summary.trackId && summary.albumTitle && summary.dnaShareId === summary.shareId) {
+  const lyricsDnaAttached = Boolean(summary.lyricsDnaAttached ?? summary.dnaShareId);
+  const lyricsDnaOpenHref = useMemo(() => {
+    if (!summary.dnaShareId || !viewerIsPro) return undefined;
+    if (summary.trackId && summary.dnaShareId === summary.shareId) {
       return dnaDropSnapshotTrackPath(summary.shareId, summary.trackId);
     }
-    return resolveDnaDropHref(summary.dnaShareId, Boolean(user), viewerIsPro);
-  }, [
-    summary.dnaShareId,
-    summary.trackId,
-    summary.albumTitle,
-    summary.shareId,
-    user,
-    viewerIsPro,
-  ]);
+    return resolveDnaDropHref(summary.dnaShareId, true, true);
+  }, [summary.dnaShareId, summary.trackId, summary.shareId, viewerIsPro]);
+  const lyricsDnaLockedHref = useMemo(() => {
+    if (!lyricsDnaAttached || viewerIsPro) return undefined;
+    if (!summary.dnaShareId) return undefined;
+    return user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(summary.dnaShareId, 'view');
+  }, [lyricsDnaAttached, viewerIsPro, summary.dnaShareId, user]);
 
   const unpressSong = async () => {
     const controls = summary.ownerControls;
@@ -239,8 +243,9 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
                 <h1 className="min-w-0 flex-1 font-headline text-3xl font-black uppercase sm:text-5xl">{summary.title}</h1>
                 <LyricsDnaStatusBadge
-                  active={Boolean(lyricsDnaHref)}
-                  href={lyricsDnaHref}
+                  attached={lyricsDnaAttached}
+                  openHref={lyricsDnaOpenHref}
+                  lockedHref={lyricsDnaLockedHref}
                   variant="title"
                   className="shrink-0"
                 />
