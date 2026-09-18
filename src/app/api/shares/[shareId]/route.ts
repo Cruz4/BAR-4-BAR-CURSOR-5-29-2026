@@ -4,6 +4,7 @@ import { canonicalShareVisibility } from '@/lib/server/dna-visibility';
 import { resolveAlbumHubShareId } from '@/lib/pressed-song';
 import { isHouseReleaseDocument, releaseShareIdFromShareDocument } from '@/lib/release-management';
 import type { ProjectShare } from '@/lib/types';
+import { resolveShareArtistCredit } from '@/lib/server/share-artist-credit';
 
 export const runtime = 'nodejs';
 
@@ -88,9 +89,12 @@ export async function GET(
           })
         : undefined;
 
+    const artist = await resolveShareArtistCredit(db, raw);
+
     return NextResponse.json({
       share,
       visibility,
+      artist: { name: artist.name, ...(artist.slug ? { slug: artist.slug } : {}) },
       ...(albumHubShareId ? { albumHubShareId } : {}),
     });
   } catch (error) {

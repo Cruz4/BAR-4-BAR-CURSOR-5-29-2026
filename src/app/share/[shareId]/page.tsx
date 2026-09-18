@@ -43,8 +43,9 @@ import {
 import { orderAlbumTracks } from '@/lib/album-track-order';
 import { isLooseTrackAlbum } from '@/lib/co-writer-rules';
 import { DnaDropAlbumHub } from '@/components/dna-drop-album-hub';
-import { DropListenPanel } from '@/components/drop-listen-panel';
 import { AlbumReleasePlaylist } from '@/components/album-release-playlist';
+import { ShareArtistLink } from '@/components/share-artist-link';
+import { buildSingleTrackReleasePlayable } from '@/lib/album-release-playables';
 import { DropSocialPanel } from '@/components/drop-social-panel';
 import { normalizeDropAudio, normalizeDropPrice } from '@/lib/drop-commerce';
 import { EmbedPlayer } from '@/components/profile/embed-player';
@@ -107,6 +108,7 @@ function SharedProjectPageInner() {
     const [isTakingOffline, setIsTakingOffline] = useState(false);
     const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false);
     const [hubVisibility, setHubVisibility] = useState<{ dnaLive: boolean; releaseLive: boolean } | null>(null);
+    const [shareArtist, setShareArtist] = useState<{ name: string; slug?: string } | null>(null);
 
     useEffect(() => {
         const fetchShare = async () => {
@@ -121,6 +123,7 @@ function SharedProjectPageInner() {
                 let data: ProjectShare | null = null;
                 let albumHubShareId: string | undefined;
                 let visibility: { dnaLive: boolean; releaseLive: boolean } | null = null;
+                let resolvedArtist: { name: string; slug?: string } | undefined;
 
                 const publicRes = await fetch(
                     `/api/shares/${encodeURIComponent(normalizedShareId)}`,
@@ -131,6 +134,7 @@ function SharedProjectPageInner() {
                         share: ProjectShare;
                         visibility?: { dnaLive?: boolean; releaseLive?: boolean };
                         albumHubShareId?: string;
+                        artist?: { name?: string; slug?: string };
                     };
                     data = payload.share;
                     albumHubShareId = payload.albumHubShareId?.trim();
@@ -138,6 +142,12 @@ function SharedProjectPageInner() {
                         dnaLive: Boolean(payload.visibility?.dnaLive),
                         releaseLive: Boolean(payload.visibility?.releaseLive),
                     };
+                    if (payload.artist?.name?.trim()) {
+                        resolvedArtist = {
+                            name: payload.artist.name.trim(),
+                            ...(payload.artist.slug?.trim() ? { slug: payload.artist.slug.trim() } : {}),
+                        };
+                    }
                 } else if (user) {
                     try {
                         const docRef = doc(db, 'shares', normalizedShareId);
@@ -152,10 +162,15 @@ function SharedProjectPageInner() {
 
                 if (!data) {
                     setShare(null);
+                    setShareArtist(null);
                     keepLoading = true;
                     router.replace('/discover');
                     return;
                 }
+
+                setShareArtist(
+                    resolvedArtist ?? { name: data.ownerName?.trim() || 'Artist' }
+                );
 
                 const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
 
@@ -316,6 +331,37 @@ function SharedProjectPageInner() {
       }
       return Boolean(normalizeDropAudio((project as DnaDropTrackPayload).dropAudio));
     }, [project, isAlbum]);
+    const artistCredit = useMemo(
+        () => ({
+            name: shareArtist?.name || share?.ownerName?.trim() || 'Artist',
+            slug: shareArtist?.slug,
+        }),
+        [shareArtist, share?.ownerName]
+    );
+    const releaseAudioActive = Boolean(hasFirstDropAudio || hubVisibility?.releaseLive);
+    const isAlbumReleaseHubPage = Boolean(viewingAlbumHub && releaseAudioActive);
+    const showAlbumReleasePlaylist = Boolean(releaseAudioActive && share && viewingAlbumHub);
+    const focusedTrackPlayable = useMemo(() => {
+        if (!share || !trackProject || viewingAlbumHub) return null;
+        if (!normalizeDropAudio(trackProject.dropAudio)) return null;
+        const listenShareId = snapshotTrack ? albumHubShareId : shareId;
+        return buildSingleTrackReleasePlayable({
+            track: trackProject,
+            shareId: listenShareId,
+            ownerId: share.ownerId,
+            ownerName: artistCredit.name,
+            houseRelease: share.houseRelease === true,
+        });
+    }, [
+        albumHubShareId,
+        artistCredit.name,
+        share,
+        shareId,
+        snapshotTrack,
+        trackProject,
+        viewingAlbumHub,
+    ]);
+    const showFocusedTrackPlayer = Boolean(share && focusedTrackPlayable);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
     const canManageShare = Boolean(user && share && canManageReleaseShare(share, user.id));
     const canViewDnaLyrics = isOwnShare || viewerIsPro;
@@ -571,9 +617,14 @@ function SharedProjectPageInner() {
 
     return (
         <div className="min-h-screen relative selection:bg-primary/30 overflow-x-hidden font-code">
-            <DnaDropAtmosphere />
+            <DnaDropAtmosphere variant={isAlbumReleaseHubPage ? 'release-hub' : 'strand'} />
 
-            <header className="sticky top-0 z-[100] min-h-14 border-b border-cyan-400/20 bg-background/70 backdrop-blur-md px-3 sm:px-6 py-2 relative flex items-center justify-between gap-2">
+            <header
+              className={cn(
+                'sticky top-0 z-[100] min-h-14 border-b bg-background/70 backdrop-blur-md px-3 sm:px-6 py-2 relative flex items-center justify-between gap-2',
+                isAlbumReleaseHubPage ? 'border-amber-400/25' : 'border-cyan-400/20'
+              )}
+            >
                 <div className="relative z-10 flex shrink-0 items-center">
                     <Button
                         type="button"
@@ -819,6 +870,12 @@ function SharedProjectPageInner() {
                         </Link>
                         <span className="text-muted-foreground">/</span>
                         <span className="truncate text-foreground">{trackProject?.title || 'Strand'}</span>
+                        <ShareArtistLink
+                          name={artistCredit.name}
+                          slug={artistCredit.slug}
+                          className="w-full basis-full sm:ml-0 sm:w-auto sm:basis-auto"
+                          size="sm"
+                        />
                         {normalizeDropAudio(trackProject?.dropAudio) ? (
                           <Link
                             href={pressedSongHref(shareId, { trackId: trackProject!.id })}
@@ -830,38 +887,45 @@ function SharedProjectPageInner() {
                       </nav>
                     ) : null}
                     <Suspense fallback={null}>
-                      {viewingAlbumHub && (hasFirstDropAudio || hubVisibility?.releaseLive) ? (
+                      {showAlbumReleasePlaylist ? (
                         <AlbumReleasePlaylist
+                          queueScope="album"
                           album={project as DnaDropAlbumPayload}
                           shareId={albumHubShareId}
                           ownerId={share.ownerId}
                           ownerName={share.ownerName}
                           houseRelease={share.houseRelease === true}
+                          artistName={artistCredit.name}
+                          artistSlug={artistCredit.slug}
                         />
-                      ) : trackProject && normalizeDropAudio(trackProject.dropAudio) ? (
-                        <DropListenPanel
-                          shareId={shareId}
-                          source="share"
-                          title={trackProject.title || 'Untitled'}
-                          artistName={share.ownerName}
+                      ) : null}
+                      {showFocusedTrackPlayer && focusedTrackPlayable ? (
+                        <AlbumReleasePlaylist
+                          queueScope="single"
+                          playables={[focusedTrackPlayable]}
+                          singleTrack={trackProject}
+                          shareId={snapshotTrack ? albumHubShareId : shareId}
                           ownerId={share.ownerId}
-                          price={normalizeDropPrice(trackProject.dropPrice)}
-                          hasAudio
+                          ownerName={share.ownerName}
                           houseRelease={share.houseRelease === true}
-                          checkoutDestination="song"
-                          trackId={snapshotTrack ? trackProject.id : undefined}
-                          detailsHref={
+                          albumTitle={
                             snapshotTrack
-                              ? pressedSongHref(shareId, { trackId: trackProject.id })
-                              : undefined
+                              ? albumPayload?.title
+                              : trackProject?.sharedAlbumContext?.title
                           }
+                          artistName={artistCredit.name}
+                          artistSlug={artistCredit.slug}
                         />
                       ) : null}
                     </Suspense>
                     {hasFirstDropAudio || snapshotTrack ? (
                     <DropSocialPanel
                       shareId={shareId}
-                      title={(snapshotTrack || project).title || 'Untitled'}
+                      title={
+                        viewingAlbumHub
+                          ? (albumPayload?.title || (project as DnaDropAlbumPayload)?.title || 'Untitled')
+                          : (snapshotTrack || project).title || 'Untitled'
+                      }
                       ownerId={share.ownerId}
                       playCount={share.playCount}
                       previewCount={share.previewCount}
@@ -903,9 +967,13 @@ function SharedProjectPageInner() {
                                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none break-words">
                                   {(snapshotTrack || project).title}
                                 </h2>
-                                <p className="text-[10px] text-cyan-200 font-bold uppercase mt-2 tracking-widest flex items-center gap-2">
-                                    <Dna className="h-3 w-3 shrink-0" /> by {share.ownerName}
-                                </p>
+                                <div className="pointer-events-auto mt-2">
+                                  <ShareArtistLink
+                                    name={artistCredit.name}
+                                    slug={artistCredit.slug}
+                                    className="text-cyan-100/90"
+                                  />
+                                </div>
                             </div>
                         </div>
                         <CardContent className="p-4 sm:p-6 space-y-6">
@@ -1106,9 +1174,12 @@ function SharedProjectPageInner() {
                             hubShareId={albumHubShareId}
                             ownerId={share.ownerId}
                             ownerName={share.ownerName}
+                            artistName={artistCredit.name}
+                            artistSlug={artistCredit.slug}
                             houseRelease={share.houseRelease === true}
                             canViewDna={canViewDnaLyrics}
                             signedIn={Boolean(user)}
+                            releaseAudioHub={Boolean(hasFirstDropAudio || hubVisibility?.releaseLive)}
                         />
                     ) : canViewDnaLyrics && trackProject ? (
                     <DnaDropLyricSheet
@@ -1118,6 +1189,8 @@ function SharedProjectPageInner() {
                         updatedLabel={`Updated ${formattedShareDate}`}
                         albumShareId={snapshotTrack ? shareId : trackProject.sharedAlbumContext?.shareId}
                         albumTitle={snapshotTrack ? albumPayload?.title : trackProject.sharedAlbumContext?.title}
+                        artistName={artistCredit.name}
+                        artistSlug={artistCredit.slug}
                     />
                     ) : (
                     <Card className="border-2 border-cyan-400/25 bg-cyan-500/5 min-h-[40vh] flex items-center justify-center">

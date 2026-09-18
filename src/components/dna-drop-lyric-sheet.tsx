@@ -7,6 +7,7 @@ import { HighlightedText } from '@/components/highlighted-text';
 import { dnaDropSharePath } from '@/lib/dna-drop-access';
 import type { Track } from '@/lib/types';
 import { Clock } from 'lucide-react';
+import { ShareArtistLink } from '@/components/share-artist-link';
 
 type DnaDropLyricSheetProps = {
   title: string;
@@ -15,6 +16,8 @@ type DnaDropLyricSheetProps = {
   updatedLabel: string;
   albumShareId?: string;
   albumTitle?: string;
+  artistName?: string;
+  artistSlug?: string | null;
 };
 
 export function DnaDropLyricSheet({
@@ -24,6 +27,8 @@ export function DnaDropLyricSheet({
   updatedLabel,
   albumShareId,
   albumTitle,
+  artistName,
+  artistSlug,
 }: DnaDropLyricSheetProps) {
   const bars = (sections ?? []).reduce(
     (n, sec) => n + (sec.bars?.filter((bar) => bar.text?.trim()).length ?? 0),
@@ -56,6 +61,9 @@ export function DnaDropLyricSheet({
         <h3 className="font-headline text-2xl sm:text-3xl font-bold uppercase tracking-tight text-foreground">
           {title}
         </h3>
+        {artistName ? (
+          <ShareArtistLink name={artistName} slug={artistSlug} className="pt-0.5" />
+        ) : null}
         {albumShareId ? (
           <Link
             href={dnaDropSharePath(albumShareId)}

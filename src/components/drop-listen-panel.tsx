@@ -34,9 +34,11 @@ import {
 import { albumHubHref, pressedSongHref } from '@/lib/pressed-song';
 import { cn } from '@/lib/utils';
 import { useDropCart } from '@/context/drop-cart-context';
+import { DropVisualizer } from '@/components/library/drop-visualizer';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
+import { useMediaElementAnalyser } from '@/hooks/use-media-element-analyser';
 import { studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 
@@ -100,7 +102,7 @@ export function DropListenPanel({
   /** Profile owner whose saved featured selection this player must match. */
   featuredByUserId?: string;
   excerptStartSec?: number;
-  presentation?: 'default' | 'song' | 'playlist' | 'compact';
+  presentation?: 'default' | 'song' | 'playlist' | 'compact' | 'feed';
   /** When set, starting this player pauses another Drop player in the same queue. */
   playbackGroup?: string;
   onPlaybackStateChange?: (state: { playing: boolean; currentTime: number; duration: number }) => void;
@@ -170,6 +172,16 @@ export function DropListenPanel({
   const compactPresentation = presentation === 'compact';
   const firstPressEdition =
     typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
+  const pressingFeed = Boolean(
+    chrome?.pressing &&
+      !firstPressEdition &&
+      !purchaseOnly &&
+      !compactPresentation &&
+      presentation !== 'song' &&
+      (presentation === 'feed' || artistAttribution || source === 'artist_home' || source === 'share')
+  );
+  const showPressingBackdrop = Boolean(chrome?.pressing && !firstPressEdition && !pressingFeed);
+  const { analyser, prime: primeAnalyser } = useMediaElementAnalyser(audioRef, Boolean(src));
   const trackDetailsHref =
     detailsHref ||
     pressedSongHref(shareId, {
@@ -490,6 +502,8 @@ export function DropListenPanel({
       ? 'relative overflow-hidden space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.45))] bg-black/40 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_18px_55px_rgba(0,0,0,.35)] sm:p-5'
       : presentation === 'playlist'
         ? 'relative overflow-hidden space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/35 p-4 sm:p-5'
+      : pressingFeed || presentation === 'feed'
+        ? 'relative overflow-hidden min-w-0 space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.45))] bg-black/20 p-3 shadow-[0_12px_40px_rgba(0,0,0,.35)] sm:min-h-[248px] sm:p-4'
       : compactPresentation
         ? 'relative overflow-hidden min-w-0 space-y-2 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-2.5'
         : 'relative overflow-hidden min-w-0 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-3 space-y-3 sm:p-4';
@@ -503,7 +517,28 @@ export function DropListenPanel({
     )}
       style={pressingStyle as React.CSSProperties | undefined}
     >
-      {chrome?.pressing && !firstPressEdition ? (
+      {pressingFeed && chrome?.pressing ? (
+        <>
+          <LivingPressField config={chrome.pressing} compact className="absolute inset-0 min-h-[220px] [&>p]:hidden" />
+          <div
+            className={cn(
+              'pointer-events-none absolute inset-0 transition-[opacity,background] duration-300',
+              playing
+                ? 'bg-[linear-gradient(180deg,rgba(0,0,0,0.22),rgba(0,0,0,0.58))]'
+                : 'bg-black/50'
+            )}
+            aria-hidden
+          />
+          <div
+            className={cn(
+              'pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500',
+              playing &&
+                'opacity-100 bg-[radial-gradient(ellipse_85%_65%_at_50%_32%,rgba(232,121,249,0.32),transparent_72%)]'
+            )}
+            aria-hidden
+          />
+        </>
+      ) : showPressingBackdrop && chrome?.pressing ? (
         <>
           <LivingPressField config={chrome.pressing} compact className="[&>p]:hidden" />
           <div className="absolute inset-0 bg-black/45" aria-hidden />
@@ -540,6 +575,159 @@ export function DropListenPanel({
       </div>
 
       {hasAudio && !purchaseOnly && (
+        pressingFeed ? (
+          <div className="space-y-3">
+            <DropVisualizer analyser={analyser} playing={playing} className="sm:gap-4">
+              <Button
+                type="button"
+                size="icon"
+                className="h-12 w-12 rounded-full bg-fuchsia-400 text-black shadow-[0_0_28px_rgba(232,121,249,0.45)] hover:bg-fuchsia-300"
+                disabled={loading || !src}
+                onClick={() => {
+                  primeAnalyser();
+                  const el = audioRef.current;
+                  if (!el) return;
+                  if (el.paused) {
+                    void el.play();
+                    setPlaying(true);
+                  } else {
+                    el.pause();
+                    setPlaying(false);
+                  }
+                }}
+                aria-label={playing ? 'Pause' : 'Play'}
+              >
+                {loading ? <Loader className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </Button>
+            </DropVisualizer>
+            <div className="flex min-w-0 items-start gap-3 px-0.5">
+              {artistAttribution ? (
+                <ArtistStarAvatar
+                  name={artistName || 'Artist'}
+                  avatarUrl={artistAttribution.avatarUrl}
+                  useStarMark={artistAttribution.useStarMark}
+                  starMarkSeed={artistAttribution.starMarkSeed}
+                  href={artistAttribution.href}
+                  size={40}
+                  studioChrome={artistAttribution.studioChrome}
+                  toneClass="bg-fuchsia-500/20 text-fuchsia-200"
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={trackDetailsHref}
+                  className="block truncate font-headline text-base font-bold uppercase text-white [text-shadow:0_1px_10px_rgba(0,0,0,.75)] transition-colors hover:text-fuchsia-100 hover:underline sm:text-lg"
+                >
+                  {title}
+                </Link>
+                {artistAttribution ? (
+                  <p className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1 text-[9px] font-bold uppercase tracking-widest text-white/70">
+                    <span>Original artist</span>
+                    <span aria-hidden>·</span>
+                    {artistAttribution.href ? (
+                      <Link
+                        href={artistAttribution.href}
+                        className={cn(
+                          'min-w-0 truncate transition-colors hover:text-white hover:underline',
+                          studioNameClass(artistAttribution.studioChrome)
+                        )}
+                      >
+                        {artistName || 'Artist'}
+                      </Link>
+                    ) : (
+                      <span className={studioNameClass(artistAttribution.studioChrome)}>
+                        {artistName || 'Artist'}
+                      </span>
+                    )}
+                  </p>
+                ) : null}
+                {resolvedAlbumTitle && resolvedAlbumHref ? (
+                  <Link
+                    href={resolvedAlbumHref}
+                    className="mt-0.5 block truncate text-[10px] font-medium text-fuchsia-200/90 hover:text-fuchsia-100 hover:underline"
+                  >
+                    {resolvedAlbumTitle}
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+            {src ? (
+              <audio
+                ref={audioRef}
+                src={src}
+                preload="none"
+                playsInline
+                className="sr-only"
+                onLoadedMetadata={(event) => {
+                  const duration = Number.isFinite(event.currentTarget.duration) && event.currentTarget.duration > 0
+                    ? event.currentTarget.duration
+                    : playbackStartSec + eligibleDurationSec;
+                  setMediaDurationSec(duration);
+                  if (playbackStartSec > 0 && event.currentTarget.currentTime < playbackStartSec) {
+                    event.currentTarget.currentTime = playbackStartSec;
+                  }
+                  setPositionSec(event.currentTarget.currentTime);
+                }}
+                onEnded={(event) => {
+                  setPlaying(false);
+                  setPositionSec(event.currentTarget.currentTime);
+                  onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+                }}
+                onPause={(event) => {
+                  setPlaying(false);
+                  setPositionSec(event.currentTarget.currentTime);
+                  onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+                }}
+                onPlay={() => {
+                  primeAnalyser();
+                  setPlaying(true);
+                  if (playbackGroup) {
+                    window.dispatchEvent(new CustomEvent('bar4bar:drop-player-play', {
+                      detail: { group: playbackGroup, playerId },
+                    }));
+                  }
+                  recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
+                  const audio = audioRef.current;
+                  onPlaybackStateChange?.({ playing: true, currentTime: audio?.currentTime || 0, duration: audio?.duration || eligibleDurationSec });
+                }}
+                onTimeUpdate={(e) => {
+                  const el = e.currentTarget;
+                  setPositionSec(el.currentTime);
+                  if (Number.isFinite(el.duration) && el.duration > 0) setMediaDurationSec(el.duration);
+                  onPlaybackStateChange?.({ playing: !el.paused, currentTime: el.currentTime, duration: el.duration || eligibleDurationSec });
+                  const listenedSec = Math.max(0, el.currentTime - playbackStartSec);
+                  const progressDuration = Math.max(
+                    1,
+                    Math.min(
+                      eligibleDurationSec,
+                      Number.isFinite(el.duration) && el.duration > 0 ? el.duration : eligibleDurationSec
+                    )
+                  );
+                  for (const milestone of DROP_LISTEN_MILESTONES) {
+                    if (
+                      listenProof &&
+                      !reportedMilestonesRef.current.has(milestone) &&
+                      listenedSec >= progressDuration * (milestone / 100)
+                    ) {
+                      reportedMilestonesRef.current.add(milestone);
+                      void recordDropListenProgressClient({ shareId, listenProof, milestone, source }).then(
+                        (recorded) => {
+                          if (!recorded) reportedMilestonesRef.current.delete(milestone);
+                        }
+                      );
+                    }
+                  }
+                  if (!previewCapped) return;
+                  if (listenedSec >= Math.min(30, eligibleDurationSec)) {
+                    el.pause();
+                    el.currentTime = playbackStartSec + Math.min(30, eligibleDurationSec);
+                    setPlaying(false);
+                  }
+                }}
+              />
+            ) : null}
+          </div>
+        ) : (
         <div className="flex min-w-0 items-center gap-2">
           <Button
             type="button"
@@ -550,6 +738,7 @@ export function DropListenPanel({
             )}
             disabled={loading || !src}
             onClick={() => {
+              primeAnalyser();
               const el = audioRef.current;
               if (!el) return;
               if (el.paused) {
@@ -701,11 +890,12 @@ export function DropListenPanel({
             />
           ) : null}
         </div>
+        )
       )}
 
       {hasAudio && !purchaseOnly ? (
         <>
-          <div className={cn('flex min-w-0 items-center gap-2', compactPresentation ? 'pl-[44px]' : 'pl-[52px]')}>
+          <div className={cn('flex min-w-0 items-center gap-2', pressingFeed ? 'pl-0' : compactPresentation ? 'pl-[44px]' : 'pl-[52px]')}>
             <span className="w-9 shrink-0 font-code text-[9px] tabular-nums text-muted-foreground">
               {formatPlaybackTime(displayedPositionSec)}
             </span>

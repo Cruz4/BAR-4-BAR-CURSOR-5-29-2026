@@ -40,7 +40,7 @@ import {
   type FoldPresence,
 } from '@/lib/folds/types';
 import { foldBarPreviewText, foldImageStoragePath, foldVoiceStoragePath } from '@/lib/folds/attachments';
-import { outgoingReadReceiptAt } from '@/lib/folds/read-receipts';
+import { outgoingReadStatus } from '@/lib/folds/read-receipts';
 import { foldMessageTimestamp, isSameMessageDay } from '@/lib/folds/message-dates';
 import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
@@ -81,7 +81,7 @@ function BarStanza({
   foldId,
   viewerId,
   onAnswer,
-  readAt,
+  readStatus,
   timestamp,
 }: {
   bar: FoldBar;
@@ -90,7 +90,7 @@ function BarStanza({
   foldId: string;
   viewerId: string;
   onAnswer: (bar: FoldBar) => void;
-  readAt?: string | null;
+  readStatus?: import('@/lib/folds/read-receipts').OutgoingReadStatus | null;
   timestamp: string;
 }) {
   const senderLabel = mine ? '[you]' : `[${peerName}]`;
@@ -171,7 +171,7 @@ function BarStanza({
           Reply
         </button>
       ) : null}
-      {readAt ? <FoldReadReceipt readAt={readAt} /> : null}
+      {readStatus ? <FoldReadReceipt status={readStatus} /> : null}
     </div>
   );
 }
@@ -278,23 +278,15 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     lastReadBarRef.current = null;
   }, [foldId]);
 
+  /** Stamp peer read receipts while this thread is open — not only when unread > 0. */
   useEffect(() => {
-    if (!fold || !me) return;
-    if (markedOpenRef.current) return;
-    if (unreadFor(fold, me) <= 0 && !fold.foldedBack?.[me]) return;
-    if (fold.foldedBack?.[me] && lastReadBarRef.current === fold.lastBarId) return;
+    if (!fold || !me || sealedForMe) return;
     markedOpenRef.current = true;
-    lastReadBarRef.current = fold.lastBarId || fold.id;
+    if (fold.lastSenderId === me || !fold.lastBarId) return;
+    if (lastReadBarRef.current === fold.lastBarId) return;
+    lastReadBarRef.current = fold.lastBarId;
     void markFoldReadClient(foldId).catch(() => undefined);
-  }, [fold, foldId, me]);
-
-  useEffect(() => {
-    if (!fold || !me || !markedOpenRef.current) return;
-    if (fold.lastSenderId === me) return;
-    if (unreadFor(fold, me) <= 0) return;
-    lastReadBarRef.current = fold.lastBarId || fold.id;
-    void markFoldReadClient(foldId).catch(() => undefined);
-  }, [fold?.lastBarId, fold?.lastSenderId, fold, foldId, me]);
+  }, [fold?.lastBarId, fold?.lastSenderId, fold?.id, foldId, me, sealedForMe]);
 
   const foldStatus = fold?.status;
   useEffect(() => {
@@ -561,10 +553,8 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           {shownBars.map((bar, index) => {
             const prev = shownBars[index - 1];
             const firstOfDay = !prev || !isSameMessageDay(bar.createdAt, prev.createdAt);
-            const readAt =
-              fold && peerId
-                ? outgoingReadReceiptAt(fold, peerId, shownBars, bar, me)
-                : null;
+            const readStatus =
+              fold && peerId ? outgoingReadStatus(fold, peerId, shownBars, bar, me) : null;
             return (
               <React.Fragment key={bar.id}>
                 {firstOfDay ? <FoldDateSeparator iso={bar.createdAt} /> : null}
@@ -574,7 +564,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                   peerName={peerName}
                   foldId={foldId}
                   viewerId={me}
-                  readAt={readAt}
+                  readStatus={readStatus}
                   timestamp={foldMessageTimestamp(bar.createdAt, firstOfDay)}
                   onAnswer={(next) =>
                     setReplyTo({

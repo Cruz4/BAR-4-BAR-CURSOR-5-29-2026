@@ -1074,6 +1074,57 @@
     background: radial-gradient(ellipse at center, transparent 40%, hsl(var(--background) / 0.55) 100%);
   }
 
+  /* Album release hub share — warm lacquer + grooves (not DNA helix lab). */
+  .release-hub-wash {
+    background:
+      radial-gradient(ellipse 70% 55% at 78% 22%, rgba(251, 191, 36, 0.14), transparent 58%),
+      radial-gradient(ellipse 65% 50% at 8% 88%, rgba(244, 114, 182, 0.12), transparent 55%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(88, 28, 135, 0.35), transparent 62%),
+      linear-gradient(165deg, hsl(var(--background) / 0.15), hsl(var(--background) / 0.78));
+  }
+  .release-hub-orb-a {
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.22), transparent 68%);
+    filter: blur(44px);
+    animation: album-orb-drift 17s ease-in-out infinite;
+  }
+  .release-hub-orb-b {
+    background: radial-gradient(circle, rgba(217, 70, 239, 0.2), transparent 70%);
+    filter: blur(50px);
+    animation: album-orb-drift 23s ease-in-out infinite reverse;
+  }
+  .release-hub-vinyl {
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    background:
+      repeating-radial-gradient(circle at 50% 50%, transparent 0 6px, rgba(251, 191, 36, 0.08) 6px 7px),
+      radial-gradient(circle at 50% 50%, rgba(12, 8, 20, 0.65) 0 12%, transparent 13% 100%);
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.4), 0 0 120px rgba(251, 191, 36, 0.06);
+    animation: album-vinyl-spin 96s linear infinite;
+    opacity: 0.38;
+  }
+  .release-hub-grooves {
+    opacity: 0.35;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 72px,
+      rgba(251, 191, 36, 0.04) 72px,
+      rgba(251, 191, 36, 0.04) 73px
+    );
+    mask-image: linear-gradient(90deg, black 0%, transparent 42%, transparent 100%);
+  }
+  .release-hub-shelf {
+    background: linear-gradient(180deg, transparent, rgba(15, 8, 28, 0.55) 35%, rgba(5, 3, 12, 0.85));
+  }
+  .release-hub-grain {
+    opacity: 0.24;
+    mix-blend-mode: overlay;
+    background-image: radial-gradient(rgba(255, 236, 179, 0.14) 0.6px, transparent 0.6px);
+    background-size: 3px 3px;
+  }
+  .release-hub-vignette {
+    background: radial-gradient(ellipse at 30% 40%, transparent 35%, hsl(var(--background) / 0.62) 100%);
+  }
+
   .album-page-orb-a {
     background: radial-gradient(circle, rgba(251, 191, 36, 0.18), transparent 68%);
     filter: blur(48px);
@@ -1373,6 +1424,9 @@
     .dna-drop-lab-orb-c,
     .dna-drop-lab-scan,
     .dna-drop-lab-helix,
+    .release-hub-orb-a,
+    .release-hub-orb-b,
+    .release-hub-vinyl,
     .album-page-orb-a,
     .album-page-orb-b,
     .album-page-vinyl {

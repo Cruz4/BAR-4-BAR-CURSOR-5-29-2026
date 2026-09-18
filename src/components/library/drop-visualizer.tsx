@@ -118,7 +118,7 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
 
   return (
     <div className={cn('flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5', className)}>
-      <div className="relative mx-auto aspect-square w-[min(58vw,220px)] shrink-0 sm:mx-0 sm:w-[200px] lg:w-[228px]">
+      <div className="relative mx-auto aspect-square w-[min(72vw,240px)] shrink-0 sm:mx-0 sm:w-[min(42vw,220px)] lg:w-[228px]">
         <div
           ref={glowRef}
           className="pointer-events-none absolute inset-[-18%] rounded-full bg-[radial-gradient(circle,rgba(232,121,249,0.35),rgba(34,211,238,0.12)_45%,transparent_70%)]"

@@ -22,6 +22,7 @@ import {
 } from '@/lib/dna-drop-access';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { proLockShell, proLockText } from '@/lib/pro-lock';
+import { ShareArtistLink } from '@/components/share-artist-link';
 
 type DnaDropAlbumHubProps = {
   album: DnaDropAlbumPayload;
@@ -33,6 +34,10 @@ type DnaDropAlbumHubProps = {
   houseRelease?: boolean;
   canViewDna?: boolean;
   signedIn?: boolean;
+  /** Music release hub — use Album · title instead of Sequence · title. */
+  releaseAudioHub?: boolean;
+  artistName?: string;
+  artistSlug?: string | null;
 };
 
 function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean, canViewDna: boolean): string {
@@ -136,7 +141,11 @@ export function DnaDropAlbumHub({
   houseRelease = false,
   canViewDna = true,
   signedIn = false,
+  releaseAudioHub = false,
+  artistName: artistNameProp,
+  artistSlug,
 }: DnaDropAlbumHubProps) {
+  const creditedArtist = artistNameProp?.trim() || ownerName;
   const listenHubId = hubShareId?.trim() || shareId;
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const tracks = orderAlbumTracks(album.tracks ?? [], album);
@@ -160,8 +169,9 @@ export function DnaDropAlbumHub({
           </span>
         </div>
         <h3 className="font-headline text-xl sm:text-3xl font-bold uppercase tracking-tight">
-          Sequence · {album.title}
+          {releaseAudioHub ? 'Album' : 'Sequence'} · {album.title}
         </h3>
+        <ShareArtistLink name={creditedArtist} slug={artistSlug} className="pt-0.5" />
         <p className="text-[11px] text-muted-foreground font-code leading-relaxed max-w-2xl">
           {canViewDna
             ? 'This is a frozen lyric snapshot, not the album in your vault. Open a strand to read that song’s lyrics and Creative DNA.'
@@ -212,6 +222,13 @@ export function DnaDropAlbumHub({
                     <p className="text-[10px] text-muted-foreground truncate">
                       {trackSubtitle(track, firstDropsOn, canViewDna)}
                     </p>
+                    <ShareArtistLink
+                      name={creditedArtist}
+                      slug={artistSlug}
+                      showLabel={false}
+                      size="sm"
+                      className="mt-0.5 text-fuchsia-200/80"
+                    />
                     <p className="mt-1 text-[9px] uppercase tracking-widest text-cyan-300/70 flex items-center gap-1.5">
                       {songListenHref ? (
                         <>

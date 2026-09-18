@@ -26,19 +26,37 @@ export function isLastBarFromSender(bars: FoldBar[], bar: FoldBar, senderId: str
   return false;
 }
 
-/** When the peer has read through this bar (used on your outgoing bubbles). */
+export type OutgoingReadStatus =
+  | { state: 'read'; readAt: string }
+  | { state: 'pending' };
+
+/** Read / not-yet-seen on your latest outgoing bubble in the thread. */
+export function outgoingReadStatus(
+  fold: FoldDoc | null | undefined,
+  peerId: string,
+  bars: FoldBar[],
+  bar: FoldBar,
+  myId: string
+): OutgoingReadStatus | null {
+  if (!fold || !peerId || bar.senderId !== myId) return null;
+  if (!isLastBarFromSender(bars, bar, myId)) return null;
+  const peerReadAt = fold.lastReadAt?.[peerId];
+  if (peerReadAt && Date.parse(peerReadAt) >= Date.parse(bar.createdAt)) {
+    return { state: 'read', readAt: peerReadAt };
+  }
+  return { state: 'pending' };
+}
+
+/** @deprecated Use outgoingReadStatus — kept for narrow call sites. */
 export function outgoingReadReceiptAt(
   fold: FoldDoc | null | undefined,
   peerId: string,
-  _bars: FoldBar[],
+  bars: FoldBar[],
   bar: FoldBar,
   myId: string
 ): string | null {
-  if (!fold || !peerId || bar.senderId !== myId) return null;
-  const peerReadAt = fold.lastReadAt?.[peerId];
-  if (!peerReadAt) return null;
-  if (Date.parse(peerReadAt) < Date.parse(bar.createdAt)) return null;
-  return peerReadAt;
+  const status = outgoingReadStatus(fold, peerId, bars, bar, myId);
+  return status?.state === 'read' ? status.readAt : null;
 }
 
 /** True when your last message in the thread was read by the peer. */

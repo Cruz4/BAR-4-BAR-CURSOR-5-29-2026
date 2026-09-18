@@ -1,4 +1,5 @@
 import type { DropPrice } from '@/lib/drop-commerce';
+import type { DeckPlayable } from '@/lib/drop-library';
 import { dnaDropSnapshotTrackPath } from '@/lib/dna-drop-access';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
 import type { PressingConfig } from '@/lib/profile/pressing';
@@ -72,6 +73,8 @@ export type PressedSongSummary = {
   dnaShareId?: string;
   /** Lyric snapshot exists on the release (album strand or live drop). */
   lyricsDnaAttached?: boolean;
+  /** Full album queue when scope is album (Reverb embeds + playlist playback). */
+  albumPlaylist?: DeckPlayable[];
   /** Album hub post (no specific track in the URL) still returns a playable first track. */
   scope?: 'album' | 'track';
   ownerId: string;

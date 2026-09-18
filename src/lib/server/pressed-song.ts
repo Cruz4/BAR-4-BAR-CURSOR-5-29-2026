@@ -8,7 +8,8 @@ import { resolveAlbumHubShareId, type PressedSongSummary, type PressedSongSuppor
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import { combinePublicMusicMetadata, publicMusicMetadataFromTrack } from '@/lib/music-discovery-metadata';
 import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
-import { trackLyricBarCount } from '@/lib/dna-drop';
+import { trackLyricBarCount, type DnaDropAlbumPayload } from '@/lib/dna-drop';
+import { buildAlbumReleasePlayables } from '@/lib/album-release-playables';
 import type { Track } from '@/lib/types';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 
@@ -183,6 +184,25 @@ export async function getPressedSongSummary(
       buyers: nonnegative(shareRaw.purchaseCount),
     },
   };
+  if (albumLevel && share.type === 'album' && share.data) {
+    const albumPayload = share.data as unknown as DnaDropAlbumPayload;
+    const playlist = buildAlbumReleasePlayables({
+      album: albumPayload,
+      shareId,
+      ownerId: share.ownerId,
+      ownerName: artistName,
+      houseRelease: share.houseRelease === true,
+      listenSource: 'artist_home',
+    });
+    if (playlist.length > 0) {
+      base.albumPlaylist = playlist;
+      const hubTitle =
+        typeof albumPayload.title === 'string' && albumPayload.title.trim()
+          ? albumPayload.title.trim()
+          : undefined;
+      if (hubTitle) base.title = hubTitle;
+    }
+  }
   if (base.albumShareId) {
     base.metadata = { ...base.metadata, albumShareId: base.albumShareId };
   }

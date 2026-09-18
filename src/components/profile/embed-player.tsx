@@ -10,6 +10,7 @@ import {
 } from '@/lib/profile/embeds';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { DropPrice } from '@/lib/drop-commerce';
+import { AlbumReleasePlaylist } from '@/components/album-release-playlist';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
 import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
@@ -113,6 +114,18 @@ function FirstDropFeedPlayer({
 
   const artistHref = profileHref(song.artist.slug);
   const albumPost = song.scope === 'album';
+  if (albumPost && song.albumPlaylist && song.albumPlaylist.length > 0) {
+    return (
+      <AlbumReleasePlaylist
+        playables={song.albumPlaylist}
+        shareId={shareId}
+        ownerId={song.ownerId}
+        ownerName={song.artist.name}
+        houseRelease={song.houseRelease}
+        albumTitle={song.title}
+      />
+    );
+  }
   const detailsHref = albumPost
     ? `/share/${encodeURIComponent(shareId)}${referralPostId ? `?refPost=${encodeURIComponent(referralPostId)}` : ''}`
     : pressedSongHref(shareId, { trackId: song.trackId || trackId, referralPostId });
@@ -122,6 +135,7 @@ function FirstDropFeedPlayer({
         shareId={shareId}
         trackId={song.trackId || trackId}
         source="artist_home"
+        presentation="feed"
         title={song.title}
         artistName={song.artist.name}
         ownerId={song.ownerId}

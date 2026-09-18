@@ -24,6 +24,7 @@ import {
   markFoldReadClient,
   passBarClient,
   subscribeFoldBars,
+  subscribeFoldDoc,
 } from '@/lib/folds/client';
 import {
   FOLD_BAR_MAX_CHARS,
@@ -34,7 +35,7 @@ import {
   type FoldBar,
   type FoldDoc,
 } from '@/lib/folds/types';
-import { outgoingReadReceiptAt, peerReadLastOutgoing } from '@/lib/folds/read-receipts';
+import { outgoingReadStatus, peerReadLastOutgoing } from '@/lib/folds/read-receipts';
 import { foldMessageTimestamp, isSameMessageDay } from '@/lib/folds/message-dates';
 import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
@@ -138,33 +139,44 @@ export function SheetMsgsDock({
     () => (activeFoldId ? folds.find((fold) => fold.id === activeFoldId) ?? null : null),
     [activeFoldId, folds]
   );
+  const [threadFold, setThreadFold] = useState<FoldDoc | null>(null);
+  const receiptFold = threadFold ?? activeFold;
 
   useEffect(() => {
     if (!open || view !== 'thread' || !activeFoldId) {
       setBars([]);
+      setThreadFold(null);
       return;
     }
     const unsub = subscribeFoldBars(activeFoldId, setBars, () => setBars([]));
-    return unsub;
+    const unsubFold = subscribeFoldDoc(activeFoldId, setThreadFold, () => setThreadFold(null));
+    return () => {
+      unsub();
+      unsubFold();
+    };
   }, [open, view, activeFoldId]);
+
+  const lastReadBarRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || view !== 'thread' || !activeFoldId) {
-      if (!open) markedThreadRef.current = null;
+      if (!open) {
+        markedThreadRef.current = null;
+        lastReadBarRef.current = null;
+      }
       return;
     }
-    if (markedThreadRef.current === activeFoldId) return;
     markedThreadRef.current = activeFoldId;
-    void markFoldReadClient(activeFoldId).catch(() => undefined);
   }, [open, view, activeFoldId]);
 
   useEffect(() => {
-    if (!open || view !== 'thread' || !activeFoldId || markedThreadRef.current !== activeFoldId) return;
+    if (!open || view !== 'thread' || !activeFoldId || !me) return;
     const fold = folds.find((f) => f.id === activeFoldId);
-    if (!fold || fold.lastSenderId === me) return;
-    if (unreadFor(fold, me) <= 0) return;
+    if (!fold || fold.lastSenderId === me || !fold.lastBarId) return;
+    if (lastReadBarRef.current === fold.lastBarId) return;
+    lastReadBarRef.current = fold.lastBarId;
     void markFoldReadClient(activeFoldId).catch(() => undefined);
-  }, [open, view, activeFoldId, bars.length, folds, me]);
+  }, [open, view, activeFoldId, folds, me]);
 
   useEffect(() => {
     if (!open || view !== 'thread') return;
@@ -434,9 +446,9 @@ export function SheetMsgsDock({
                     const prev = bars[index - 1];
                     const firstOfDay = !prev || !isSameMessageDay(m.createdAt, prev.createdAt);
                     const mine = m.senderId === me;
-                    const readAt =
-                      mine && activeFold && peerId
-                        ? outgoingReadReceiptAt(activeFold, peerId, bars, m, me)
+                    const readStatus =
+                      mine && receiptFold && peerId
+                        ? outgoingReadStatus(receiptFold, peerId, bars, m, me)
                         : null;
                     return (
                       <React.Fragment key={m.id}>
@@ -453,7 +465,7 @@ export function SheetMsgsDock({
                         >
                           {m.text}
                         </p>
-                        {readAt ? <FoldReadReceipt readAt={readAt} compact /> : null}
+                        {readStatus ? <FoldReadReceipt status={readStatus} compact /> : null}
                       </div>
                       </React.Fragment>
                     );

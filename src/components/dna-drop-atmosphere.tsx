@@ -2,8 +2,34 @@
 
 import { cn } from '@/lib/utils';
 
-/** Lyric-lab atmosphere — helix + phosphor, not vault chamber and not an album jacket. */
-export function DnaDropAtmosphere({ className }: { className?: string }) {
+export type DnaDropAtmosphereVariant = 'strand' | 'release-hub';
+
+/** Strand = lyric-lab helix. Release hub = lacquer / groove room (same neon family, different read). */
+export function DnaDropAtmosphere({
+  className,
+  variant = 'strand',
+}: {
+  className?: string;
+  variant?: DnaDropAtmosphereVariant;
+}) {
+  if (variant === 'release-hub') {
+    return (
+      <div
+        className={cn('pointer-events-none fixed inset-0 z-0 overflow-hidden release-hub-room', className)}
+        aria-hidden
+      >
+        <div className="release-hub-wash absolute inset-0" />
+        <div className="release-hub-orb-a absolute -right-[10%] top-[-8%] h-[55%] w-[58%] rounded-full" />
+        <div className="release-hub-orb-b absolute -left-[14%] bottom-[-12%] h-[50%] w-[52%] rounded-full" />
+        <div className="release-hub-vinyl absolute right-[-6%] top-[12%] h-[min(72vw,520px)] w-[min(72vw,520px)] rounded-full" />
+        <div className="release-hub-grooves absolute inset-0" />
+        <div className="release-hub-shelf absolute inset-x-0 bottom-0 h-[38%]" />
+        <div className="release-hub-grain absolute inset-0" />
+        <div className="release-hub-vignette absolute inset-0" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn('pointer-events-none fixed inset-0 z-0 overflow-hidden dna-drop-lab', className)}
