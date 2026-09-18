@@ -331,7 +331,6 @@ function FreeVisitorVault({
   onDeleteTrack,
   vaultFilter,
   onClearVaultFilter,
-  setVaultFilter,
   unassignedTracks,
   unassignedTrackCount,
 }: {
@@ -347,7 +346,6 @@ function FreeVisitorVault({
   onDeleteTrack: (track: Track) => void;
   vaultFilter: LooseTrackFilter;
   onClearVaultFilter: () => void;
-  setVaultFilter: (value: LooseTrackFilter) => void;
   unassignedTracks: Track[];
   unassignedTrackCount: number;
 }) {
@@ -375,8 +373,6 @@ function FreeVisitorVault({
           scope="loose"
           looseTracks={unassignedTracks}
           albums={realAlbums}
-          vaultFilter={vaultFilter}
-          onFilter={setVaultFilter}
           title={
             <Link
               href="/albums/unassigned"
@@ -519,8 +515,6 @@ function FreeVisitorVault({
           scope="albums"
           looseTracks={unassignedTracks}
           albums={realAlbums}
-          vaultFilter={vaultFilter}
-          onFilter={setVaultFilter}
           title={
             <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
               <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION
@@ -1304,7 +1298,6 @@ export function AlbumList() {
                   onDeleteTrack={setTrackToDelete}
                   vaultFilter={vaultFilter}
                   onClearVaultFilter={clearVaultFilter}
-                  setVaultFilter={setVaultFilter}
                   unassignedTracks={unassignedTracks}
                   unassignedTrackCount={unassignedTracks.length}
                 />
@@ -1317,8 +1310,6 @@ export function AlbumList() {
                               scope="loose"
                               looseTracks={unassignedTracks}
                               albums={realAlbums}
-                              vaultFilter={vaultFilter}
-                              onFilter={setVaultFilter}
                               title={
                                 <div className="flex items-center gap-3">
                                   <Link
@@ -1432,8 +1423,6 @@ export function AlbumList() {
                           scope="albums"
                           looseTracks={unassignedTracks}
                           albums={realAlbums}
-                          vaultFilter={vaultFilter}
-                          onFilter={setVaultFilter}
                           title={
                             <h2 className="text-3xl font-headline font-bold text-foreground uppercase tracking-tighter flex items-center gap-3">
                               <Music className="text-emerald-500 h-8 w-8" /> YOUR COLLECTION

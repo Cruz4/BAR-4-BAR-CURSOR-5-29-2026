@@ -4,8 +4,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { VaultStatusBadgeRow } from '@/components/vault/vault-status-badge-row';
 import type { Album, Track } from '@/lib/types';
-import type { LooseTrackFilter } from '@/lib/track-live-flags';
-
 /** Title row: section name + status badges (tight); count pill aligned on the right across sections. */
 export function VaultSectionHeader({
   borderClass,
@@ -14,8 +12,6 @@ export function VaultSectionHeader({
   scope,
   looseTracks,
   albums,
-  vaultFilter,
-  onFilter,
   countLabel,
   className,
   dataTour,
@@ -26,8 +22,6 @@ export function VaultSectionHeader({
   scope: 'loose' | 'albums';
   looseTracks: Track[];
   albums: Album[];
-  vaultFilter: LooseTrackFilter;
-  onFilter: (filter: LooseTrackFilter) => void;
   countLabel: ReactNode;
   className?: string;
   dataTour?: string;
@@ -41,8 +35,6 @@ export function VaultSectionHeader({
             scope={scope}
             looseTracks={looseTracks}
             albums={albums}
-            activeFilter={vaultFilter}
-            onFilter={onFilter}
             className="ml-4 sm:ml-6 md:ml-10"
           />
         </div>

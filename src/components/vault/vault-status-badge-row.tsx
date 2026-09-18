@@ -46,15 +46,11 @@ export function VaultStatusBadgeRow({
   scope,
   looseTracks,
   albums,
-  activeFilter,
-  onFilter,
   className,
 }: {
   scope: Scope;
   looseTracks: Track[];
   albums: Album[];
-  activeFilter: LooseTrackFilter;
-  onFilter: (filter: LooseTrackFilter) => void;
   className?: string;
 }) {
   return (
@@ -86,7 +82,6 @@ export function VaultStatusBadgeRow({
               ];
 
         const count = list.length;
-        const active = activeFilter === key;
         const disabled = count === 0;
 
         return (
@@ -95,16 +90,11 @@ export function VaultStatusBadgeRow({
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => {
-                  if (!disabled) onFilter(key);
-                }}
                 className={cn(
                   'inline-flex h-7 min-w-[2.25rem] items-center justify-center gap-1 rounded-full border px-2 text-[9px] font-bold uppercase tracking-[0.12em] transition-colors',
                   disabled
                     ? 'cursor-default border-white/10 bg-black/20 text-muted-foreground/35'
-                    : active
-                      ? cn(lit, 'ring-1 ring-white/20')
-                      : cn(lit, 'hover:brightness-110')
+                    : cn(lit, 'hover:brightness-110')
                 )}
                 title={disabled ? `No ${label}` : `${count} ${label}`}
                 aria-label={`${label}: ${count}`}
