@@ -36,6 +36,7 @@ import {
   resolveDnaDropCoverArt,
   findTrackInVault,
   normalizeDnaDropMedia,
+  trackLyricBarCount,
   type DnaDropTrackPayload,
   type DnaDropAlbumPayload,
 } from '@/lib/dna-drop';
@@ -112,13 +113,32 @@ function SharedProjectPageInner() {
             // Guests settle with authReady=false; waiting on authReady hangs the share page forever.
             if (authBooting) return;
             if (user && !authReady) return;
+            setLoading(true);
+            setDnaAccessRedirecting(false);
+            let keepLoading = false;
             try {
                 const normalizedShareId = shareId.trim().toUpperCase();
                 let data: ProjectShare | null = null;
-                let visibilityFromPublicApi: { dnaLive?: boolean; releaseLive?: boolean } | null =
-                    null;
+                let albumHubShareId: string | undefined;
+                let visibility: { dnaLive: boolean; releaseLive: boolean } | null = null;
 
-                if (user) {
+                const publicRes = await fetch(
+                    `/api/shares/${encodeURIComponent(normalizedShareId)}`,
+                    { cache: 'no-store' }
+                );
+                if (publicRes.ok) {
+                    const payload = (await publicRes.json()) as {
+                        share: ProjectShare;
+                        visibility?: { dnaLive?: boolean; releaseLive?: boolean };
+                        albumHubShareId?: string;
+                    };
+                    data = payload.share;
+                    albumHubShareId = payload.albumHubShareId?.trim();
+                    visibility = {
+                        dnaLive: Boolean(payload.visibility?.dnaLive),
+                        releaseLive: Boolean(payload.visibility?.releaseLive),
+                    };
+                } else if (user) {
                     try {
                         const docRef = doc(db, 'shares', normalizedShareId);
                         const snap = await getDoc(docRef);
@@ -126,130 +146,108 @@ function SharedProjectPageInner() {
                             data = { id: snap.id, ...(snap.data() as Omit<ProjectShare, 'id'>) };
                         }
                     } catch {
-                        /* guests and some sessions cannot read shares client-side */
-                    }
-                }
-
-                if (!data) {
-                    const publicRes = await fetch(
-                        `/api/shares/${encodeURIComponent(normalizedShareId)}`,
-                        { cache: 'no-store' }
-                    );
-                    if (publicRes.ok) {
-                        const payload = (await publicRes.json()) as {
-                            share: ProjectShare;
-                            visibility?: { dnaLive?: boolean; releaseLive?: boolean };
-                            albumHubShareId?: string;
-                        };
-                        data = payload.share;
-                        visibilityFromPublicApi = payload.visibility ?? null;
+                        /* fall through */
                     }
                 }
 
                 if (!data) {
                     setShare(null);
+                    keepLoading = true;
                     router.replace('/discover');
                     return;
                 }
 
-                const fromShare = shareDocumentVisibility(data as unknown as Record<string, unknown>);
-                let fromApi: { dnaLive?: boolean; releaseLive?: boolean } | null =
-                    visibilityFromPublicApi;
-                if (!fromApi) {
-                    const ac = new AbortController();
-                    const timer = window.setTimeout(() => ac.abort(), 2500);
+                const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
+
+                if (!visibility) {
+                    const fromShare = shareDocumentVisibility(data as unknown as Record<string, unknown>);
                     try {
                         const visibilityResponse = await fetch(
                             `/api/dna/manage?shareId=${encodeURIComponent(normalizedShareId)}`,
-                            { cache: 'no-store', signal: ac.signal }
+                            { cache: 'no-store' }
                         );
-                        fromApi = visibilityResponse.ok
-                            ? await visibilityResponse.json() as { dnaLive?: boolean; releaseLive?: boolean }
-                            : null;
-                    } catch {
-                        fromApi = null;
-                    } finally {
-                        window.clearTimeout(timer);
-                    }
-                }
-                const visibility = {
-                    dnaLive: Boolean(fromApi?.dnaLive ?? fromShare.dnaLive),
-                    releaseLive: Boolean(fromApi?.releaseLive ?? fromShare.releaseLive),
-                };
-                if (data.type === 'album') {
-                    const releaseHubId = releaseShareIdFromShareDocument(
-                        data as unknown as Record<string, unknown>
-                    );
-                    if (
-                        !visibility.releaseLive &&
-                        releaseHubId &&
-                        releaseHubId.toUpperCase() !== normalizedShareId
-                    ) {
-                        try {
-                            const altRes = await fetch(
-                                `/api/shares/${encodeURIComponent(releaseHubId)}`,
-                                { cache: 'no-store' }
-                            );
-                            if (altRes.ok) {
-                                const altPayload = (await altRes.json()) as {
-                                    visibility?: { releaseLive?: boolean };
-                                };
-                                if (altPayload.visibility?.releaseLive) {
-                                    visibility.releaseLive = true;
-                                }
-                            }
-                        } catch {
-                            /* optional sibling release hub */
+                        if (visibilityResponse.ok) {
+                            const parsed = (await visibilityResponse.json()) as {
+                                dnaLive?: boolean;
+                                releaseLive?: boolean;
+                            };
+                            visibility = {
+                                dnaLive: Boolean(parsed.dnaLive),
+                                releaseLive: Boolean(parsed.releaseLive),
+                            };
+                        } else {
+                            visibility = {
+                                dnaLive: Boolean(fromShare.dnaLive),
+                                releaseLive: Boolean(fromShare.releaseLive),
+                            };
                         }
+                    } catch {
+                        visibility = {
+                            dnaLive: Boolean(fromShare.dnaLive),
+                            releaseLive: Boolean(fromShare.releaseLive),
+                        };
                     }
                 }
-                const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
+
                 const snapshotTrackIdEarly = (searchParams.get(DNA_DROP_SNAPSHOT_TRACK_PARAM) || '').trim();
-                const isPublic = Boolean(
-                    visibility?.dnaLive || visibility?.releaseLive || (data.type === 'album' && isOwner)
-                );
-                const musicPublic = Boolean(visibility?.releaseLive);
-                const canViewDna = isOwner || viewerIsPro;
-                if (data.type === 'album' && !snapshotTrackIdEarly && musicPublic && !isOwner) {
-                    const releaseHubId = releaseShareIdFromShareDocument(
-                        data as unknown as Record<string, unknown>
-                    );
-                    if (releaseHubId && releaseHubId.toUpperCase() !== normalizedShareId) {
-                        router.replace(`/share/${encodeURIComponent(releaseHubId)}`);
-                        return;
-                    }
+                const housePublic = Boolean((data as ProjectShare).houseRelease);
+                const musicPublic = Boolean(visibility.releaseLive || housePublic);
+                const dnaPublic = Boolean(visibility.dnaLive);
+                const isPublic = Boolean(dnaPublic || musicPublic || isOwner || housePublic);
+                const viewerCanUseDna = isOwner || viewerIsPro;
+
+                const resolvedAlbumHubId =
+                    albumHubShareId ||
+                    releaseShareIdFromShareDocument(data as unknown as Record<string, unknown>);
+
+                if (
+                    data.type === 'album' &&
+                    !snapshotTrackIdEarly &&
+                    musicPublic &&
+                    !isOwner &&
+                    resolvedAlbumHubId &&
+                    resolvedAlbumHubId.toUpperCase() !== normalizedShareId
+                ) {
+                    keepLoading = true;
+                    router.replace(`/share/${encodeURIComponent(resolvedAlbumHubId)}`);
+                    return;
                 }
-                if (data.type !== 'album' && musicPublic && !visibility?.dnaLive) {
+
+                if (data.type === 'track' && musicPublic && !dnaPublic) {
+                    keepLoading = true;
                     router.replace(`/song/${encodeURIComponent(shareId)}`);
                     return;
                 }
+
                 if (!isPublic && !isOwner) {
                     setShare(null);
+                    keepLoading = true;
                     router.replace('/discover');
                     return;
                 }
-                if (!canViewDna && !musicPublic && data.type !== 'album') {
+
+                const isLyricDnaOnlyTrack =
+                    data.type === 'track' && dnaPublic && !musicPublic && !snapshotTrackIdEarly;
+                const isAlbumDnaStrand =
+                    data.type === 'album' && Boolean(snapshotTrackIdEarly) && dnaPublic;
+                if ((isLyricDnaOnlyTrack || isAlbumDnaStrand) && !viewerCanUseDna) {
                     const dest = user ? DNA_DROP_UPGRADE_PATH : buildDnaDropLoginPath(shareId, 'view');
                     setDnaAccessRedirecting(true);
+                    keepLoading = true;
                     router.replace(dest);
-                    window.setTimeout(() => {
-                        if (window.location.pathname.startsWith('/share/')) {
-                            window.location.assign(dest);
-                        }
-                    }, 1200);
                     return;
                 }
+
                 setHubVisibility(visibility);
                 setShare(data);
-                if (canViewDna || musicPublic) {
-                    const docRef = doc(db, 'shares', normalizedShareId);
-                    updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
-                }
+                const docRef = doc(db, 'shares', normalizedShareId);
+                updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
             } catch {
                 setShare(null);
+                keepLoading = true;
                 router.replace('/discover');
             } finally {
-                setLoading(false);
+                if (!keepLoading) setLoading(false);
             }
         };
         void fetchShare();
@@ -272,6 +270,12 @@ function SharedProjectPageInner() {
           ?? albumPayload.tracks?.find((track) => track.id === snapshotTrackId);
     }, [albumPayload, snapshotTrackId]);
     const viewingAlbumHub = Boolean(isAlbum && !snapshotTrack);
+    const albumLyricDnaStrandCount = useMemo(() => {
+        if (!albumPayload) return 0;
+        return orderAlbumTracks(albumPayload.tracks ?? [], albumPayload).filter(
+            (track) => trackLyricBarCount(track) > 0
+        ).length;
+    }, [albumPayload]);
     const albumHubShareId = useMemo(() => {
         if (!isAlbum) return shareId;
         const payload = project as DnaDropAlbumPayload | undefined;
@@ -553,6 +557,16 @@ function SharedProjectPageInner() {
     const guestImportHint =
       'Copies lyrics, structure, and Creative DNA into your vault — not the song. Use Pay what you want below to buy the stream.';
 
+    const importSetupTooltip = !user
+      ? guestImportHint
+      : !viewerIsPro
+        ? 'Studio Pro unlocks opening and importing Lyrics DNA Drops into your vault.'
+        : isOwnShare && alreadyInVault
+          ? isAlbum
+            ? 'This album is already in your vault — open it to edit sheets and DNA.'
+            : 'This track is already in your vault — open the sheet to keep writing.'
+          : 'Import Setup copies lyrics, structure, Creative DNA, vibe, and strains into your vault. Released audio stays separate — use Listen / buy to stream or purchase.';
+
     const OwnerEditIcon = snapshotTrack || !isAlbum ? Pencil : Disc3;
 
     return (
@@ -667,32 +681,41 @@ function SharedProjectPageInner() {
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                    <Button
-                        onClick={handleImportClick}
-                        size="sm"
-                        className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[11rem] sm:max-w-none"
-                        disabled={isImporting}
-                    >
-                        {isImporting ? (
-                            <StudioLoader size="sm" />
-                        ) : !user ? (
-                            <LogIn className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                        ) : isOwnShare && alreadyInVault ? (
-                            <OwnerEditIcon className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                        ) : (
-                            <Import className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                        )}
-                        <span className="truncate text-[10px] sm:text-sm">
-                            {isOwnShare && alreadyInVault ? (
-                                <>
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleImportClick}
+                              size="sm"
+                              className="h-8 sm:h-9 px-2.5 sm:px-4 font-bold shadow-lg max-w-[11rem] sm:max-w-none"
+                              disabled={isImporting}
+                            >
+                              {isImporting ? (
+                                <StudioLoader size="sm" />
+                              ) : !user ? (
+                                <LogIn className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                              ) : isOwnShare && alreadyInVault ? (
+                                <OwnerEditIcon className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                              ) : (
+                                <Import className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                              )}
+                              <span className="truncate text-[10px] sm:text-sm">
+                                {isOwnShare && alreadyInVault ? (
+                                  <>
                                     <span className="sm:hidden">{isAlbum ? 'Album' : 'Edit'}</span>
                                     <span className="hidden sm:inline">{importLabel}</span>
-                                </>
-                            ) : (
-                                importLabel
-                            )}
-                        </span>
-                    </Button>
+                                  </>
+                                ) : (
+                                  importLabel
+                                )}
+                              </span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-[18rem] text-[11px] leading-relaxed">
+                            {importSetupTooltip}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                 </div>
             </header>
@@ -767,7 +790,7 @@ function SharedProjectPageInner() {
                     <span
                       className={cn(
                         'rounded-full border px-2.5 py-1',
-                        hubVisibility.dnaLive
+                        hubVisibility.dnaLive || albumLyricDnaStrandCount > 0
                           ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-100'
                           : canViewDnaLyrics
                             ? 'border-white/15 text-muted-foreground'
@@ -775,11 +798,13 @@ function SharedProjectPageInner() {
                       )}
                     >
                       Lyrics DNA:{' '}
-                      {hubVisibility.dnaLive
-                        ? 'live'
-                        : canViewDnaLyrics
-                          ? 'not shared'
-                          : 'Pro only'}
+                      {albumLyricDnaStrandCount > 0
+                        ? `${albumLyricDnaStrandCount} track${albumLyricDnaStrandCount === 1 ? '' : 's'} live`
+                        : hubVisibility.dnaLive
+                          ? 'live'
+                          : canViewDnaLyrics
+                            ? 'not shared'
+                            : 'Pro only'}
                     </span>
                   </div>
                 ) : null}

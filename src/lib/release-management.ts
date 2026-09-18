@@ -238,7 +238,17 @@ export function shareDocumentVisibility(document: Record<string, unknown>): Shar
     ? document.data as Record<string, unknown>
     : {};
   const hasAudio = hasReleaseAudio(payload as ReleaseRecord) || document.hasDropAudio === true;
+  const houseRelease = isHouseReleaseDocument(document);
   const releaseStatus = document.releaseStatus || payload.releaseStatus;
+  const releaseMarkedLive =
+    releaseStatus === 'live' &&
+    document.hasDropAudio === true &&
+    !document.releaseRemovedAt;
+  const houseReleasePublic =
+    houseRelease &&
+    hasAudio &&
+    releaseStatus !== 'draft' &&
+    !document.releaseRemovedAt;
   // A commerce snapshot may contain the Vault record's dnaStatus inside data;
   // that does not make this release document a second DNA page. For modern
   // release documents only the share document's top-level dnaStatus is authoritative.
@@ -246,11 +256,15 @@ export function shareDocumentVisibility(document: Record<string, unknown>): Shar
   const legacyCombined = hasAudio && !releaseStatus && !dnaStatus;
   return {
     releaseLive: Boolean(
-      hasAudio &&
-      !document.releaseRemovedAt &&
+      houseReleasePublic ||
+      releaseMarkedLive ||
       (
-        (Boolean(releaseStatus) && releaseStatus !== 'draft' && releaseStatus !== 'unlisted') ||
-        (!releaseStatus && !dnaStatus)
+        hasAudio &&
+        !document.releaseRemovedAt &&
+        (
+          (Boolean(releaseStatus) && releaseStatus !== 'draft' && releaseStatus !== 'unlisted') ||
+          (!releaseStatus && !dnaStatus)
+        )
       )
     ),
     dnaLive: dnaStatus === 'live' || (!dnaStatus && (!hasAudio || legacyCombined)),

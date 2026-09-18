@@ -45,7 +45,7 @@ export async function canonicalShareVisibility(db: Firestore, shareId: string) {
   const liveDnaIds = await canonicalLiveDnaShareIds(db, [shareId]);
   const dnaLive = visibility.dnaLive && liveDnaIds.has(shareId);
   let releaseLive = visibility.releaseLive;
-  if (data.type === 'album' && !dnaLive && !releaseLive) {
+  if (data.type === 'album' && !releaseLive) {
     const releaseHubId = releaseShareIdFromShareDocument(data);
     if (releaseHubId && releaseHubId.toUpperCase() !== shareId.toUpperCase()) {
       const altSnap = await db.doc(`shares/${releaseHubId}`).get();

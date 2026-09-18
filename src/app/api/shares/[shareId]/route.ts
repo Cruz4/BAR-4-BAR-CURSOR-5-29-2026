@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
 import { canonicalShareVisibility } from '@/lib/server/dna-visibility';
 import { resolveAlbumHubShareId } from '@/lib/pressed-song';
-import { releaseShareIdFromShareDocument } from '@/lib/release-management';
+import { isHouseReleaseDocument, releaseShareIdFromShareDocument } from '@/lib/release-management';
 import type { ProjectShare } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -29,12 +29,14 @@ export async function GET(
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const visibility = await canonicalShareVisibility(db, shareId);
+    const raw = snap.data() as Record<string, unknown>;
+    let visibility = await canonicalShareVisibility(db, shareId);
+    if (isHouseReleaseDocument(raw) && visibility) {
+      visibility = { ...visibility, releaseLive: true };
+    }
     if (!visibility || (!visibility.dnaLive && !visibility.releaseLive)) {
       return NextResponse.json({ error: 'Not public' }, { status: 404 });
     }
-
-    const raw = snap.data() as Record<string, unknown>;
     const share: ProjectShare = {
       id: snap.id,
       type: raw.type === 'track' ? 'track' : 'album',

@@ -96,6 +96,16 @@ assert.deepEqual(
 );
 assert.equal(isHouseReleaseDocument({ houseRelease: true, data: {} }), true);
 assert.equal(isHouseReleaseDocument({ data: { houseRelease: true } }), false);
+assert.deepEqual(
+  shareDocumentVisibility({
+    houseRelease: true,
+    releaseStatus: 'unlisted',
+    hasDropAudio: true,
+    data: { tracks: [{ dropAudio: audio }] },
+  }),
+  { releaseLive: true, dnaLive: false },
+  'House albums stay reachable on the public album hub even when commerce is unlisted',
+);
 assert.equal(
   canManageReleaseShare({ houseRelease: true, houseArtistId: 'artist', ownerId: 'admin' }, 'artist'),
   true,
