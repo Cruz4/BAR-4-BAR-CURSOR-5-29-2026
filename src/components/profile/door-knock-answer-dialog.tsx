@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
 import { playDoorKnockSound } from '@/lib/door-knock-sound';
@@ -17,6 +18,7 @@ import { PassBarDialog } from '@/components/folds/pass-bar-dialog';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { foldIdFor } from '@/lib/folds/types';
+import { profileHref } from '@/lib/profile/profile-slug';
 import {
   dismissDoorKnockLiveClient,
   type DoorKnockLiveEvent,
@@ -73,11 +75,20 @@ export function DoorKnockAnswerDialog({
         <DialogContent className="max-w-md border-sky-500/30 bg-[#07111f] sm:rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-headline text-xl uppercase tracking-tight text-sky-100">
-              <span className="text-xl leading-none" aria-hidden>✊</span> Someone&apos;s at the door
+              <span className="door-knock-punch text-xl leading-none" aria-hidden>✊</span> Someone&apos;s at the door
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-              <span className="font-bold text-sky-100">{knock.knockerName}</span> knocked on your
-              Artist Home while you&apos;re here. Would you like to answer and say hello?
+              {profileHref(knock.knockerSlug) ? (
+                <Link
+                  href={profileHref(knock.knockerSlug)!}
+                  className="font-bold text-fuchsia-200 transition-colors hover:text-fuchsia-100 hover:underline"
+                >
+                  {knock.knockerName}
+                </Link>
+              ) : (
+                <span className="font-bold text-sky-100">{knock.knockerName}</span>
+              )}{' '}
+              knocked on your Artist Home while you&apos;re here. Would you like to answer and say hello?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">

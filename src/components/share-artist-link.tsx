@@ -12,6 +12,8 @@ type ShareArtistLinkProps = {
   size?: 'sm' | 'md';
   /** When false, only the artist name is shown (still clickable when slug exists). */
   showLabel?: boolean;
+  /** Plain text only — use inside another link to avoid nested `<a>`. */
+  disableLink?: boolean;
 };
 
 /** Clickable original artist credit on public share / DNA pages. */
@@ -22,8 +24,9 @@ export function ShareArtistLink({
   label = 'Original artist',
   size = 'md',
   showLabel = true,
+  disableLink = false,
 }: ShareArtistLinkProps) {
-  const href = profileHref(slug);
+  const href = disableLink ? null : profileHref(slug);
   const textClass =
     size === 'sm'
       ? 'text-[9px] uppercase tracking-[0.16em]'

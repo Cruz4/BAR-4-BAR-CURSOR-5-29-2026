@@ -276,9 +276,16 @@ export async function knockArtistHomeDoor(input: {
   return { ok: true, quota, live: atHome, knockId };
 }
 
+export type DeliveredDoorKnocker = {
+  name: string;
+  slug?: string;
+  activityId?: string;
+};
+
 export type DeliveredDoorKnocks = {
   delivered: number;
   knockerNames: string[];
+  knockers: DeliveredDoorKnocker[];
 };
 
 export async function deliverPendingDoorKnocks(userId: string): Promise<DeliveredDoorKnocks> {
@@ -290,16 +297,24 @@ export async function deliverPendingDoorKnocks(userId: string): Promise<Delivere
     const data = doc.data();
     return data.direction === 'received' && !data.homeDeliveredAt;
   });
-  if (!pending.length) return { delivered: 0, knockerNames: [] };
+  if (!pending.length) return { delivered: 0, knockerNames: [], knockers: [] };
 
   const now = new Date().toISOString();
   const batch = db.batch();
   const names: string[] = [];
+  const knockers: DeliveredDoorKnocker[] = [];
   for (const doc of pending) {
     const data = doc.data();
     batch.update(doc.ref, { homeDeliveredAt: now });
     const name = typeof data.actorName === 'string' ? data.actorName.trim() : '';
+    const slug = typeof data.actorSlug === 'string' ? data.actorSlug.trim() : '';
+    const activityId = doc.id;
     if (name) names.push(name);
+    knockers.push({
+      name: name || 'Artist',
+      ...(slug ? { slug } : {}),
+      activityId,
+    });
   }
   batch.set(
     db.doc(`users/${userId}/activityMeta/summary`),
@@ -318,7 +333,7 @@ export async function deliverPendingDoorKnocks(userId: string): Promise<Delivere
     void maybePush(userId, 'door_knock', title, body, href);
   }
 
-  return { delivered: pending.length, knockerNames: names };
+  return { delivered: pending.length, knockerNames: names, knockers };
 }
 
 export async function dismissDoorKnockLive(userId: string, knockId: string): Promise<void> {

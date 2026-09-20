@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { collection, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client/firebase';
 import { subscribeQuery } from '@/lib/firebase/client/firestore-subscribe';
@@ -10,11 +10,17 @@ import { useToast } from '@/hooks/use-toast';
 import {
   deliverDoorKnocksAtHome,
   startDoorPresenceHeartbeat,
+  type DeliveredDoorKnocker,
   type DoorKnockLiveEvent,
 } from '@/lib/door-knock-client';
 import { DoorKnockAnswerDialog } from '@/components/profile/door-knock-answer-dialog';
+import { DoorKnockReveal } from '@/components/profile/door-knock-reveal';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { playDoorKnockSound } from '@/lib/door-knock-sound';
+
+type RevealState =
+  | { kind: 'delivered'; delivered: number; knockers: DeliveredDoorKnocker[] }
+  | { kind: 'live'; knock: DoorKnockLiveEvent };
 
 /**
  * When the profile owner is on their Artist Home: heartbeat presence,
@@ -31,7 +37,9 @@ export function DoorKnockHomeListener({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [reveal, setReveal] = useState<RevealState | null>(null);
   const [liveKnock, setLiveKnock] = useState<DoorKnockLiveEvent | null>(null);
+  const [openAnswerOnRevealClose, setOpenAnswerOnRevealClose] = useState(false);
   const handledRef = useRef<Set<string>>(new Set());
   const deliveredRef = useRef(false);
 
@@ -55,6 +63,12 @@ export function DoorKnockHomeListener({
           description: `${who} knocked while you were away. Check Activity for the full list.`,
           duration: 12_000,
         });
+        playDoorKnockSound(0.2);
+        setReveal({
+          kind: 'delivered',
+          delivered: result.delivered,
+          knockers: result.knockers.length ? result.knockers : result.knockerNames.map((name) => ({ name })),
+        });
       }
     });
   }, [enabled, user?.id, ownerUserId, toast]);
@@ -74,15 +88,17 @@ export function DoorKnockHomeListener({
           const knockerId = typeof row.knockerId === 'string' ? row.knockerId : '';
           if (!knockerId || knockerId === user.id) continue;
           handledRef.current.add(knockId);
-          playDoorKnockSound(0.18);
-          setLiveKnock({
+          playDoorKnockSound(0.22);
+          const knock: DoorKnockLiveEvent = {
             knockId,
             knockerId,
             knockerName: typeof row.knockerName === 'string' ? row.knockerName : 'Artist',
             knockerSlug: typeof row.knockerSlug === 'string' ? row.knockerSlug : undefined,
             activityId: typeof row.activityId === 'string' ? row.activityId : undefined,
             createdAt: typeof row.createdAt === 'string' ? row.createdAt : '',
-          });
+          };
+          setOpenAnswerOnRevealClose(true);
+          setReveal({ kind: 'live', knock });
           void refreshActivityAlerts();
           break;
         }
@@ -94,14 +110,54 @@ export function DoorKnockHomeListener({
     );
   }, [enabled, user?.id, ownerUserId]);
 
-  if (!liveKnock || !user?.id) return null;
+  const closeReveal = useCallback(() => {
+    setReveal((current) => {
+      if (current?.kind === 'live' && openAnswerOnRevealClose) {
+        setLiveKnock(current.knock);
+        setOpenAnswerOnRevealClose(false);
+      }
+      return null;
+    });
+  }, [openAnswerOnRevealClose]);
+
+  const sayHelloFromReveal = useCallback(() => {
+    setReveal((current) => {
+      if (current?.kind === 'live') {
+        setLiveKnock(current.knock);
+        setOpenAnswerOnRevealClose(false);
+      }
+      return null;
+    });
+  }, []);
+
+  if (!user?.id) return null;
 
   return (
-    <DoorKnockAnswerDialog
-      knock={liveKnock}
-      ownerUserId={user.id}
-      ownerSlug={ownerSlug}
-      onDismiss={() => setLiveKnock(null)}
-    />
+    <>
+      {reveal?.kind === 'delivered' ? (
+        <DoorKnockReveal
+          variant="delivered"
+          delivered={reveal.delivered}
+          knockers={reveal.knockers}
+          onClose={closeReveal}
+        />
+      ) : null}
+      {reveal?.kind === 'live' ? (
+        <DoorKnockReveal
+          variant="live"
+          knock={reveal.knock}
+          onClose={closeReveal}
+          onSayHello={sayHelloFromReveal}
+        />
+      ) : null}
+      {liveKnock ? (
+        <DoorKnockAnswerDialog
+          knock={liveKnock}
+          ownerUserId={user.id}
+          ownerSlug={ownerSlug}
+          onDismiss={() => setLiveKnock(null)}
+        />
+      ) : null}
+    </>
   );
 }

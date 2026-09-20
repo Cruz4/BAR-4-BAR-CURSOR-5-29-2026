@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { usePostImageUrl } from '@/hooks/use-post-image-url';
 import { cn } from '@/lib/utils';
+import { formatDropShareCaption } from '@/lib/profile/drop-share-caption';
+import { classifyAppHref } from '@/lib/profile/inline-links';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import { FieldsLinkPreview } from '@/components/profile/inline-link-preview';
@@ -211,7 +213,7 @@ function ReverbSourceBody({
     post.reverbPostId && liveSlug ? artistHomePostHref(liveSlug, post.reverbPostId) : undefined;
 
   return (
-    <div className="mt-2 rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-3">
+    <div className="mt-2 min-w-0 overflow-hidden rounded-xl border border-[var(--ph-border,rgba(255,255,255,0.14))] bg-black/30 p-2.5 sm:p-3">
       <div className="mb-1.5 flex items-center gap-2">
         {resolved && !isLive && (post.reverbOwnerId || post.reverbOwnerSlug) ? (
           <Hint content="Artist Home offline" side="top">
@@ -221,7 +223,7 @@ function ReverbSourceBody({
                 avatarUrl={avatarUrl}
                 useStarMark={useStar}
                 starMarkSeed={starSeed}
-                size={42}
+                size={36}
                 toneClass="bg-sky-500/30 text-sky-300"
                 studioChrome={studioChrome}
               />
@@ -234,7 +236,7 @@ function ReverbSourceBody({
             useStarMark={useStar}
             starMarkSeed={starSeed}
             href={href}
-            size={42}
+            size={36}
             toneClass="bg-sky-500/30 text-sky-300"
             studioChrome={studioChrome}
           />
@@ -324,7 +326,7 @@ function ReverbSourceBody({
         text={post.reverbText}
         referralPostId={post.id}
         viewportBounded={immersive}
-        className="mt-2"
+        className="mt-2 min-w-0 max-w-full overflow-hidden"
       />
       {post.reverbVoice ? (
         <div className="mt-2">
@@ -398,6 +400,21 @@ export function PostCard({
   const [imprintRoot, setImprintRoot] = useState<HTMLDivElement | null>(null);
   const [imprintSaveCount, setImprintSaveCount] = useState(post.imprintSaveCount || 0);
   const insertReverbEmoji = useEmojiInserter(reverbQuote, setReverbQuote, reverbQuoteRef);
+  const wallCaptionRaw =
+    post.embedUrl && post.text && !post.quotePress && !post.lyricClip
+      ? formatDropShareCaption(post.text)
+      : post.text;
+  /** Drop embed posts already show title | artist | album in the player — skip duplicate caption. */
+  const wallCaption =
+    post.embedUrl &&
+    wallCaptionRaw &&
+    !post.quotePress &&
+    !post.lyricClip &&
+    !post.voice &&
+    !post.video &&
+    classifyAppHref(post.embedUrl)?.kind === 'song'
+      ? ''
+      : wallCaptionRaw;
   const {
     imprintOn: reverbImprintOn,
     setImprintOn: setReverbImprintOn,
@@ -902,13 +919,13 @@ export function PostCard({
             />
           </div>
         </div>
-      ) : post.text ? (
+      ) : wallCaption ? (
         <ImmersiveClampedText
-          text={post.text}
+          text={wallCaption}
           immersive={immersive}
           className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--ph-text,#fff)]"
         >
-          <MentionText text={post.text} />
+          <MentionText text={wallCaption} />
         </ImmersiveClampedText>
       ) : null}
 
@@ -963,7 +980,7 @@ export function PostCard({
           text={post.text}
           referralPostId={post.id}
           viewportBounded={immersive}
-          className="mt-3"
+          className="mt-3 min-w-0 max-w-full overflow-hidden"
         />
       ) : null}
 

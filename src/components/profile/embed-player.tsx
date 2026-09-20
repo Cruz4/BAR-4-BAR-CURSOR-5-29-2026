@@ -13,7 +13,7 @@ import type { DropPrice } from '@/lib/drop-commerce';
 import { AlbumReleasePlaylist } from '@/components/album-release-playlist';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import type { FeaturedTrackSelection } from '@/lib/profile/modules';
-import { pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
+import { albumHubHref, pressedSongHref, type PressedSongSummary } from '@/lib/pressed-song';
 import { normalizeInlineHref, songShareIdFromHref, displayLabelForHref, isPlausibleWebHref } from '@/lib/profile/inline-links';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
@@ -123,6 +123,9 @@ function FirstDropFeedPlayer({
         ownerName={song.artist.name}
         houseRelease={song.houseRelease}
         albumTitle={song.title}
+        artistName={song.artist.name}
+        artistSlug={song.artist.slug}
+        albumHref={albumHubHref(song.albumShareId || shareId)}
       />
     );
   }
@@ -135,7 +138,7 @@ function FirstDropFeedPlayer({
         shareId={shareId}
         trackId={song.trackId || trackId}
         source="artist_home"
-        presentation="feed"
+        presentation="compact"
         title={song.title}
         artistName={song.artist.name}
         ownerId={song.ownerId}
@@ -204,6 +207,7 @@ export function FeaturedTrackPlayer({
         shareId={selection.shareId}
         trackId={selection.trackId}
         source="artist_home"
+        presentation="compact"
         title={selection.title}
         artistName={selection.artistName}
         ownerId={selection.ownerId}

@@ -7,6 +7,7 @@ import { Loader, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 import { formatDeckTime } from '@/lib/drop-library';
 import { Button } from '@/components/ui/button';
+import { DropTransportButton } from '@/components/drop-transport-button';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { cn } from '@/lib/utils';
 import { DropRepeatControl } from '@/components/drop-repeat-control';
@@ -111,21 +112,12 @@ export function DropNowPlayingBar() {
         <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-white hover:bg-white/10" onClick={prev} aria-label="Previous">
           <SkipBack className="h-4 w-4" />
         </Button>
-        <Button
-          type="button"
-          size="icon"
-          className="h-10 w-10 shrink-0 rounded-full bg-[var(--ph-accent,#e879f9)] text-black hover:brightness-110"
+        <DropTransportButton
+          playing={playing}
+          loading={loading}
+          size="md"
           onClick={togglePlay}
-          aria-label={playing ? 'Pause' : 'Play'}
-        >
-          {loading ? (
-            <Loader className="h-4 w-4 animate-spin" />
-          ) : playing ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
+        />
         <Button type="button" size="icon" variant="ghost" className="h-9 w-9 shrink-0 text-white hover:bg-white/10" onClick={skipNext} aria-label="Next">
           <SkipForward className="h-4 w-4" />
         </Button>

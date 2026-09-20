@@ -158,3 +158,72 @@ export function DropVisualizer({ analyser, playing, children, className }: DropV
     </div>
   );
 }
+
+/** Compact EQ strip for inline feed / wall players. */
+export function DropInlineSpectrum({
+  analyser,
+  playing,
+  className,
+  showOnMobile = false,
+}: {
+  analyser: AnalyserNode | null;
+  playing: boolean;
+  className?: string;
+  /** Show on narrow viewports (feed embed). */
+  showOnMobile?: boolean;
+}) {
+  const barRefs = useRef<Array<HTMLDivElement | null>>([null, null, null, null]);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    const smoothed = [0.1, 0.1, 0.1, 0.1];
+    let t = 0;
+
+    const tick = () => {
+      rafRef.current = requestAnimationFrame(tick);
+      t += playing ? 0.02 : 0.008;
+      if (analyser && bins) analyser.getByteFrequencyData(bins);
+
+      MUSICAL_EQ_BANDS.forEach((band, i) => {
+        const measured =
+          playing && analyser && bins
+            ? measureSpectrumBand(analyser, bins, band)
+            : 0.08 + Math.sin(t * 2.5 + i) * 0.05;
+        smoothed[i] = smoothSpectrumLevel(smoothed[i], measured);
+        const el = barRefs.current[i];
+        if (el) el.style.transform = `scaleY(${Math.max(0.12, smoothed[i])})`;
+      });
+    };
+
+    tick();
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [analyser, playing]);
+
+  return (
+    <div
+      className={cn(
+        'h-7 w-8 shrink-0 items-end justify-center gap-0.5',
+        showOnMobile ? 'flex' : 'hidden sm:flex',
+        playing && 'opacity-100',
+        !playing && 'opacity-35',
+        className
+      )}
+      aria-hidden
+    >
+      {MUSICAL_EQ_BANDS.map((_, i) => (
+        <div
+          key={i}
+          ref={(el) => {
+            barRefs.current[i] = el;
+          }}
+          className={cn(
+            'h-8 w-1 origin-bottom rounded-full',
+            i % 2 === 0 ? 'bg-fuchsia-400/90' : 'bg-cyan-300/85'
+          )}
+          style={{ transform: 'scaleY(0.15)' }}
+        />
+      ))}
+    </div>
+  );
+}

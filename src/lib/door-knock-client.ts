@@ -58,22 +58,33 @@ export async function knockArtistHomeDoorClient(input: {
   return data;
 }
 
+export type DeliveredDoorKnocker = {
+  name: string;
+  slug?: string;
+  activityId?: string;
+};
+
 export async function deliverDoorKnocksAtHome(): Promise<{
   delivered: number;
   knockerNames: string[];
+  knockers: DeliveredDoorKnocker[];
 }> {
   const user = auth.currentUser;
-  if (!user) return { delivered: 0, knockerNames: [] };
+  if (!user) return { delivered: 0, knockerNames: [], knockers: [] };
   const res = await fetch('/api/door-knock', {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify({ action: 'deliver', userId: user.uid }),
   });
-  if (!res.ok) return { delivered: 0, knockerNames: [] };
+  if (!res.ok) return { delivered: 0, knockerNames: [], knockers: [] };
   const data = await res.json();
+  const knockers = Array.isArray(data.knockers)
+    ? (data.knockers as DeliveredDoorKnocker[]).filter((k) => k && typeof k.name === 'string')
+    : [];
   return {
     delivered: Number(data.delivered) || 0,
     knockerNames: Array.isArray(data.knockerNames) ? data.knockerNames : [],
+    knockers,
   };
 }
 

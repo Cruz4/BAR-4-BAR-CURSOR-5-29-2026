@@ -205,9 +205,9 @@ export function DnaDropAlbumHub({
 
               const main = (
                 <>
-                  <div
-                    className={cn(
-                      'relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold tabular-nums',
+                   <div
+                     className={cn(
+                       'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold tabular-nums sm:h-11 sm:w-11',
                       rowHref
                         ? 'border-cyan-400/50 bg-cyan-400/10 text-cyan-200'
                         : 'border-border bg-muted/20 text-muted-foreground'
@@ -215,21 +215,22 @@ export function DnaDropAlbumHub({
                   >
                     {String(idx + 1).padStart(2, '0')}
                   </div>
-                  <div className="min-w-0 flex-1 py-1">
-                    <h4 className="font-headline text-base sm:text-lg font-bold uppercase tracking-tight leading-tight truncate">
-                      {trackTitle}
-                    </h4>
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {trackSubtitle(track, firstDropsOn, canViewDna)}
-                    </p>
+                   <div className="min-w-0 flex-1 py-0.5 sm:py-1">
+                     <h4 className="break-words font-headline text-[15px] font-bold uppercase leading-[1.15] tracking-tight sm:text-lg">
+                       {trackTitle}
+                     </h4>
+                     <p className="mt-0.5 break-words text-[10px] leading-snug text-muted-foreground">
+                       {trackSubtitle(track, firstDropsOn, canViewDna)}
+                     </p>
                     <ShareArtistLink
                       name={creditedArtist}
                       slug={artistSlug}
                       showLabel={false}
                       size="sm"
+                      disableLink={Boolean(rowHref)}
                       className="mt-0.5 text-fuchsia-200/80"
                     />
-                    <p className="mt-1 text-[9px] uppercase tracking-widest text-cyan-300/70 flex items-center gap-1.5">
+                     <p className="mt-1 flex items-start gap-1.5 text-[9px] uppercase leading-snug tracking-widest text-cyan-300/70">
                       {songListenHref ? (
                         <>
                           <Music className="h-3 w-3 shrink-0" />
@@ -255,16 +256,16 @@ export function DnaDropAlbumHub({
 
               return (
                 <li key={track.id}>
-                  <div
-                    className={cn(
-                      'flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-cyan-400/15 bg-black/20 px-3 py-3 sm:px-4',
-                      rowHref && 'hover:border-cyan-400/35'
-                    )}
+                   <div
+                     className={cn(
+                       'flex flex-col items-stretch gap-2 rounded-2xl border border-cyan-400/15 bg-black/20 px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4',
+                       rowHref && 'hover:border-cyan-400/35'
+                     )}
                   >
                     {rowHref ? (
                       <Link
-                        href={rowHref}
-                        className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 transition-colors hover:bg-cyan-400/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded-xl -m-1 p-1"
+                         href={rowHref}
+                         className="-m-1 flex w-full min-w-0 items-center gap-3 rounded-xl p-1 transition-colors hover:bg-cyan-400/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:flex-1 sm:gap-4"
                         aria-label={
                           songListenHref
                             ? `Open song page for ${trackTitle}`
@@ -274,16 +275,18 @@ export function DnaDropAlbumHub({
                         {main}
                         <ChevronRight className="h-5 w-5 text-cyan-300 shrink-0" aria-hidden />
                       </Link>
-                    ) : (
-                      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 opacity-80">{main}</div>
-                    )}
-                    <LyricsDnaTrackButton
-                      hasStrand={hasStrand}
-                      openHref={lyricDnaOpenHref}
-                      lockedHref={lyricDnaLockedHref}
-                      title={trackTitle}
-                    />
-                  </div>
+                     ) : (
+                       <div className="flex w-full min-w-0 items-center gap-3 opacity-80 sm:flex-1 sm:gap-4">{main}</div>
+                     )}
+                     <div className="flex justify-start pl-[3.25rem] sm:block sm:pl-0">
+                       <LyricsDnaTrackButton
+                         hasStrand={hasStrand}
+                         openHref={lyricDnaOpenHref}
+                         lockedHref={lyricDnaLockedHref}
+                         title={trackTitle}
+                       />
+                     </div>
+                   </div>
                 </li>
               );
             })}

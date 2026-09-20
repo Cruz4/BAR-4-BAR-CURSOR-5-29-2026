@@ -112,6 +112,57 @@
   }
 }
 
+.door-knock-punch {
+  animation: door-knock-punch 0.85s ease-in-out infinite;
+}
+
+@keyframes door-knock-reveal-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes door-knock-reveal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+@keyframes door-knock-reveal-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.door-knock-reveal-pop {
+  animation: door-knock-reveal-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.door-knock-reveal-out {
+  animation: door-knock-reveal-out 0.28s ease-in forwards;
+}
+
+.door-knock-reveal-timer {
+  animation: door-knock-reveal-timer 3s linear forwards;
+}
+
 /* Visitor chrome: sky blue rgb(125 211 252), flash pink every 7s — avatar ring + Studio Tier row only. */
 @keyframes studio-free-tier-flash {
   0%,

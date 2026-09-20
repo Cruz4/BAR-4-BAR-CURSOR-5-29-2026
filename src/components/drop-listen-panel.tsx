@@ -20,7 +20,7 @@ import {
   type DropPrice,
 } from '@/lib/drop-commerce';
 import { buildDropBuyLoginPath, getDropBuyIntentFromPath } from '@/lib/checkout-intent';
-import { Check, Pause, Play, Loader, ShoppingCart, Sparkles, Trophy } from 'lucide-react';
+import { Check, Loader, ShoppingCart, Sparkles, Trophy } from 'lucide-react';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useAudioVolume } from '@/hooks/use-audio-volume';
 import { AudioVolumeControl } from '@/components/audio-volume-control';
@@ -34,7 +34,8 @@ import {
 import { albumHubHref, pressedSongHref } from '@/lib/pressed-song';
 import { cn } from '@/lib/utils';
 import { useDropCart } from '@/context/drop-cart-context';
-import { DropVisualizer } from '@/components/library/drop-visualizer';
+import { DropInlineSpectrum, DropVisualizer } from '@/components/library/drop-visualizer';
+import { DropTransportButton } from '@/components/drop-transport-button';
 import { LivingPressField } from '@/components/profile/living-press-field';
 import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
@@ -170,15 +171,17 @@ export function DropListenPanel({
   const effectiveTrackId = trackId || pendingBuyIntent?.trackId;
   const pendingCheckoutHandledRef = useRef<string | null>(null);
   const compactPresentation = presentation === 'compact';
+  const songPresentation = presentation === 'song';
   const firstPressEdition =
     typeof firstPressRank === 'number' && firstPressRank >= 1 && firstPressRank <= 10;
+  /** Large lathe + EQ layout — opt-in only (`presentation="feed"`). Inline wall/feed uses compact/default. */
   const pressingFeed = Boolean(
     chrome?.pressing &&
       !firstPressEdition &&
       !purchaseOnly &&
       !compactPresentation &&
       presentation !== 'song' &&
-      (presentation === 'feed' || artistAttribution || source === 'artist_home' || source === 'share')
+      presentation === 'feed'
   );
   const showPressingBackdrop = Boolean(chrome?.pressing && !firstPressEdition && !pressingFeed);
   const { analyser, prime: primeAnalyser } = useMediaElementAnalyser(audioRef, Boolean(src));
@@ -505,13 +508,16 @@ export function DropListenPanel({
       : pressingFeed || presentation === 'feed'
         ? 'relative overflow-hidden min-w-0 space-y-3 rounded-2xl border border-[var(--ph-border,rgba(232,121,249,.45))] bg-black/20 p-3 shadow-[0_12px_40px_rgba(0,0,0,.35)] sm:min-h-[248px] sm:p-4'
       : compactPresentation
-        ? 'relative overflow-hidden min-w-0 space-y-2 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-2.5'
+        ? 'relative min-w-0 overflow-hidden rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-1.5 sm:p-2.5'
         : 'relative overflow-hidden min-w-0 rounded-xl border border-[var(--ph-border,rgba(232,121,249,.4))] bg-black/30 p-3 space-y-3 sm:p-4';
 
   return (
     <div
       className={cn(
       presentationClass,
+      compactPresentation &&
+        playing &&
+        'border-fuchsia-400/50 shadow-[0_0_28px_rgba(217,70,239,0.14)]',
       firstPressEdition &&
         'relative overflow-hidden border-amber-300/70 bg-[linear-gradient(128deg,rgba(40,25,3,.96),rgba(8,11,18,.97)_48%,rgba(73,46,4,.86))] shadow-[inset_0_1px_0_rgba(255,244,185,.35),0_0_0_1px_rgba(251,191,36,.16),0_18px_60px_rgba(245,158,11,.24)]'
     )}
@@ -544,7 +550,22 @@ export function DropListenPanel({
           <div className="absolute inset-0 bg-black/45" aria-hidden />
         </>
       ) : null}
-      <div className="relative z-10 space-y-3">
+      <div
+        className={cn(
+          'relative z-10',
+          compactPresentation
+            ? 'grid grid-rows-[auto_1fr_auto] gap-y-1 sm:gap-y-1.5'
+            : songPresentation
+              ? 'grid min-h-[7.5rem] grid-rows-[auto_1fr_auto] gap-y-2 sm:min-h-[8.5rem]'
+              : 'space-y-3'
+        )}
+      >
+      {compactPresentation && playing ? (
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_75%_55%_at_72%_38%,rgba(232,121,249,0.14),transparent_68%)]"
+          aria-hidden
+        />
+      ) : null}
       {firstPressEdition ? (
         <div className="relative mb-1 flex items-center justify-between gap-3 rounded-xl border border-amber-200/25 bg-gradient-to-r from-amber-400/20 via-yellow-100/10 to-amber-500/15 px-3 py-2 text-amber-100">
           <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[.18em]">
@@ -578,11 +599,11 @@ export function DropListenPanel({
         pressingFeed ? (
           <div className="space-y-3">
             <DropVisualizer analyser={analyser} playing={playing} className="sm:gap-4">
-              <Button
-                type="button"
-                size="icon"
-                className="h-12 w-12 rounded-full bg-fuchsia-400 text-black shadow-[0_0_28px_rgba(232,121,249,0.45)] hover:bg-fuchsia-300"
+              <DropTransportButton
+                playing={playing}
+                loading={loading}
                 disabled={loading || !src}
+                size="md"
                 onClick={() => {
                   primeAnalyser();
                   const el = audioRef.current;
@@ -595,10 +616,7 @@ export function DropListenPanel({
                     setPlaying(false);
                   }
                 }}
-                aria-label={playing ? 'Pause' : 'Play'}
-              >
-                {loading ? <Loader className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-              </Button>
+              />
             </DropVisualizer>
             <div className="flex min-w-0 items-start gap-3 px-0.5">
               {artistAttribution ? (
@@ -727,16 +745,14 @@ export function DropListenPanel({
               />
             ) : null}
           </div>
-        ) : (
-        <div className="flex min-w-0 items-center gap-2">
-          <Button
-            type="button"
-            size="icon"
-            className={cn(
-              compactPresentation ? 'h-9 w-9 rounded-full' : 'h-11 w-11 rounded-full',
-              firstPressEdition && 'bg-gradient-to-br from-yellow-200 via-amber-400 to-amber-600 text-black shadow-[0_0_24px_rgba(251,191,36,.38)] hover:from-yellow-100 hover:to-amber-500'
-            )}
+        ) : compactPresentation ? (
+        <div className="flex min-h-0 min-w-0 items-center self-stretch px-0.5 sm:px-1">
+          <DropTransportButton
+            playing={playing}
+            loading={loading}
             disabled={loading || !src}
+            size="sm"
+            className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"
             onClick={() => {
               primeAnalyser();
               const el = audioRef.current;
@@ -749,10 +765,198 @@ export function DropListenPanel({
                 setPlaying(false);
               }
             }}
-            aria-label={playing ? 'Pause' : 'Play'}
+          />
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 pl-1.5 sm:gap-2.5 sm:pl-3">
+            {artistAttribution ? (
+              <ArtistStarAvatar
+                name={artistName || 'Artist'}
+                avatarUrl={artistAttribution.avatarUrl}
+                useStarMark={artistAttribution.useStarMark}
+                starMarkSeed={artistAttribution.starMarkSeed}
+                href={artistAttribution.href}
+                size={28}
+                className="shrink-0"
+                studioChrome={artistAttribution.studioChrome}
+                toneClass="bg-fuchsia-500/20 text-fuchsia-200 ring-1 ring-fuchsia-400/25"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1 pr-0.5">
+              <Link
+                href={trackDetailsHref}
+                className={cn(
+                  'block max-w-full break-words text-left font-headline text-xs font-bold uppercase leading-[1.15] tracking-tight [text-shadow:0_1px_8px_rgba(0,0,0,.75)] transition-colors hover:text-fuchsia-100 hover:underline sm:text-[13px] md:text-sm',
+                  firstPressEdition ? 'text-amber-50' : 'text-white'
+                )}
+              >
+                {title}
+              </Link>
+              {artistAttribution || resolvedAlbumTitle ? (
+                <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 font-code text-[9px] font-semibold uppercase leading-tight tracking-wide text-white/65 sm:text-[10px]">
+                  {artistAttribution ? (
+                    <>
+                      {artistAttribution.href ? (
+                        <Link
+                          href={artistAttribution.href}
+                          className={cn(
+                            'max-w-full break-words transition-colors hover:text-white hover:underline',
+                            studioNameClass(artistAttribution.studioChrome)
+                          )}
+                          aria-label={`Open ${artistName || 'Artist'} artist page`}
+                        >
+                          {artistName || 'Artist'}
+                        </Link>
+                      ) : (
+                        <span className={cn('max-w-full break-words', studioNameClass(artistAttribution.studioChrome))}>
+                          {artistName || 'Artist'}
+                        </span>
+                      )}
+                    </>
+                  ) : null}
+                  {resolvedAlbumTitle ? (
+                    <>
+                      {artistAttribution ? <span className="text-white/30" aria-hidden>•</span> : null}
+                      {resolvedAlbumHref ? (
+                        <Link
+                          href={resolvedAlbumHref}
+                          className="max-w-full break-words text-cyan-200/90 transition-colors hover:text-cyan-100 hover:underline"
+                          aria-label={`Open ${resolvedAlbumTitle} album`}
+                        >
+                          {resolvedAlbumTitle}
+                        </Link>
+                      ) : (
+                        <span className="max-w-full break-words text-cyan-200/85">{resolvedAlbumTitle}</span>
+                      )}
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+              <p className="mt-1 font-code text-[9px] uppercase leading-tight tracking-wide text-muted-foreground/90">
+                {previewCapped
+                  ? isHouseRelease
+                    ? '30s preview · free account for full House stream'
+                    : showPurchase
+                      ? '30s featured excerpt'
+                      : '30s album preview'
+                  : featuredByUserId && excerptStartSec > 0
+                    ? 'Full stream · featured moment'
+                    : 'Streams in Library'}
+              </p>
+            </div>
+          </div>
+          {src ? (
+            <audio
+              ref={audioRef}
+              src={src}
+              preload="none"
+              playsInline
+              className="sr-only"
+              onLoadedMetadata={(event) => {
+                const duration = Number.isFinite(event.currentTarget.duration) && event.currentTarget.duration > 0
+                  ? event.currentTarget.duration
+                  : playbackStartSec + eligibleDurationSec;
+                setMediaDurationSec(duration);
+                if (playbackStartSec > 0 && event.currentTarget.currentTime < playbackStartSec) {
+                  event.currentTarget.currentTime = playbackStartSec;
+                }
+                setPositionSec(event.currentTarget.currentTime);
+              }}
+              onEnded={(event) => {
+                setPlaying(false);
+                setPositionSec(event.currentTarget.currentTime);
+                onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+              }}
+              onPause={(event) => {
+                setPlaying(false);
+                setPositionSec(event.currentTarget.currentTime);
+                onPlaybackStateChange?.({ playing: false, currentTime: event.currentTarget.currentTime, duration: event.currentTarget.duration || eligibleDurationSec });
+              }}
+              onPlay={() => {
+                primeAnalyser();
+                setPlaying(true);
+                if (playbackGroup) {
+                  window.dispatchEvent(new CustomEvent('bar4bar:drop-player-play', {
+                    detail: { group: playbackGroup, playerId },
+                  }));
+                }
+                recordDropSpinClient(shareId, previewCapped ? 'preview' : 'play');
+                const audio = audioRef.current;
+                onPlaybackStateChange?.({ playing: true, currentTime: audio?.currentTime || 0, duration: audio?.duration || eligibleDurationSec });
+              }}
+              onTimeUpdate={(e) => {
+                const el = e.currentTarget;
+                setPositionSec(el.currentTime);
+                if (Number.isFinite(el.duration) && el.duration > 0) setMediaDurationSec(el.duration);
+                onPlaybackStateChange?.({ playing: !el.paused, currentTime: el.currentTime, duration: el.duration || eligibleDurationSec });
+                const listenedSec = Math.max(0, el.currentTime - playbackStartSec);
+                const progressDuration = Math.max(
+                  1,
+                  Math.min(
+                    eligibleDurationSec,
+                    Number.isFinite(el.duration) && el.duration > 0 ? el.duration : eligibleDurationSec
+                  )
+                );
+                for (const milestone of DROP_LISTEN_MILESTONES) {
+                  if (
+                    listenProof &&
+                    !reportedMilestonesRef.current.has(milestone) &&
+                    listenedSec >= progressDuration * (milestone / 100)
+                  ) {
+                    reportedMilestonesRef.current.add(milestone);
+                    void recordDropListenProgressClient({ shareId, listenProof, milestone, source }).then(
+                      (recorded) => {
+                        if (!recorded) reportedMilestonesRef.current.delete(milestone);
+                      }
+                    );
+                  }
+                }
+                if (!previewCapped) return;
+                if (listenedSec >= Math.min(30, eligibleDurationSec)) {
+                  el.pause();
+                  el.currentTime = playbackStartSec + Math.min(30, eligibleDurationSec);
+                  setPlaying(false);
+                }
+              }}
+            />
+          ) : null}
+        </div>
+        ) : (
+        <div
+          className={cn(
+            'flex min-w-0 w-full',
+            songPresentation
+              ? 'min-h-0 items-center self-stretch pl-4 pr-0.5 sm:pl-5'
+              : 'items-center gap-2'
+          )}
+        >
+          <DropTransportButton
+            playing={playing}
+            loading={loading}
+            disabled={loading || !src}
+            size={songPresentation ? 'lg' : 'md'}
+            className={cn(
+              'shrink-0',
+              firstPressEdition &&
+                'border-amber-200 bg-gradient-to-br from-yellow-200 via-amber-400 to-amber-600 shadow-[0_0_24px_rgba(251,191,36,.38)]'
+            )}
+            onClick={() => {
+              primeAnalyser();
+              const el = audioRef.current;
+              if (!el) return;
+              if (el.paused) {
+                void el.play();
+                setPlaying(true);
+              } else {
+                el.pause();
+                setPlaying(false);
+              }
+            }}
+          />
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 items-center',
+              songPresentation ? 'gap-4 pl-6 sm:gap-5 sm:pl-10 md:pl-12' : 'gap-2'
+            )}
           >
-            {loading ? <Loader className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-          </Button>
           {artistAttribution ? (
             <ArtistStarAvatar
               name={artistName || 'Artist'}
@@ -760,7 +964,7 @@ export function DropListenPanel({
               useStarMark={artistAttribution.useStarMark}
               starMarkSeed={artistAttribution.starMarkSeed}
               href={artistAttribution.href}
-              size={compactPresentation ? 30 : 36}
+              size={songPresentation ? 40 : 36}
               studioChrome={artistAttribution.studioChrome}
               toneClass="bg-fuchsia-500/20 text-fuchsia-200"
             />
@@ -769,7 +973,7 @@ export function DropListenPanel({
             <Link
               href={trackDetailsHref}
               className={cn(
-                'block truncate text-sm font-headline font-bold uppercase transition-colors hover:underline',
+                'block truncate pl-0.5 text-sm font-headline font-bold uppercase transition-colors hover:underline',
                 firstPressEdition ? 'text-amber-50 hover:text-amber-200' : 'text-white [text-shadow:0_1px_8px_rgba(0,0,0,.7)] hover:text-white'
               )}
             >
@@ -804,7 +1008,7 @@ export function DropListenPanel({
                 {resolvedAlbumTitle}
               </Link>
             ) : null}
-            <p className={compactPresentation ? 'truncate text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'}>
+            <p className="text-[10px] text-muted-foreground">
               {previewCapped
                 ? isHouseRelease
                   ? '30-second preview. Create a free account to unlock the full House release in Library.'
@@ -815,6 +1019,7 @@ export function DropListenPanel({
                   ? 'Full track unlocked · starts at the featured moment.'
                   : 'Streams in Library.'}
             </p>
+          </div>
           </div>
           {src ? (
             <audio
@@ -895,8 +1100,19 @@ export function DropListenPanel({
 
       {hasAudio && !purchaseOnly ? (
         <>
-          <div className={cn('flex min-w-0 items-center gap-2', pressingFeed ? 'pl-0' : compactPresentation ? 'pl-[44px]' : 'pl-[52px]')}>
-            <span className="w-9 shrink-0 font-code text-[9px] tabular-nums text-muted-foreground">
+          <div
+            className={cn(
+              'flex min-w-0 items-center gap-2',
+              pressingFeed
+                ? 'pl-0'
+                : compactPresentation
+                  ? 'px-0.5 sm:px-1'
+                  : songPresentation
+                    ? 'pl-4 sm:pl-5'
+                  : 'pl-[52px]'
+            )}
+          >
+            <span className={cn('shrink-0 font-code text-[9px] tabular-nums text-muted-foreground', compactPresentation ? 'w-7 sm:w-9' : 'w-9')}>
               {formatPlaybackTime(displayedPositionSec)}
             </span>
             <input
@@ -921,9 +1137,12 @@ export function DropListenPanel({
               aria-label="Song playback position"
               aria-valuetext={`${formatPlaybackTime(displayedPositionSec)} of ${formatPlaybackTime(displayedDurationSec)}`}
             />
-            <span className="w-9 shrink-0 text-right font-code text-[9px] tabular-nums text-muted-foreground">
+            <span className={cn('shrink-0 text-right font-code text-[9px] tabular-nums text-muted-foreground', compactPresentation ? 'w-7 sm:w-9' : 'w-9')}>
               {formatPlaybackTime(displayedDurationSec)}
             </span>
+            {compactPresentation || songPresentation ? (
+              <DropInlineSpectrum analyser={analyser} playing={playing} showOnMobile={songPresentation} />
+            ) : null}
             <AudioVolumeControl
               volume={volume}
               onVolumeChange={setVolume}

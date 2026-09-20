@@ -7,6 +7,7 @@ import { AudioVolumeControl } from '@/components/audio-volume-control';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import { DropRepeatControl } from '@/components/drop-repeat-control';
 import { Button } from '@/components/ui/button';
+import { DropTransportButton } from '@/components/drop-transport-button';
 import { useDropPlayer } from '@/context/drop-player-context';
 import { ShareArtistLink } from '@/components/share-artist-link';
 import { buildAlbumReleasePlayables } from '@/lib/album-release-playables';
@@ -14,6 +15,7 @@ import type { DropPrice } from '@/lib/drop-commerce';
 import type { DnaDropAlbumPayload, DnaDropTrackPayload } from '@/lib/dna-drop';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
 import { formatDeckTime, type DeckPlayable } from '@/lib/drop-library';
+import { albumHubHref } from '@/lib/pressed-song';
 import { cn } from '@/lib/utils';
 
 type AlbumReleasePlaylistProps = {
@@ -27,6 +29,8 @@ type AlbumReleasePlaylistProps = {
   albumTitle?: string;
   artistName?: string;
   artistSlug?: string | null;
+  /** Public album release hub (`/share/…`). */
+  albumHref?: string;
   /** Select this track in the queue on load (DNA strand / song page). */
   initialTrackId?: string;
   /** Full album queue vs one track only (lyric DNA strand / single song). */
@@ -45,6 +49,7 @@ export function AlbumReleasePlaylist({
   albumTitle,
   artistName: artistNameProp,
   artistSlug,
+  albumHref: albumHrefProp,
   initialTrackId,
   queueScope = 'album',
   singleTrack,
@@ -65,6 +70,10 @@ export function AlbumReleasePlaylist({
       listenSource: 'share',
     });
   }, [album, houseRelease, ownerId, ownerName, playablesProp, shareId]);
+  const resolvedAlbumHref =
+    albumHrefProp?.trim() ||
+    playables.find((item) => item.albumHref)?.albumHref ||
+    albumHubHref(shareId);
   const activeIndex = playables.findIndex((item) => item.key === player.current?.key);
   const activeInAlbum = activeIndex >= 0;
   const shownIndex = activeInAlbum ? activeIndex : Math.min(selectedIndex, Math.max(0, playables.length - 1));
@@ -100,8 +109,15 @@ export function AlbumReleasePlaylist({
       ? 'House album · full playlist'
       : 'Album release · ordered playlist';
 
+  const albumPlaying = Boolean(activeInAlbum && player.playing);
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-[linear-gradient(145deg,rgba(37,12,50,0.9),rgba(5,10,24,0.96))] shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+    <section
+      className={cn(
+        'overflow-hidden rounded-2xl border border-fuchsia-400/40 bg-[linear-gradient(145deg,rgba(37,12,50,0.9),rgba(5,10,24,0.96))] shadow-[0_18px_50px_rgba(0,0,0,0.35)] transition-shadow duration-300',
+        albumPlaying && 'border-fuchsia-300/55 shadow-[0_0_32px_rgba(217,70,239,0.18)]'
+      )}
+    >
       <div className="space-y-3 p-4">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
@@ -112,11 +128,39 @@ export function AlbumReleasePlaylist({
               {shown.title}
             </Link>
             <p className="truncate font-code text-[9px] uppercase text-muted-foreground">
-              {isSingleQueue
-                ? resolvedAlbumTitle && resolvedAlbumTitle !== 'Album'
-                  ? `From ${resolvedAlbumTitle}`
-                  : 'Single track'
-                : `${shown.trackNumber} of ${playables.length} · ${resolvedAlbumTitle}`}
+              {isSingleQueue ? (
+                resolvedAlbumTitle && resolvedAlbumTitle !== 'Album' ? (
+                  <>
+                    <span className="text-muted-foreground/80">From </span>
+                    {resolvedAlbumHref ? (
+                      <Link
+                        href={resolvedAlbumHref}
+                        className="font-bold text-fuchsia-200/90 transition-colors hover:text-fuchsia-100 hover:underline underline-offset-2"
+                      >
+                        {resolvedAlbumTitle}
+                      </Link>
+                    ) : (
+                      resolvedAlbumTitle
+                    )}
+                  </>
+                ) : (
+                  'Single track'
+                )
+              ) : (
+                <>
+                  {shown.trackNumber} of {playables.length} ·{' '}
+                  {resolvedAlbumHref ? (
+                    <Link
+                      href={resolvedAlbumHref}
+                      className="font-bold text-fuchsia-200/90 transition-colors hover:text-fuchsia-100 hover:underline underline-offset-2"
+                    >
+                      {resolvedAlbumTitle}
+                    </Link>
+                  ) : (
+                    resolvedAlbumTitle
+                  )}
+                </>
+              )}
             </p>
             <ShareArtistLink
               name={creditedArtist}
@@ -125,21 +169,13 @@ export function AlbumReleasePlaylist({
               size="sm"
             />
           </div>
-          <Button
-            type="button"
-            size="icon"
-            className="h-11 w-11 shrink-0 rounded-full"
+          <DropTransportButton
+            playing={Boolean(activeInAlbum && player.playing)}
+            loading={Boolean(activeInAlbum && player.loading)}
+            size="md"
             onClick={() => playTrack(shownIndex)}
             aria-label={activeInAlbum && player.playing ? 'Pause album' : 'Play album'}
-          >
-            {activeInAlbum && player.loading ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : activeInAlbum && player.playing ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="ml-0.5 h-4 w-4" />
-            )}
-          </Button>
+          />
         </div>
 
         <div className="flex items-center gap-1.5">

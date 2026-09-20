@@ -14,6 +14,7 @@ import {
   undoDropReverb,
 } from '@/lib/profile/social-client';
 import { profileHref } from '@/lib/profile/profile-slug';
+import { buildDropShareCaption } from '@/lib/profile/drop-share-caption';
 import { ToastAction } from '@/components/ui/toast';
 import { buildLoginUrl } from '@/lib/login-links';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
@@ -265,13 +266,14 @@ export function DropSocialPanel({
         toast({ title: 'Reverb removed' });
         return;
       }
-      const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Song' : 'Lyrics DNA Drop';
       const post = await createPost({
-        text: [
-          `${kindLabel} · ${title}`,
-          ownerName ? `Original · ${ownerName}` : '',
-          albumTitle ? `Album · ${albumTitle}` : '',
-        ].filter(Boolean).join('\n'),
+        text: buildDropShareCaption({
+          title,
+          ownerName,
+          albumTitle,
+          isAlbum,
+          hasAudio,
+        }),
         embedUrl: dropPath,
         sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
@@ -303,14 +305,15 @@ export function DropSocialPanel({
     if (!quoteComposerReady) return;
     setBusy(true);
     try {
-      const kindLabel = isAlbum ? 'Album' : hasAudio ? 'Song' : 'Lyrics DNA Drop';
+      const caption = buildDropShareCaption({
+        title,
+        ownerName,
+        albumTitle,
+        isAlbum,
+        hasAudio,
+      });
       const post = await createPost({
-        text: [
-          quoteText.trim(),
-          `${kindLabel} · ${title}`,
-          ownerName ? `Original · ${ownerName}` : '',
-          albumTitle ? `Album · ${albumTitle}` : '',
-        ].filter(Boolean).join('\n'),
+        text: [quoteText.trim(), caption].filter(Boolean).join('\n'),
         embedUrl: dropPath,
         sourceKind: isAlbum || hasAudio ? 'song' : 'dna',
         ownerName: user.displayName || 'Artist',
