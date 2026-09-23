@@ -29,6 +29,7 @@ type AlbumReleasePlaylistProps = {
   albumTitle?: string;
   artistName?: string;
   artistSlug?: string | null;
+  artistUserId?: string | null;
   /** Public album release hub (`/share/…`). */
   albumHref?: string;
   /** Select this track in the queue on load (DNA strand / song page). */
@@ -49,6 +50,7 @@ export function AlbumReleasePlaylist({
   albumTitle,
   artistName: artistNameProp,
   artistSlug,
+  artistUserId,
   albumHref: albumHrefProp,
   initialTrackId,
   queueScope = 'album',
@@ -165,6 +167,7 @@ export function AlbumReleasePlaylist({
             <ShareArtistLink
               name={creditedArtist}
               slug={artistSlug}
+              userId={artistUserId}
               className="mt-1.5"
               size="sm"
             />
@@ -259,6 +262,7 @@ export function AlbumReleasePlaylist({
                 <ShareArtistLink
                   name={creditedArtist}
                   slug={artistSlug}
+                  userId={artistUserId}
                   showLabel={false}
                   size="sm"
                   className="text-muted-foreground/90"

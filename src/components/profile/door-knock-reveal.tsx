@@ -1,16 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Bell, MessageSquare, X } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { cn } from '@/lib/utils';
 import type { DeliveredDoorKnocker } from '@/lib/door-knock-client';
 import type { DoorKnockLiveEvent } from '@/lib/door-knock-client';
 
-const AUTO_CLOSE_MS = 3000;
+const AUTO_CLOSE_SINGLE_MS = 14_000;
+const AUTO_CLOSE_MULTI_BASE_MS = 18_000;
+const AUTO_CLOSE_MULTI_PER_KNOCK_MS = 5_000;
+const AUTO_CLOSE_MULTI_MAX_MS = 60_000;
+const AUTO_CLOSE_SLIDE_RESET_MS = 12_000;
 
 type DoorKnockRevealProps =
   | {
@@ -26,32 +30,44 @@ type DoorKnockRevealProps =
       onSayHello: () => void;
     };
 
-function KnockerLinks({
-  knockers,
+function formatKnockWhen(iso: string | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function autoCloseDurationMs(knockerCount: number): number {
+  if (knockerCount <= 1) return AUTO_CLOSE_SINGLE_MS;
+  return Math.min(
+    AUTO_CLOSE_MULTI_MAX_MS,
+    AUTO_CLOSE_MULTI_BASE_MS + Math.max(0, knockerCount - 1) * AUTO_CLOSE_MULTI_PER_KNOCK_MS
+  );
+}
+
+function KnockerName({
+  knocker,
   className,
 }: {
-  knockers: { name: string; slug?: string }[];
+  knocker: { name: string; slug?: string };
   className?: string;
 }) {
-  if (!knockers.length) return null;
+  const href = profileHref(knocker.slug);
   return (
     <p className={cn('font-headline text-lg font-bold uppercase tracking-tight text-sky-50', className)}>
-      {knockers.map((k, index) => {
-        const href = profileHref(k.slug);
-        const sep = index < knockers.length - 1 ? ', ' : '';
-        return (
-          <span key={`${k.name}-${index}`}>
-            {href ? (
-              <Link href={href} className="text-fuchsia-200 transition-colors hover:text-fuchsia-100 hover:underline">
-                {k.name}
-              </Link>
-            ) : (
-              <span className="text-fuchsia-200">{k.name}</span>
-            )}
-            {sep}
-          </span>
-        );
-      })}
+      {href ? (
+        <Link href={href} className="text-fuchsia-200 transition-colors hover:text-fuchsia-100 hover:underline">
+          {knocker.name}
+        </Link>
+      ) : (
+        <span className="text-fuchsia-200">{knocker.name}</span>
+      )}
     </p>
   );
 }
@@ -59,27 +75,67 @@ function KnockerLinks({
 export function DoorKnockReveal(props: DoorKnockRevealProps) {
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [timerKey, setTimerKey] = useState(0);
+  const dismissTimerRef = useRef<number | null>(null);
 
-  const close = () => {
+  const isLive = props.variant === 'live';
+  const deliveredKnockers = useMemo(() => {
+    if (props.variant !== 'delivered') return [];
+    return [...props.knockers].sort((a, b) => {
+      const ta = Date.parse(a.createdAt || '');
+      const tb = Date.parse(b.createdAt || '');
+      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+    });
+  }, [props]);
+
+  const knockers = isLive
+    ? [{ name: props.knock.knockerName, slug: props.knock.knockerSlug, createdAt: props.knock.createdAt }]
+    : deliveredKnockers;
+
+  const knockerCount = knockers.length;
+  const safeIndex = knockerCount ? Math.min(index, knockerCount - 1) : 0;
+  const current = knockers[safeIndex];
+  const hasMultiple = knockerCount > 1;
+  const timerMs = hasMultiple ? AUTO_CLOSE_SLIDE_RESET_MS : autoCloseDurationMs(knockerCount);
+
+  const onClose = props.onClose;
+
+  const close = useCallback(() => {
     if (closing) return;
     setClosing(true);
-    window.setTimeout(() => props.onClose(), 280);
-  };
+    window.setTimeout(() => onClose(), 280);
+  }, [closing, onClose]);
+
+  const bumpDismissTimer = useCallback(() => {
+    if (dismissTimerRef.current != null) window.clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = window.setTimeout(() => close(), timerMs);
+    setTimerKey((k) => k + 1);
+  }, [close, timerMs]);
 
   useEffect(() => {
     setMounted(true);
-    const timer = window.setTimeout(() => close(), AUTO_CLOSE_MS);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot auto dismiss per reveal mount
-  }, []);
+    bumpDismissTimer();
+    return () => {
+      if (dismissTimerRef.current != null) window.clearTimeout(dismissTimerRef.current);
+    };
+  }, [bumpDismissTimer]);
+
+  const goPrev = () => {
+    if (!hasMultiple) return;
+    setIndex((i) => (i <= 0 ? knockerCount - 1 : i - 1));
+    bumpDismissTimer();
+  };
+
+  const goNext = () => {
+    if (!hasMultiple) return;
+    setIndex((i) => (i >= knockerCount - 1 ? 0 : i + 1));
+    bumpDismissTimer();
+  };
 
   if (!mounted || typeof document === 'undefined') return null;
 
-  const isLive = props.variant === 'live';
-  const knockers =
-    props.variant === 'delivered'
-      ? props.knockers
-      : [{ name: props.knock.knockerName, slug: props.knock.knockerSlug }];
+  const whenLabel = formatKnockWhen(current?.createdAt);
 
   return createPortal(
     <div
@@ -119,16 +175,53 @@ export function DoorKnockReveal(props: DoorKnockRevealProps) {
             <h2 className="mt-1 font-headline text-xl font-bold uppercase tracking-tight text-white">
               {isLive ? "Someone's knocking" : 'Knocks collected'}
             </h2>
-            <KnockerLinks knockers={knockers} className="mt-2 text-base sm:text-lg" />
+            {current ? <KnockerName knocker={current} className="mt-2 text-base sm:text-lg" /> : null}
+            {whenLabel ? (
+              <p className="mt-1.5 font-code text-[10px] tabular-nums uppercase tracking-wide text-sky-200/85">
+                {whenLabel}
+              </p>
+            ) : null}
+            {hasMultiple ? (
+              <p className="mt-1 font-code text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Knock {safeIndex + 1} of {knockerCount}
+              </p>
+            ) : null}
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
               {isLive
-                ? 'They found you on your Artist Home. Answer or let this card close — you can still reply from Activity.'
+                ? 'They found you on your Artist Home. Answer or dismiss — you can still reply from Activity.'
                 : props.variant === 'delivered'
-                  ? `${props.delivered} knock${props.delivered === 1 ? '' : 's'} moved into Activity.`
+                  ? `${props.delivered} knock${props.delivered === 1 ? '' : 's'} moved into Activity.${
+                      hasMultiple ? ' Use Next to see each visitor.' : ''
+                    }`
                   : null}
             </p>
           </div>
         </div>
+
+        {hasMultiple ? (
+          <div className="relative mt-3 flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1 font-bold uppercase"
+              onClick={goPrev}
+              aria-label="Previous knock"
+            >
+              <ChevronLeft className="h-4 w-4" /> Prev
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1 font-bold uppercase"
+              onClick={goNext}
+              aria-label="Next knock"
+            >
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
 
         <div className="relative mt-4 flex flex-wrap items-center gap-2">
           {isLive ? (
@@ -149,9 +242,9 @@ export function DoorKnockReveal(props: DoorKnockRevealProps) {
               <Bell className="h-3.5 w-3.5" /> Activity
             </Link>
           </Button>
-          {!isLive && knockers[0]?.slug ? (
+          {!isLive && current?.slug ? (
             <Button type="button" size="sm" variant="ghost" className="font-bold uppercase" asChild>
-              <Link href={profileHref(knockers[0].slug)!} onClick={() => close()}>
+              <Link href={profileHref(current.slug)!} onClick={() => close()}>
                 View profile
               </Link>
             </Button>
@@ -159,7 +252,11 @@ export function DoorKnockReveal(props: DoorKnockRevealProps) {
         </div>
 
         <div className="mt-3 h-0.5 overflow-hidden rounded-full bg-white/10">
-          <div className="door-knock-reveal-timer h-full origin-left bg-gradient-to-r from-sky-400 to-fuchsia-400" />
+          <div
+            key={timerKey}
+            className="door-knock-reveal-timer h-full origin-left bg-gradient-to-r from-sky-400 to-fuchsia-400"
+            style={{ animationDuration: `${timerMs}ms` }}
+          />
         </div>
       </div>
     </div>,

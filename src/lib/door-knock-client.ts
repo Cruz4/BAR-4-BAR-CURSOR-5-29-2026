@@ -62,6 +62,7 @@ export type DeliveredDoorKnocker = {
   name: string;
   slug?: string;
   activityId?: string;
+  createdAt?: string;
 };
 
 export async function deliverDoorKnocksAtHome(): Promise<{

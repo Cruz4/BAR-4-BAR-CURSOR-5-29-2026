@@ -87,14 +87,23 @@ export async function GET(
             dnaLive: visibility.dnaLive,
             fallbackShareId: shareId,
           })
-        : undefined;
+        : (() => {
+            const ctx = (share.data as { sharedAlbumContext?: { shareId?: string } } | undefined)
+              ?.sharedAlbumContext;
+            const parent = ctx?.shareId?.trim();
+            return parent || undefined;
+          })();
 
     const artist = await resolveShareArtistCredit(db, raw);
 
     return NextResponse.json({
       share,
       visibility,
-      artist: { name: artist.name, ...(artist.slug ? { slug: artist.slug } : {}) },
+      artist: {
+        name: artist.name,
+        ...(artist.slug ? { slug: artist.slug } : {}),
+        ...(artist.userId ? { userId: artist.userId } : {}),
+      },
       ...(albumHubShareId ? { albumHubShareId } : {}),
     });
   } catch (error) {

@@ -61,7 +61,7 @@ function EmojiGrid({
         <button
           key={`${keyPrefix}-${emoji}`}
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10"
+          className="font-emoji flex h-8 w-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-white/10"
           onPointerDown={(e) => e.preventDefault()}
           onClick={() => onPick(emoji)}
           aria-label={`Insert ${emoji}`}

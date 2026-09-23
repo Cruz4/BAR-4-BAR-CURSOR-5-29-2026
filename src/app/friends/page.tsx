@@ -46,6 +46,7 @@ import { cn } from '@/lib/utils';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { PassBarButton } from '@/components/folds/pass-bar-dialog';
+import { Hint } from '@/components/ui/tooltip';
 import {
   ArrowUpDown,
   Ban,
@@ -305,60 +306,80 @@ export default function FriendsPage() {
                 <ul className="space-y-2">
                   {sortedFriends.map((friend) => {
                     const friendship = friendships.find((f) => f.uids.includes(friend.userId));
-                    const href =
-                      friend.isLivePublic && friend.slug ? profileHref(friend.slug) : undefined;
-                    const profileInner = (
-                      <>
-                        <ArtistStarAvatar
-                          name={friend.name}
-                          avatarUrl={friend.avatarUrl}
-                          useStarMark={friend.starMarkUseStar}
-                          starMarkSeed={friend.starMarkSeed}
-                          studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
-                          size={36}
-                        />
-                        <span
+                    const isLive = friend.isLivePublic && Boolean(friend.slug);
+                    const href = isLive && friend.slug ? profileHref(friend.slug) : undefined;
+                    const offlineHint = 'Artist Home offline';
+                      const profileInner = (
+                        <>
+                          <ArtistStarAvatar
+                            name={friend.name}
+                            avatarUrl={friend.avatarUrl}
+                            useStarMark={friend.starMarkUseStar}
+                            starMarkSeed={friend.starMarkSeed}
+                            studioChrome={parseStudioBadge(friend.studioBadge) || 'free'}
+                            size={36}
+                          />
+                          <span
+                            className={cn(
+                              'min-w-0 truncate text-sm font-bold',
+                              isLive && 'group-hover:text-sky-300',
+                              studioNameClass(parseStudioBadge(friend.studioBadge) || 'free')
+                            )}
+                          >
+                            {friend.name}
+                            {!isLive ? (
+                              <span className="ml-1 hidden font-medium text-muted-foreground sm:ml-1.5 sm:inline">
+                                (offline)
+                              </span>
+                            ) : null}
+                          </span>
+                        </>
+                      );
+                      return (
+                        <li
+                          key={friend.userId}
                           className={cn(
-                            'min-w-0 truncate text-sm font-bold group-hover:text-sky-300',
-                            studioNameClass(parseStudioBadge(friend.studioBadge) || 'free')
+                            'flex items-center gap-2 rounded-xl border border-sky-500/15 bg-black/35 px-2.5 py-2.5 backdrop-blur-sm transition-colors sm:gap-3 sm:px-3',
+                            isLive && 'hover:border-sky-400/30 hover:bg-sky-500/[0.06]'
                           )}
                         >
-                          {friend.name}
-                          {!friend.isLivePublic ? (
-                            <span className="ml-1.5 font-medium text-muted-foreground group-hover:text-muted-foreground">
-                              (offline)
-                            </span>
-                          ) : null}
-                        </span>
-                      </>
-                    );
-                    return (
-                      <li
-                        key={friend.userId}
-                        className="flex items-center gap-3 rounded-xl border border-sky-500/15 bg-black/35 px-3 py-2.5 backdrop-blur-sm transition-colors hover:border-sky-400/30 hover:bg-sky-500/[0.06]"
-                      >
-                        <div className="min-w-0 flex-1">
-                          {href ? (
-                            <Link href={href} className="group flex items-center gap-3">
-                              {profileInner}
-                            </Link>
-                          ) : (
-                            <div className="flex items-center gap-3">{profileInner}</div>
-                          )}
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            {href ? (
+                              <Link
+                                href={href}
+                                className="group flex min-w-0 items-center gap-2.5 sm:gap-3"
+                              >
+                                {profileInner}
+                              </Link>
+                            ) : (
+                              <Hint content={offlineHint} side="top" skipOnTouch={false}>
+                                <div
+                                  className="flex min-w-0 cursor-default items-center gap-2.5 sm:gap-3"
+                                  tabIndex={0}
+                                  role="text"
+                                  aria-label={`${friend.name} — ${offlineHint}`}
+                                >
+                                  {profileInner}
+                                </div>
+                              </Hint>
+                            )}
+                          </div>
                         {friendship && (
-                          <>
+                          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                             <PassBarButton
                               peerId={friend.userId}
                               peerName={friend.name}
                               senderSlug={viewerSlug}
                               size="xs"
+                              className="shrink-0"
                             />
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 gap-1 font-bold uppercase"
+                              className="h-8 shrink-0 gap-1 px-2 font-bold uppercase sm:px-3"
                               disabled={busyId === friend.userId}
+                              aria-label={`Unfriend ${friend.name}`}
+                              title="Unfriend"
                               onClick={() =>
                                 void run(
                                   friend.userId,
@@ -375,14 +396,14 @@ export default function FriendsPage() {
                               ) : (
                                 <UserMinus className="h-3.5 w-3.5" />
                               )}
-                              Unfriend
+                              <span className="hidden sm:inline">Unfriend</span>
                             </Button>
-                          </>
+                          </div>
                         )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                        </li>
+                      );
+                    })}
+                  </ul>
               )
             ) : blocked.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-sky-500/20 bg-black/25 px-6 py-14 text-center">

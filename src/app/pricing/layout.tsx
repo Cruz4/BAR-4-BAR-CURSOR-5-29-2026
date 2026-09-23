@@ -1,12 +1,19 @@
 import { pageMetadata } from '@/lib/seo';
+import { getProductSurfacesPublicStatus } from '@/lib/server/product-surfaces';
+import { isSongGenerationSurfaceLive } from '@/lib/product-surface-modes';
 
-export const metadata = pageMetadata({
-  title: 'Studio Memberships & Pricing',
-  description:
-    'Compare Visitor (free Ink + Artist Home) vs Studio Pro ($7.77/mo or $4.44/mo yearly). AI bar-by-bar lyric workstation with a shareable public page—not full-song generation. Unlimited vault projects on Pro.',
-  path: '/pricing',
-  openGraphTitle: 'Pricing — AKAsheet: Put Your World Within Reach',
-});
+export async function generateMetadata() {
+  const surfaces = await getProductSurfacesPublicStatus();
+  const songGenLive = isSongGenerationSurfaceLive(surfaces.songGeneration);
+  return pageMetadata({
+    title: 'Studio Memberships & Pricing',
+    description: songGenLive
+      ? 'Compare Visitor, Pro Writer ($7.77/mo), and Studio Max ($9.77/mo) — bar-by-bar lyrics plus optional local-first song rendering. Unlimited vault projects on Pro.'
+      : 'Compare Visitor and Pro Writer ($7.77/mo) — bar-by-bar lyrics, vault, DNA, and releases. Unlimited vault projects on Pro.',
+    path: '/pricing',
+    openGraphTitle: 'Pricing — AKAsheet: Put Your World Within Reach',
+  });
+}
 
 export default function PricingLayout({ children }: { children: React.ReactNode }) {
   return children;

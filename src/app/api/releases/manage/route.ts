@@ -347,6 +347,12 @@ export async function POST(req: Request) {
     if (kind === 'track' && !track!.dropRightsAttestedAt) {
       return NextResponse.json({ error: 'Confirm that you have the rights to sell this recording.' }, { status: 400 });
     }
+    if (kind === 'track' && track!.dropAudio?.audioProvenance?.generatedInApp) {
+      const prov = track!.dropAudio.audioProvenance;
+      if (!prov.recipeHash || prov.generatedInApp !== true) {
+        return NextResponse.json({ error: 'Generated release provenance is incomplete.' }, { status: 400 });
+      }
+    }
     if (kind === 'album' && audioTracks.some((item) => !item.dropRightsAttestedAt)) {
       return NextResponse.json({ error: 'Confirm rights for every recording included in this album.' }, { status: 400 });
     }

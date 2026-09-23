@@ -40,6 +40,8 @@ next-env.d.ts
 
 .genkit/*
 .env*
+fal-api-key.local
+/vendor/ACE-Step-1.5
 
 # firebase
 firebase-debug.log

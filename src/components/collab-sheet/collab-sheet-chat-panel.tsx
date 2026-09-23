@@ -104,7 +104,7 @@ export function CollabSheetChatPanel({
               )}
               <div ref={bottomRef} />
             </div>
-            <div className="flex items-center gap-1.5 border-t border-white/10 p-2">
+            <div className="flex items-center gap-1.5 border-t border-white/10 p-2" data-composer-field>
               <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
               <Input
                 ref={composeRef}

@@ -101,6 +101,11 @@ export async function getProductSurfacesPublicStatus(): Promise<ProductSurfacesP
     sceneWeather: config.sceneWeather,
     releaseRoom: config.releaseRoom,
     emergency: config.emergency,
+    songGeneration: config.songGeneration,
+    cloudRendering: config.cloudRendering,
+    artistSignature: config.artistSignature,
+    voiceMatch: config.voiceMatch,
+    stemsMidi: config.stemsMidi,
     source: config.source,
     updatedAt: config.updatedAt,
   };
@@ -111,8 +116,12 @@ export async function setProductSurfaces(
   adminUid: string
 ): Promise<ProductSurfacesAdminConfig> {
   if (!hasAdminFirestoreCredentials()) {
-    throw new Error('Firebase Admin required');
+    throw new Error(
+      'Firebase Admin is not configured for local saves. Add GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json to .env.local and restart dev.'
+    );
   }
+
+  await assertMutationsAllowed();
 
   const current = await getProductSurfaces();
   const next = normalizeProductSurfacesConfig({ ...current, ...patch });

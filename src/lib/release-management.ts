@@ -315,9 +315,7 @@ export function groupVaultReleases(albums: Album[]): VaultReleaseGroups {
       if (lyricCount === audioTracks.length) groups.liveAlbumsAllLyrics.push(album);
       else if (lyricCount === 0) groups.liveAlbumsAudioOnly.push(album);
       else groups.liveAlbumsMixedLyrics.push(album);
-      if (dnaStatusOf(album) === 'live' && album.shareId !== releaseShareIdOf({ ...album, tracks: album.tracks })) {
-        groups.dnaPreviews.push({ album });
-      }
+      if (dnaStatusOf(album) === 'live') groups.dnaPreviews.push({ album });
     } else if (releaseStatusOf({ ...album, tracks: album.tracks }) === 'unlisted') {
       groups.offlineReleases.push({ album });
       if (dnaStatusOf(album) === 'live') groups.dnaPreviews.push({ album });
@@ -350,11 +348,42 @@ function classifyTrack(groups: VaultReleaseGroups, album: Album, track: Track): 
   } else if (status === 'live') {
     if (hasLyrics(track)) groups.liveSinglesWithLyrics.push({ album, track });
     else groups.liveSinglesAudioOnly.push({ album, track });
-    if (dnaStatusOf(track) === 'live' && track.shareId !== releaseShareIdOf(track)) {
-      groups.dnaPreviews.push({ album, track });
-    }
+    if (dnaStatusOf(track) === 'live') groups.dnaPreviews.push({ album, track });
   } else if (dnaStatusOf(track) === 'live') groups.dnaPreviews.push({ album, track });
   else groups.unpressed.push({ album, track });
+}
+
+export type LiveDnaCatalogRow = { album: Album; track?: Track };
+
+/** Every live Lyrics DNA Drop in the Vault — matches Artist Home / strip counts. */
+export function liveLyricDnaCatalogRows(albums: Album[]): LiveDnaCatalogRow[] {
+  const rows: LiveDnaCatalogRow[] = [];
+  const seen = new Set<string>();
+
+  for (const album of albums) {
+    for (const track of album.tracks || []) {
+      if (!hasLiveDnaDrop(track)) continue;
+      const key = `${album.id}:track:${track.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({ album, track });
+    }
+    if (album.id !== 'unassigned' && hasLiveDnaDrop(album)) {
+      const trackHits = (album.tracks || []).filter((t) => hasLiveDnaDrop(t)).length;
+      if (trackHits === 0) {
+        const key = `${album.id}:album`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          rows.push({ album });
+        }
+      }
+    }
+  }
+  return rows;
+}
+
+export function countLiveLyricDnaDrops(albums: Album[]): number {
+  return liveLyricDnaCatalogRows(albums).length;
 }
 
 export function findVaultReleaseByShareId(

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
+import { useReleaseCatalogReopenListener } from '@/lib/release-catalog-navigation';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import type { DiscoverCard, DiscoverDrop } from '@/lib/scene/discover-client';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
@@ -336,6 +337,8 @@ export function ScenePortalHub({
 }: ScenePortalHubProps) {
   const [releaseCatalogOpen, setReleaseCatalogOpen] = React.useState(false);
   const { libraryReleases } = useSocialAlerts();
+
+  useReleaseCatalogReopenListener(React.useCallback(() => setReleaseCatalogOpen(true), []));
 
   return (
     <section className="space-y-3" data-tour="scene-feed" aria-label="Scene Portal">

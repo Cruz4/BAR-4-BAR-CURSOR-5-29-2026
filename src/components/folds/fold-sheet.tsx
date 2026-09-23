@@ -707,7 +707,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               Imprint
             </button>
           </div>
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2" data-composer-field>
             <textarea
               ref={composeRef}
               value={text}

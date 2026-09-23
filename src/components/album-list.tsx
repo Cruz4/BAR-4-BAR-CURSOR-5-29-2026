@@ -44,6 +44,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrackLiveIndicators, AlbumLiveIndicators } from '@/components/track-live-indicators';
 import { CollabSheetsVaultSection } from '@/components/collab-sheet/collab-sheets-vault-section';
+import { GenerateInstrumentalDialog } from '@/components/vault/generate-instrumental-dialog';
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useSongGenerationWorkbenchLive } from '@/hooks/use-song-generation-live';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudioLoader } from '@/components/studio-loader';
 import {
@@ -609,6 +611,7 @@ function VaultHeaderToolbar({
   setVaultFilter,
   setCreateItemType,
   onOpenBlankLooseSheets,
+  onOpenGenerateInstrumental,
   hasProWorkflow,
   fileInputRef,
   onOpenExport,
@@ -620,6 +623,7 @@ function VaultHeaderToolbar({
   setVaultFilter: (value: LooseTrackFilter) => void;
   setCreateItemType: (value: 'Album' | 'Track') => void;
   onOpenBlankLooseSheets: () => void;
+  onOpenGenerateInstrumental?: () => void;
   hasProWorkflow: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onOpenExport: () => void;
@@ -705,6 +709,11 @@ function VaultHeaderToolbar({
           <DropdownMenuItem onClick={onOpenBlankLooseSheets} className="text-[10px] font-bold uppercase">
             <NotebookPen className="mr-2 h-4 w-4" /> Blank Loose Sheets
           </DropdownMenuItem>
+          {onOpenGenerateInstrumental ? (
+            <DropdownMenuItem onClick={onOpenGenerateInstrumental} className="text-[10px] font-bold uppercase">
+              <Sparkles className="mr-2 h-4 w-4" /> Generate Instrumental
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -741,10 +750,15 @@ function VaultHeaderToolbar({
 export function AlbumList() {
   const [createItemType, setCreateItemType] = useState<'Album' | 'Track' | null>(null);
   const [blankLooseSheetsOpen, setBlankLooseSheetsOpen] = useState(false);
+  const [generateInstrumentalOpen, setGenerateInstrumentalOpen] = useState(false);
   const { albums, styleProfile, loading, deleteTrack, moveTrack, getAlbumById, mergeData, clearVault } = useContext(DataContext);
   const { user, loading: authLoading } = useAuth();
   const isPaidPro = isProUser(user);
   const hasProWorkflow = isProOrTrial(user);
+  const songGenerationWorkbench = useSongGenerationWorkbenchLive();
+  const openGenerateInstrumental = songGenerationWorkbench
+    ? () => setGenerateInstrumentalOpen(true)
+    : undefined;
   const trackCount = countUserTracks(albums);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -1176,6 +1190,7 @@ export function AlbumList() {
                       setVaultFilter={setVaultFilter}
                       setCreateItemType={setCreateItemType}
                       onOpenBlankLooseSheets={() => setBlankLooseSheetsOpen(true)}
+                      onOpenGenerateInstrumental={openGenerateInstrumental}
                       hasProWorkflow={hasProWorkflow}
                       fileInputRef={fileInputRef}
                       onOpenExport={() => setShowExportDialog(true)}
@@ -1192,6 +1207,7 @@ export function AlbumList() {
                     setVaultFilter={setVaultFilter}
                     setCreateItemType={setCreateItemType}
                     onOpenBlankLooseSheets={() => setBlankLooseSheetsOpen(true)}
+                    onOpenGenerateInstrumental={openGenerateInstrumental}
                     hasProWorkflow={hasProWorkflow}
                     fileInputRef={fileInputRef}
                     onOpenExport={() => setShowExportDialog(true)}
@@ -1494,6 +1510,12 @@ export function AlbumList() {
         onOpenChange={setBlankLooseSheetsOpen}
         albumId="unassigned"
       />
+      {songGenerationWorkbench ? (
+        <GenerateInstrumentalDialog
+          open={generateInstrumentalOpen}
+          onOpenChange={setGenerateInstrumentalOpen}
+        />
+      ) : null}
       
       <Dialog open={showExportDialog} onOpenChange={(open) => !isExportingArchive && setShowExportDialog(open)}>
         <DialogContent className="max-w-xl border-2 bg-card">

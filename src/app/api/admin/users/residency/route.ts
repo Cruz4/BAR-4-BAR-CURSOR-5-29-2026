@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       user: {
         subscriptionStatus: result.subscriptionStatus,
         subscriptionTier: result.subscriptionTier,
+        subscriptionProduct: result.subscriptionProduct ?? null,
         proSource: result.proSource ?? null,
       },
     });

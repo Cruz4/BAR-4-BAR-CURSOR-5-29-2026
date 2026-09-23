@@ -28,6 +28,7 @@ import {
 import { StudioLoader } from '@/components/studio-loader';
 import { DnaDropAtmosphere } from '@/components/dna-drop-atmosphere';
 import { DnaDropLyricSheet } from '@/components/dna-drop-lyric-sheet';
+import type { DnaDropLinkedAlbumTrack } from '@/components/dna-drop-linked-album-panel';
 import { ShareCoverImage } from '@/components/share-cover-image';
 import { format } from 'date-fns';
 import {
@@ -73,6 +74,7 @@ import {
   DNA_DROP_UPGRADE_PATH,
   buildDnaDropLoginPath,
   dnaDropSharePath,
+  dnaDropSnapshotTrackPath,
   resolveDnaDropImportPath,
 } from '@/lib/dna-drop-access';
 import { pressedSongHref, resolveAlbumHubShareId } from '@/lib/pressed-song';
@@ -83,9 +85,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { manageRelease } from '@/lib/release-management-client';
-import { releaseShareIdFromShareDocument, shareDocumentVisibility } from '@/lib/release-management';
-import { canManageReleaseShare } from '@/lib/house-artist-link';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { releaseShareIdFromShareDocument, shareDocumentVisibility, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { canManageReleaseShare } from '@/lib/house-artist-link';
+import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
+import { AlbumVaultReleasePanel } from '@/components/album-vault-release-panel';
 import { isProOrTrial } from '@/lib/subscription';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
 
@@ -108,7 +112,8 @@ function SharedProjectPageInner() {
     const [isTakingOffline, setIsTakingOffline] = useState(false);
     const [offlineConfirmOpen, setOfflineConfirmOpen] = useState(false);
     const [hubVisibility, setHubVisibility] = useState<{ dnaLive: boolean; releaseLive: boolean } | null>(null);
-    const [shareArtist, setShareArtist] = useState<{ name: string; slug?: string } | null>(null);
+    const [shareArtist, setShareArtist] = useState<{ name: string; slug?: string; userId?: string } | null>(null);
+    const [shareAlbumHubId, setShareAlbumHubId] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         const fetchShare = async () => {
@@ -134,7 +139,7 @@ function SharedProjectPageInner() {
                         share: ProjectShare;
                         visibility?: { dnaLive?: boolean; releaseLive?: boolean };
                         albumHubShareId?: string;
-                        artist?: { name?: string; slug?: string };
+                        artist?: { name?: string; slug?: string; userId?: string };
                     };
                     data = payload.share;
                     albumHubShareId = payload.albumHubShareId?.trim();
@@ -146,6 +151,7 @@ function SharedProjectPageInner() {
                         resolvedArtist = {
                             name: payload.artist.name.trim(),
                             ...(payload.artist.slug?.trim() ? { slug: payload.artist.slug.trim() } : {}),
+                            ...(payload.artist.userId?.trim() ? { userId: payload.artist.userId.trim() } : {}),
                         };
                     }
                 } else if (user) {
@@ -163,13 +169,17 @@ function SharedProjectPageInner() {
                 if (!data) {
                     setShare(null);
                     setShareArtist(null);
+                    setShareAlbumHubId(undefined);
                     keepLoading = true;
                     router.replace('/discover');
                     return;
                 }
 
                 setShareArtist(
-                    resolvedArtist ?? { name: data.ownerName?.trim() || 'Artist' }
+                    resolvedArtist ?? {
+                        name: data.ownerName?.trim() || 'Artist',
+                        ...(data.ownerId ? { userId: data.ownerId } : {}),
+                    }
                 );
 
                 const isOwner = Boolean(user?.id && canManageReleaseShare(data, user.id));
@@ -234,6 +244,28 @@ function SharedProjectPageInner() {
                     return;
                 }
 
+                const trackPayloadEarly =
+                    data.type === 'track'
+                        ? (data.data as DnaDropTrackPayload | undefined)
+                        : undefined;
+                const parentAlbumShareId =
+                    albumHubShareId?.trim() ||
+                    trackPayloadEarly?.sharedAlbumContext?.shareId?.trim();
+                const vaultTrackId =
+                    typeof trackPayloadEarly?.id === 'string' ? trackPayloadEarly.id.trim() : '';
+                if (
+                    data.type === 'track' &&
+                    dnaPublic &&
+                    !snapshotTrackIdEarly &&
+                    parentAlbumShareId &&
+                    vaultTrackId &&
+                    parentAlbumShareId.toUpperCase() !== normalizedShareId
+                ) {
+                    keepLoading = true;
+                    router.replace(dnaDropSnapshotTrackPath(parentAlbumShareId, vaultTrackId));
+                    return;
+                }
+
                 if (!isPublic && !isOwner) {
                     setShare(null);
                     keepLoading = true;
@@ -254,6 +286,7 @@ function SharedProjectPageInner() {
                 }
 
                 setHubVisibility(visibility);
+                setShareAlbumHubId(albumHubShareId);
                 setShare(data);
                 const docRef = doc(db, 'shares', normalizedShareId);
                 updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
@@ -311,6 +344,48 @@ function SharedProjectPageInner() {
     }, [isAlbum, share, shareId, project, hubVisibility]);
     const trackProject: DnaDropTrackPayload | undefined =
       snapshotTrack || (!isAlbum ? (project as DnaDropTrackPayload | undefined) : undefined);
+    const lyricSheetLinkedAlbum = useMemo(() => {
+        if (!trackProject) return null;
+        const ctx = trackProject.sharedAlbumContext;
+        const title =
+            (snapshotTrack ? albumPayload?.title : ctx?.title)?.trim() || albumPayload?.title?.trim();
+        if (!title) return null;
+
+        const ctxShare = ctx?.shareId?.trim();
+        const hubFromApi = shareAlbumHubId?.trim();
+        let albumShareId: string | undefined;
+        if (snapshotTrack && isAlbum) {
+            albumShareId = shareId;
+        } else if (hubFromApi && hubFromApi.toUpperCase() !== shareId.trim().toUpperCase()) {
+            albumShareId = hubFromApi;
+        } else if (ctxShare && ctxShare.toUpperCase() !== shareId.trim().toUpperCase()) {
+            albumShareId = ctxShare;
+        } else {
+            albumShareId = ctxShare || hubFromApi;
+        }
+
+        const theme =
+            (snapshotTrack ? albumPayload?.theme : ctx?.theme)?.trim() ||
+            albumPayload?.theme?.trim() ||
+            ctx?.theme?.trim();
+
+        let albumTracks: DnaDropLinkedAlbumTrack[] | undefined;
+        if (albumPayload && albumShareId) {
+            albumTracks = orderAlbumTracks(albumPayload.tracks ?? [], albumPayload).map((t) => ({
+                id: t.id,
+                title: t.title || 'Untitled',
+                lyricBarCount: trackLyricBarCount(t),
+            }));
+        }
+
+        return {
+            albumTitle: title,
+            albumShareId,
+            albumTheme: theme,
+            albumTracks,
+            currentTrackId: trackProject.id,
+        };
+    }, [trackProject, snapshotTrack, isAlbum, shareId, albumPayload, shareAlbumHubId]);
     const direction = (snapshotTrack || project) ? resolveSharedDirection(snapshotTrack || project!) : undefined;
     const displayIntents = useMemo(() => {
         if (trackProject) return sharedTrackIntents(trackProject);
@@ -335,10 +410,18 @@ function SharedProjectPageInner() {
         () => ({
             name: shareArtist?.name || share?.ownerName?.trim() || 'Artist',
             slug: shareArtist?.slug,
+            userId: shareArtist?.userId || share?.ownerId,
         }),
-        [shareArtist, share?.ownerName]
+        [shareArtist, share?.ownerName, share?.ownerId]
     );
-    const releaseAudioActive = Boolean(hasFirstDropAudio || hubVisibility?.releaseLive);
+    const canManageShare = Boolean(user && share && canManageReleaseShare(share, user.id));
+    const canStreamReleaseAudio = Boolean(
+        hubVisibility?.releaseLive || share?.houseRelease || canManageShare
+    );
+    /** Match `/api/drops/audio`: preview only when release is public, or owner/house can stream. */
+    const releaseAudioActive = Boolean(
+        hasFirstDropAudio && hubVisibility !== null && canStreamReleaseAudio
+    );
     const isAlbumReleaseHubPage = Boolean(viewingAlbumHub && releaseAudioActive);
     const showAlbumReleasePlaylist = Boolean(releaseAudioActive && share && viewingAlbumHub);
     const focusedTrackPlayable = useMemo(() => {
@@ -361,9 +444,8 @@ function SharedProjectPageInner() {
         trackProject,
         viewingAlbumHub,
     ]);
-    const showFocusedTrackPlayer = Boolean(share && focusedTrackPlayable);
+    const showFocusedTrackPlayer = Boolean(share && focusedTrackPlayable && releaseAudioActive);
     const isOwnShare = Boolean(user && share && user.id === share.ownerId);
-    const canManageShare = Boolean(user && share && canManageReleaseShare(share, user.id));
     const canViewDnaLyrics = isOwnShare || viewerIsPro;
     const isReleaseShare = Boolean(
       project && hasFirstDropAudio && (
@@ -377,6 +459,82 @@ function SharedProjectPageInner() {
         if (!trackProject) return null;
         return findTrackInVault(albums, trackProject.id);
     }, [trackProject, albums]);
+
+    const ownerVaultAlbum = useMemo(() => {
+        if (!project || !canManageShare) return null;
+        if (isAlbum) return getAlbumById(project.id) ?? null;
+        const fromVault = vaultTrack?.album;
+        if (fromVault && !isLooseTrackAlbum(fromVault)) return fromVault;
+        return null;
+    }, [project, canManageShare, isAlbum, getAlbumById, vaultTrack]);
+
+    const ownerReleaseShareId = useMemo(() => {
+        if (ownerVaultAlbum) {
+            return releaseShareIdOf({ ...ownerVaultAlbum, tracks: ownerVaultAlbum.tracks });
+        }
+        if (isAlbum && albumPayload) {
+            return releaseShareIdOf({ ...albumPayload, tracks: albumPayload.tracks ?? [] });
+        }
+        if (trackProject) return releaseShareIdOf(trackProject);
+        return undefined;
+    }, [ownerVaultAlbum, isAlbum, albumPayload, trackProject]);
+
+    const ownerReleaseAlbum = useMemo(() => {
+        if (ownerVaultAlbum && !isLooseTrackAlbum(ownerVaultAlbum)) return ownerVaultAlbum;
+        if (canManageShare && isAlbum && albumPayload && project) {
+            return { ...albumPayload, id: project.id } as Album;
+        }
+        return null;
+    }, [ownerVaultAlbum, canManageShare, isAlbum, albumPayload, project]);
+
+    const ownerReleaseStatus = useMemo(() => {
+        if (!ownerReleaseAlbum) return undefined;
+        return releaseStatusOf({ ...ownerReleaseAlbum, tracks: ownerReleaseAlbum.tracks ?? [] });
+    }, [ownerReleaseAlbum]);
+
+    const showOwnerReleaseDesk = Boolean(
+        canManageShare &&
+            (hubVisibility?.releaseLive ||
+                hasFirstDropAudio ||
+                ownerReleaseShareId ||
+                isReleaseShare)
+    );
+
+    const openOwnerReleaseDesk = useCallback(() => {
+        const albumId =
+            ownerReleaseAlbum?.id ??
+            ownerVaultAlbum?.id ??
+            (isAlbum && project ? project.id : vaultTrack?.album.id);
+        if (!albumId) {
+            toast({
+                variant: 'destructive',
+                title: 'Open your album in the Vault first',
+                description: 'Sync your vault, then manage the release from the album page.',
+            });
+            return;
+        }
+        const latheShareId =
+            share?.houseRelease && ownerReleaseShareId ? ownerReleaseShareId.trim() : undefined;
+        openFirstDropLathe({
+            albumId,
+            mode: isAlbum || viewingAlbumHub ? 'album' : 'song',
+            ...(latheShareId ? { shareId: latheShareId } : {}),
+            ...(!isAlbum && !viewingAlbumHub && trackProject
+                ? { trackId: trackProject.id }
+                : {}),
+        });
+    }, [
+        ownerReleaseAlbum?.id,
+        ownerVaultAlbum?.id,
+        isAlbum,
+        project,
+        vaultTrack?.album.id,
+        share?.houseRelease,
+        ownerReleaseShareId,
+        viewingAlbumHub,
+        trackProject,
+        toast,
+    ]);
 
     useEffect(() => {
         if (!share || !trackProject || !dropPlayer) return;
@@ -441,6 +599,7 @@ function SharedProjectPageInner() {
             router.push(dnaDropSharePath(shareId));
             return;
         }
+        if (navigateBackToReleaseCatalog(router)) return;
         if (typeof window !== 'undefined' && window.history.length > 1) {
             router.back();
             return;
@@ -677,18 +836,17 @@ function SharedProjectPageInner() {
                             <span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span>
                         </div>
                     </div>
-                    {canManageShare && isReleaseShare ? (
+                    {showOwnerReleaseDesk ? (
                         <Button
-                            onClick={() => openFirstDropLathe({
-                              shareId,
-                              mode: isAlbum ? 'album' : 'song',
-                            })}
+                            onClick={openOwnerReleaseDesk}
                             size="sm"
                             variant="outline"
-                            className="h-8 sm:h-9 px-2 sm:px-3 font-bold"
+                            className="h-8 sm:h-9 px-2 sm:px-3 font-bold border-fuchsia-400/40 text-fuchsia-100 hover:bg-fuchsia-500/15"
                         >
                             <Pencil className="h-3.5 w-3.5 sm:mr-1.5" />
-                            <span className="hidden sm:inline">Update</span>
+                            <span className="hidden sm:inline">
+                              {ownerReleaseStatus === 'live' ? 'Manage release' : 'Release desk'}
+                            </span>
                         </Button>
                     ) : null}
                     {canManageShare && (
@@ -825,7 +983,7 @@ function SharedProjectPageInner() {
                 </div>
             )}
 
-            <main className="container max-w-7xl mx-auto py-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
+            <main className="container max-w-[88rem] mx-auto py-8 px-5 sm:px-8 lg:px-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 relative z-10">
                 {viewingAlbumHub && hubVisibility ? (
                   <div className="lg:col-span-12 -mt-2 mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-black/35 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em]">
                     <span
@@ -860,19 +1018,29 @@ function SharedProjectPageInner() {
                   </div>
                 ) : null}
                 <div className="lg:col-span-4 space-y-6">
-                    {snapshotTrack && isAlbum && albumPayload ? (
+                    {lyricSheetLinkedAlbum && trackProject && !viewingAlbumHub ? (
                       <nav
                         className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-black/35 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em]"
                         aria-label="Album strand navigation"
                       >
-                        <Link href={dnaDropSharePath(shareId)} className="text-cyan-300 hover:text-cyan-100">
-                          Album · {albumPayload.title || 'Sequence'}
-                        </Link>
+                        {lyricSheetLinkedAlbum.albumShareId ? (
+                          <Link
+                            href={dnaDropSharePath(lyricSheetLinkedAlbum.albumShareId)}
+                            className="text-cyan-300 hover:text-cyan-100"
+                          >
+                            Album · {lyricSheetLinkedAlbum.albumTitle}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Album · {lyricSheetLinkedAlbum.albumTitle}
+                          </span>
+                        )}
                         <span className="text-muted-foreground">/</span>
-                        <span className="truncate text-foreground">{trackProject?.title || 'Strand'}</span>
+                        <span className="truncate text-foreground">{trackProject.title || 'Strand'}</span>
                         <ShareArtistLink
                           name={artistCredit.name}
                           slug={artistCredit.slug}
+                          userId={artistCredit.userId}
                           className="w-full basis-full sm:ml-0 sm:w-auto sm:basis-auto"
                           size="sm"
                         />
@@ -897,6 +1065,7 @@ function SharedProjectPageInner() {
                           houseRelease={share.houseRelease === true}
                           artistName={artistCredit.name}
                           artistSlug={artistCredit.slug}
+                          artistUserId={artistCredit.userId}
                         />
                       ) : null}
                       {showFocusedTrackPlayer && focusedTrackPlayable ? (
@@ -915,6 +1084,7 @@ function SharedProjectPageInner() {
                           }
                           artistName={artistCredit.name}
                           artistSlug={artistCredit.slug}
+                          artistUserId={artistCredit.userId}
                         />
                       ) : null}
                     </Suspense>
@@ -971,6 +1141,7 @@ function SharedProjectPageInner() {
                                   <ShareArtistLink
                                     name={artistCredit.name}
                                     slug={artistCredit.slug}
+                                    userId={artistCredit.userId}
                                     className="text-cyan-100/90"
                                   />
                                 </div>
@@ -1064,6 +1235,36 @@ function SharedProjectPageInner() {
                             )}
                         </CardContent>
                     </Card>
+
+                    {canManageShare && ownerReleaseAlbum ? (
+                        <Card className="border-fuchsia-500/35 bg-fuchsia-500/5">
+                            <CardContent className="p-4">
+                                <AlbumVaultReleasePanel album={ownerReleaseAlbum} />
+                            </CardContent>
+                        </Card>
+                    ) : showOwnerReleaseDesk ? (
+                        <Card className="border-fuchsia-500/35 bg-fuchsia-500/5">
+                            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0 space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-fuchsia-300">
+                                        Music release
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Update audio, pricing, and availability on the release desk.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-9 shrink-0 gap-1.5 font-bold uppercase tracking-wider"
+                                    onClick={openOwnerReleaseDesk}
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                    {ownerReleaseStatus === 'live' ? 'Manage release' : 'Open release desk'}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ) : null}
 
                     {isOwnShare && alreadyInVault && editHref && (
                         <Card className="border-emerald-500/35 bg-emerald-500/5">
@@ -1166,7 +1367,7 @@ function SharedProjectPageInner() {
                     )}
                 </div>
 
-                <div className="lg:col-span-8 space-y-8">
+                <div className="lg:col-span-8 min-w-0 space-y-8">
                     {viewingAlbumHub ? (
                         <DnaDropAlbumHub
                             album={project as DnaDropAlbumPayload}
@@ -1176,10 +1377,11 @@ function SharedProjectPageInner() {
                             ownerName={share.ownerName}
                             artistName={artistCredit.name}
                             artistSlug={artistCredit.slug}
+                            artistUserId={artistCredit.userId}
                             houseRelease={share.houseRelease === true}
                             canViewDna={canViewDnaLyrics}
                             signedIn={Boolean(user)}
-                            releaseAudioHub={Boolean(hasFirstDropAudio || hubVisibility?.releaseLive)}
+                            releaseAudioHub={releaseAudioActive}
                         />
                     ) : canViewDnaLyrics && trackProject ? (
                     <DnaDropLyricSheet
@@ -1187,10 +1389,14 @@ function SharedProjectPageInner() {
                         sections={trackProject.sections}
                         rhymeGroups={rhymeGroups}
                         updatedLabel={`Updated ${formattedShareDate}`}
-                        albumShareId={snapshotTrack ? shareId : trackProject.sharedAlbumContext?.shareId}
-                        albumTitle={snapshotTrack ? albumPayload?.title : trackProject.sharedAlbumContext?.title}
+                        albumShareId={lyricSheetLinkedAlbum?.albumShareId}
+                        albumTitle={lyricSheetLinkedAlbum?.albumTitle}
+                        albumTheme={lyricSheetLinkedAlbum?.albumTheme}
+                        albumTracks={lyricSheetLinkedAlbum?.albumTracks}
+                        currentTrackId={lyricSheetLinkedAlbum?.currentTrackId}
                         artistName={artistCredit.name}
                         artistSlug={artistCredit.slug}
+                        artistUserId={artistCredit.userId}
                     />
                     ) : (
                     <Card className="border-2 border-cyan-400/25 bg-cyan-500/5 min-h-[40vh] flex items-center justify-center">

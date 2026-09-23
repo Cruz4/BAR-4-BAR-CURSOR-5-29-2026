@@ -231,7 +231,21 @@ export async function eradicateUserIdentity(
 
   const { albums, tracks } = await deleteUserAlbums(trimmedId, db);
 
-  const subcollections = ['usageLogs', 'usage', 'styleProfile', 'analytics', 'gamification'] as const;
+  const subcollections = [
+    'usageLogs',
+    'usage',
+    'styleProfile',
+    'analytics',
+    'gamification',
+    'renderJobs',
+    'generatedTakes',
+    'renderDevices',
+    'renderUsage',
+    'downloadUsage',
+    'artistSignatures',
+    'voiceMatches',
+    'renderPairing',
+  ] as const;
   await Promise.all(
     subcollections.map((name) => deleteSubcollection(`users/${trimmedId}`, name, db))
   );

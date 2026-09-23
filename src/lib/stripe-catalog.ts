@@ -7,11 +7,17 @@ const env = (key: string, fallback: string) => process.env[key]?.trim() || fallb
 
 export const PRO_MONTHLY_RESIDENCY = 1777;
 export const PRO_YEARLY_RESIDENCY = 3444;
+export const MAX_MONTHLY_RESIDENCY = 80_000;
+export const MAX_YEARLY_RESIDENCY = 80_000;
+export const MAX_INCLUDED_CLOUD_PASSES_MONTHLY = 20;
 
 /** Active checkout price keys (Ink Store UI). Session Pack removed — legacy ID kept for webhooks only. */
 export const STRIPE_PRICE_IDS = {
   PRO_MONTHLY: env('STRIPE_PRICE_PRO_MONTHLY', 'price_1TcEHIR1AVjROqp3n5ARXBOo'),
   PRO_YEARLY: env('STRIPE_PRICE_PRO_YEARLY', 'price_1TcDtcR1AVjROqp3yy51oUYx'),
+  MAX_MONTHLY: env('STRIPE_PRICE_MAX_MONTHLY', 'price_MAX_MONTHLY_PLACEHOLDER'),
+  MAX_YEARLY: env('STRIPE_PRICE_MAX_YEARLY', 'price_MAX_YEARLY_PLACEHOLDER'),
+  CLOUD_PASS_PACK: env('STRIPE_PRICE_CLOUD_PASS_PACK', 'price_CLOUD_PASS_PLACEHOLDER'),
   INK_REFILL: env('STRIPE_PRICE_INK_REFILL', 'price_1TcDYlR1AVjROqp3dVwsVof0'),
   INK_ARTIST: env('STRIPE_PRICE_INK_ARTIST', 'price_1TcDYlR1AVjROqp3Rt3UjuTN'),
   INK_VAULT: env('STRIPE_PRICE_INK_VAULT', 'price_1TcDYmR1AVjROqp3S0hy1WOd'),
@@ -37,23 +43,44 @@ export const LEGACY_STRIPE_PRICE_INK_VAULT = env(
 export const PRO_GATED_INK_PACK_KEYS = new Set(['INK_ARTIST', 'INK_VAULT']);
 
 type CatalogEntry =
-  | { type: 'subscription'; tier: 'monthly' | 'yearly'; residencyRefill: number }
-  | { type: 'one_time'; inkAmount: number };
+  | {
+      type: 'subscription';
+      tier: 'monthly' | 'yearly';
+      residencyRefill: number;
+      product?: 'writer' | 'max';
+    }
+  | { type: 'one_time'; inkAmount: number }
+  | { type: 'one_time'; cloudPassAmount: number };
 
 const ACTIVE_CATALOG: Record<string, CatalogEntry> = {
   [STRIPE_PRICE_IDS.PRO_MONTHLY]: {
     type: 'subscription',
     tier: 'monthly',
     residencyRefill: PRO_MONTHLY_RESIDENCY,
+    product: 'writer',
   },
   [STRIPE_PRICE_IDS.PRO_YEARLY]: {
     type: 'subscription',
     tier: 'yearly',
     residencyRefill: PRO_YEARLY_RESIDENCY,
+    product: 'writer',
   },
-  [STRIPE_PRICE_IDS.INK_REFILL]: { type: 'one_time', inkAmount: 1000 },
-  [STRIPE_PRICE_IDS.INK_ARTIST]: { type: 'one_time', inkAmount: 2500 },
-  [STRIPE_PRICE_IDS.INK_VAULT]: { type: 'one_time', inkAmount: 5000 },
+  [STRIPE_PRICE_IDS.MAX_MONTHLY]: {
+    type: 'subscription',
+    tier: 'monthly',
+    residencyRefill: MAX_MONTHLY_RESIDENCY,
+    product: 'max',
+  },
+  [STRIPE_PRICE_IDS.MAX_YEARLY]: {
+    type: 'subscription',
+    tier: 'yearly',
+    residencyRefill: MAX_YEARLY_RESIDENCY,
+    product: 'max',
+  },
+  [STRIPE_PRICE_IDS.INK_REFILL]: { type: 'one_time', inkAmount: 10_000 },
+  [STRIPE_PRICE_IDS.INK_ARTIST]: { type: 'one_time', inkAmount: 25_000 },
+  [STRIPE_PRICE_IDS.INK_VAULT]: { type: 'one_time', inkAmount: 50_000 },
+  [STRIPE_PRICE_IDS.CLOUD_PASS_PACK]: { type: 'one_time', cloudPassAmount: 10 },
 };
 
 const LEGACY_CATALOG: Record<string, CatalogEntry> = {
@@ -79,7 +106,13 @@ export function getCatalogEntry(priceId: string) {
   return STRIPE_PRICE_CATALOG[priceId];
 }
 
-export function getResidencyRefillForTier(tier: 'monthly' | 'yearly') {
+export function getResidencyRefillForTier(
+  tier: 'monthly' | 'yearly',
+  product: 'writer' | 'max' = 'writer'
+) {
+  if (product === 'max') {
+    return MAX_MONTHLY_RESIDENCY;
+  }
   return tier === 'yearly' ? PRO_YEARLY_RESIDENCY : PRO_MONTHLY_RESIDENCY;
 }
 

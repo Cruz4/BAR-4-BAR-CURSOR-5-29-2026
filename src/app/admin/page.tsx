@@ -545,6 +545,7 @@ export default function AdminPage() {
                 ...u,
                 subscriptionStatus: body.user?.subscriptionStatus ?? u.subscriptionStatus,
                 subscriptionTier: body.user?.subscriptionTier ?? u.subscriptionTier,
+                subscriptionProduct: body.user?.subscriptionProduct ?? u.subscriptionProduct,
                 proSource: body.user?.proSource || undefined,
               }
             : u
@@ -1016,6 +1017,8 @@ export default function AdminPage() {
                                   <SelectItem value="none" className="text-[rgb(125,211,252)]">LOCAL</SelectItem>
                                   <SelectItem value="admin-monthly" className="text-accent">ADMIN MO</SelectItem>
                                   <SelectItem value="admin-yearly" className="text-accent">ADMIN YR</SelectItem>
+                                  <SelectItem value="admin-max-monthly" className="text-violet-300">MAX MO</SelectItem>
+                                  <SelectItem value="admin-max-yearly" className="text-violet-300">MAX YR</SelectItem>
                                   <SelectItem value="stripe-monthly" className="text-sky-300">STRIPE MO</SelectItem>
                                   <SelectItem value="stripe-yearly" className="text-sky-300">STRIPE YR</SelectItem>
                               </SelectContent>

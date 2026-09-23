@@ -63,7 +63,7 @@ import {
   INK_PACK_YEARLY_DISCOUNT_LABEL,
   getYearlyProInkPackCheckoutSummary,
   STUDIO_DRAFT_INK_TIP,
-  COMPETITOR_ANCHOR_COPY,
+  getCompetitorAnchorCopy,
   VISITOR_INK_STORE_NOTICE,
   INK_STORE_PACK_CONTEXT,
   VISITOR_RESIDENCY_POOL_CAPTION,
@@ -72,6 +72,8 @@ import {
   PRO_GATED_INK_PACK_KEYS,
 } from '@/lib/studio-tiers';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, isProUser } from '@/lib/subscription';
+import { isStudioMaxUser } from '@/lib/subscription-products';
+import { useSongGenerationLive } from '@/hooks/use-song-generation-live';
 import {
   studioChromeFromUser,
   studioCurrentPlanRingClass,
@@ -91,8 +93,9 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { dropArtistShareLabel } from '@/lib/drop-commerce';
 import {
   buildLoginPath,
-  isProCheckoutPriceKey,
+  isSubscriptionCheckoutPriceKey,
 } from '@/lib/checkout-intent';
+import type { StripePriceKey } from '@/lib/stripe-catalog';
 import { DNA_DROP_HIGHLIGHT, DNA_DROP_UPGRADE_TOAST, isDnaDropAccessFeature } from '@/lib/dna-drop-access';
 import { patchGamificationSettings } from '@/lib/gamification-client';
 
@@ -119,6 +122,7 @@ function UsagePageContent() {
   const { isCloudSyncActive } = useContext(DataContext);
   const { user } = useAuth();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const songGenerationLive = useSongGenerationLive();
   const { checkout, fulfillCheckoutReturn, openBillingPortal, isCheckingOut } = useStripe();
   const { toast } = useToast();
   const router = useRouter();
@@ -247,20 +251,23 @@ function UsagePageContent() {
 
   useEffect(() => {
     const rawCheckout = searchParams.get('checkout');
-    if (!isProCheckoutPriceKey(rawCheckout) || !user?.id) return;
+    if (!isSubscriptionCheckoutPriceKey(rawCheckout) || !user?.id) return;
     if (searchParams.get('success') === 'true' || searchParams.get('canceled') === 'true') return;
     if (checkoutAutoStartedRef.current || isCheckingOut) return;
 
     checkoutAutoStartedRef.current = true;
     setActiveTab('cloud');
 
-    if (isProUser(user)) {
+    const alreadyOnTier =
+      (rawCheckout.startsWith('PRO_') && isProUser(user) && !isStudioMaxUser(user)) ||
+      (rawCheckout.startsWith('MAX_') && isStudioMaxUser(user));
+    if (alreadyOnTier) {
       router.replace('/usage?tab=cloud');
       return;
     }
 
     router.replace('/usage?tab=cloud');
-    checkout(rawCheckout, user.id, user.email, { withTrial: false });
+    checkout(rawCheckout as StripePriceKey, user.id, user.email, { withTrial: false });
   }, [searchParams, user, checkout, isCheckingOut, router]);
 
   const isYearlyUser = user?.subscriptionTier === 'yearly';
@@ -276,13 +283,14 @@ function UsagePageContent() {
       discount: isYearlyUser ? INK_PACK_YEARLY_DISCOUNT_LABEL : null,
     }));
 
-  const handleStripeCheckout = (
-    priceKey: 'PRO_MONTHLY' | 'PRO_YEARLY' | 'INK_REFILL' | 'INK_ARTIST' | 'INK_VAULT'
-  ) => {
+  const handleStripeCheckout = (priceKey: StripePriceKey) => {
     if (!user) {
       const highlightQ = highlightDnaDrop ? `&highlight=${DNA_DROP_HIGHLIGHT}` : '';
       const loginPath =
-        priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY'
+        priceKey === 'PRO_MONTHLY' ||
+        priceKey === 'PRO_YEARLY' ||
+        priceKey === 'MAX_MONTHLY' ||
+        priceKey === 'MAX_YEARLY'
           ? buildLoginPath(`/usage?tab=cloud&checkout=${priceKey}${highlightQ}`)
           : buildLoginPath('/usage?tab=buy-ink');
       router.push(loginPath);
@@ -311,11 +319,21 @@ function UsagePageContent() {
                 studioHeaderBadgeClass(studioChromeFromUser(user))
               )}
             >
-              {paidPro ? (isYearlyUser ? 'Yearly Pro' : 'Monthly Pro') : 'Visitor'}
+              {isStudioMaxUser(user)
+                ? isYearlyUser
+                  ? 'Studio Max Yearly'
+                  : 'Studio Max Monthly'
+                : paidPro
+                  ? isYearlyUser
+                    ? 'Yearly Pro'
+                    : 'Monthly Pro'
+                  : 'Visitor'}
             </Badge>
           </div>
           <p className="text-muted-foreground font-code">Permanent ink never expires — used after your monthly residency pool runs out.</p>
-          <p className="text-xs text-muted-foreground/90 max-w-2xl leading-relaxed">{COMPETITOR_ANCHOR_COPY}</p>
+          <p className="text-xs text-muted-foreground/90 max-w-2xl leading-relaxed">
+            {getCompetitorAnchorCopy(songGenerationLive)}
+          </p>
           <p className="text-xs text-primary/80 max-w-2xl leading-relaxed flex items-start gap-2">
             <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>{STUDIO_DRAFT_INK_TIP}</span>
@@ -577,12 +595,15 @@ function UsagePageContent() {
                 </CardFooter>
               </Card>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-                {getStudioTierPlans(isCloudSyncActive, user?.subscriptionTier).map((plan) => {
-                    const isProPlan = plan.name !== 'Visitor';
-                    const planChrome = isProPlan ? 'pro' as const : 'free' as const;
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
+                {getStudioTierPlans(isCloudSyncActive, user, {
+                  includeStudioMax: songGenerationLive,
+                }).map((plan) => {
+                    const isMaxPlan = plan.name.startsWith('Studio Max');
+                    const isProPlan = plan.name !== 'Visitor' && !isMaxPlan;
+                    const planChrome = isMaxPlan ? 'pro' as const : isProPlan ? 'pro' as const : 'free' as const;
                     return (
-                    <Card key={plan.name} className={cn("flex flex-col h-full relative transition-all duration-500 shadow-xl", isProPlan ? "border-accent" : "border-transparent", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && studioCurrentPlanRingClass(planChrome))}>
+                    <Card key={plan.name} className={cn("flex flex-col h-full relative transition-all duration-500 shadow-xl", isMaxPlan ? "border-violet-500/50" : isProPlan ? "border-accent" : "border-transparent", plan.badge ? "overflow-visible" : "overflow-hidden", plan.isCurrent && studioCurrentPlanRingClass(planChrome))}>
                         {plan.badge && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex max-w-[calc(100%-1.5rem)] justify-center">
                             <Badge className="whitespace-nowrap text-[8px] uppercase tracking-widest font-bold bg-accent px-4 py-1.5 shadow-lg">

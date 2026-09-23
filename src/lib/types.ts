@@ -26,6 +26,13 @@ export interface User {
   stripeConnectPayoutsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'canceled' | 'none';
   subscriptionTier?: 'monthly' | 'yearly' | 'none';
+  /** Grandfathered Pro = writer; Studio Max = max */
+  subscriptionProduct?: 'writer' | 'max';
+  billingInterval?: 'monthly' | 'yearly';
+  /** Included cloud render passes (Studio Max), non-rollover */
+  cloudRenderPassesBalance?: number;
+  /** Idempotent purchased Ink 10× migration marker */
+  inkEconomyMigrationV2At?: string;
   /** Who owns this Pro — admin grant stays until roster changes it; stripe follows their membership. */
   proSource?: 'admin' | 'stripe';
   subscriptionId?: string;
@@ -147,6 +154,10 @@ export interface Track {
   id:string;
   albumId: string;
   ownerId: string;
+  /** Vocal song (default) or Vault instrumental shell */
+  workKind?: 'song' | 'instrumental';
+  /** Private approved generated take for library/release */
+  approvedGeneratedTakeId?: string;
   title: string;
   coverArtUrl?: string; 
   vibe: TrackVibe;

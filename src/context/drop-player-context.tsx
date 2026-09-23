@@ -341,6 +341,12 @@ export function DropPlayerProvider({ children }: { children: ReactNode }) {
     const onInlinePlay = (event: Event) => {
       const globalAudio = audioRef.current;
       if (!globalAudio || event.target === globalAudio) return;
+      if (
+        event.target instanceof HTMLMediaElement &&
+        event.target.dataset.studioTake === '1'
+      ) {
+        return;
+      }
       if (event.target instanceof HTMLMediaElement && !globalAudio.paused) {
         userPausedRef.current = true;
         wantPlayingRef.current = false;

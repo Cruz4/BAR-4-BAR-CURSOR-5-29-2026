@@ -242,6 +242,20 @@ export function canUnlockAchievement(
       return (summary.lifetimeQuoteReverbs || 0) >= 1 && ctx.quoteReverbVerified;
     case 'gallery_signal':
       return (summary.lifetimeGalleryPosts || 0) >= 1 && ctx.wallImagePostVerified;
+    case 'render_first_playback':
+      return analytics.renderAchievementKey === 'first_playback';
+    case 'render_keeper_take':
+      return analytics.renderAchievementKey === 'keeper_take';
+    case 'render_beat_on_deck':
+      return analytics.renderAchievementKey === 'beat_on_deck';
+    case 'render_surgical_session':
+      return analytics.renderAchievementKey === 'surgical_session';
+    case 'render_session_split':
+      return analytics.renderAchievementKey === 'session_split';
+    case 'render_signature_set':
+      return analytics.renderAchievementKey === 'signature_set';
+    case 'render_sheet_to_stage':
+      return analytics.renderAchievementKey === 'sheet_to_stage';
     default:
       return isAchievementActionVerified(achievementId, analytics, ctx, trigger, prestige);
   }

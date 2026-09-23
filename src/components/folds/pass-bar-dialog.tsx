@@ -80,7 +80,7 @@ export function PassBarDialog({
             If you aren’t friends yet, they accept before the thread stays open.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-start gap-2">
+        <div className="flex items-start gap-2" data-composer-field>
           <EmojiPickerButton
             compact
             disabled={busy}

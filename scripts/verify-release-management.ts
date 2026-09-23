@@ -353,7 +353,11 @@ const profileTabs = readFileSync(new URL('../src/components/profile/profile-sect
 assert.match(albumHrefLib, /export function albumHubHref/);
 assert.match(albumHrefLib, /export function resolveAlbumHubShareId/);
 assert.doesNotMatch(albumHrefLib, /discover\?/);
-assert.match(foldSheet, /min-h-\[calc\(100dvh-3\.5rem\)\] w-full/, 'DM thread must full-bleed Msgs atmosphere');
+assert.match(
+  foldSheet,
+  /(?:min-h|h)-\[calc\(100dvh-3\.5rem\)\][\s\S]{0,120}w-full[\s\S]{0,200}InboxPageAtmosphere variant="msgs"/,
+  'DM thread must full-bleed Msgs atmosphere'
+);
 assert.match(emojiPicker, /onFocusOutside=\{\(e\) => e\.preventDefault\(\)\}/, 'emoji picker must stay open while composing');
 assert.match(shareSnapshotPage, /Album release hub/, 'album share chrome must label the release hub');
 assert.match(discoveryTags, /albumHubHref\(metadata\.albumShareId\)/, 'album chips must open the album hub');

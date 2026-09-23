@@ -280,6 +280,7 @@ export type DeliveredDoorKnocker = {
   name: string;
   slug?: string;
   activityId?: string;
+  createdAt?: string;
 };
 
 export type DeliveredDoorKnocks = {
@@ -293,10 +294,16 @@ export async function deliverPendingDoorKnocks(userId: string): Promise<Delivere
   const collection = db.collection(`users/${userId}/activity`);
   const snap = await collection.where('type', '==', 'door_knock').limit(60).get();
 
-  const pending = snap.docs.filter((doc) => {
-    const data = doc.data();
-    return data.direction === 'received' && !data.homeDeliveredAt;
-  });
+  const pending = snap.docs
+    .filter((doc) => {
+      const data = doc.data();
+      return data.direction === 'received' && !data.homeDeliveredAt;
+    })
+    .sort((a, b) => {
+      const ta = Date.parse(String(a.data().createdAt || ''));
+      const tb = Date.parse(String(b.data().createdAt || ''));
+      return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0);
+    });
   if (!pending.length) return { delivered: 0, knockerNames: [], knockers: [] };
 
   const now = new Date().toISOString();
@@ -309,11 +316,13 @@ export async function deliverPendingDoorKnocks(userId: string): Promise<Delivere
     const name = typeof data.actorName === 'string' ? data.actorName.trim() : '';
     const slug = typeof data.actorSlug === 'string' ? data.actorSlug.trim() : '';
     const activityId = doc.id;
+    const createdAt = typeof data.createdAt === 'string' ? data.createdAt : undefined;
     if (name) names.push(name);
     knockers.push({
       name: name || 'Artist',
       ...(slug ? { slug } : {}),
       activityId,
+      ...(createdAt ? { createdAt } : {}),
     });
   }
   batch.set(

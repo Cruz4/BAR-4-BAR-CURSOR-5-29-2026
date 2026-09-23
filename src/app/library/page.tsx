@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StudioLoader } from '@/components/studio-loader';
 import { DropDeck } from '@/components/library/drop-deck';
+import { ApprovedStudioSection } from '@/components/library/approved-studio-section';
 import { useAuth } from '@/hooks/use-auth';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useSongGenerationWorkbenchLive } from '@/hooks/use-song-generation-live';
 import { waitForAuthUser } from '@/lib/firebase/client/auth-ready';
 import type { DropLibraryItem } from '@/lib/drop-library';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
@@ -20,6 +22,7 @@ import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 export default function DropLibraryPage() {
   const { user, loading: authLoading } = useAuth();
   const { enabled: firstDropsOn, loading: featureLoading } = useFirstDropsFeature();
+  const songGenerationWorkbench = useSongGenerationWorkbenchLive();
   const searchParams = useSearchParams();
   const releaseShareId = searchParams.get('release');
   const [items, setItems] = useState<DropLibraryItem[]>([]);
@@ -123,6 +126,11 @@ export default function DropLibraryPage() {
 
   return (
     <div className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
+      {songGenerationWorkbench ? (
+        <div className="px-3 pt-3 md:px-6">
+          <ApprovedStudioSection />
+        </div>
+      ) : null}
       <DropDeck userId={user.id} items={items} pressing={pressing} />
     </div>
   );

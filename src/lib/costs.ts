@@ -1,23 +1,22 @@
 /**
- * Per-action Ink costs — studio economy.
- * Pools: 1,777/mo (Pro Monthly) · 3,444/mo (Pro Yearly residency refill).
- * Visitor: 250 welcome on signup · +150/mo from month two (see subscription.ts).
+ * Per-action Ink costs — studio economy (rebalanced for Render Studio anti-arbitrage).
+ * Pro Writer: 1,777/mo · Studio Max: 80,000/mo residency.
  */
 export const AI_COSTS = {
-  generateNextLine: 15,
-  generateDraftPerBar: 2,
+  generateNextLine: 3,
+  generateDraftPerBar: 3,
 
-  analyzeRelayAssets: 10,
-  extractAlbumDna: 15,
-  generateRelayDraft: 2,
+  analyzeRelayAssets: 12,
+  extractAlbumDna: 24,
+  generateRelayDraft: 3,
 
-  suggestTrackTitles: 3,
-  suggestVibe: 20,
-  generateCoverArt: 25,
-  analyzeStructure: 8,
+  suggestTrackTitles: 6,
+  suggestVibe: 18,
+  generateCoverArt: 30,
+  analyzeStructure: 12,
 
-  findRhymes: 10,
-  improveMyStyle: 35,
+  findRhymes: 15,
+  improveMyStyle: 42,
 
   /** Charged once per freestyle recording session after several successful speech chunks. */
   freestyleTranscription: 3,
@@ -26,15 +25,18 @@ export const AI_COSTS = {
   /** Wall / comment voice-note transcripts — free. */
   transcribeVoiceNote: 0,
 
-  runCreativeEffect: 10,
+  runCreativeEffect: 12,
 
-  // Roadmap placeholders — pre-priced and Pro-gated (see PRO_ONLY_AI_ACTIONS in
-  // ai-gate.ts) for when the feature ships, but no flow file or dispatcher
-  // entry exists yet. Not reachable from any UI; do not remove without also
-  // clearing the ai-gate.ts gate entry, or wire up a real flow before shipping
-  // a button that calls these action names.
   aiVideoDirector: 100,
-  aiMusicCowriter: 80,
+  /** Legacy label — vocal render uses renderSong via Render API. */
+  aiMusicCowriter: 44,
+  renderSong: 44,
+  renderInstrumental: 44,
+  renderRepaint: 6,
+  renderStemBundle: 40,
+  renderMidiStem: 12,
+  renderVoiceMatch: 36,
+  renderSignatureTrain: 220,
 } as const;
 
 /** Bill the Freestyle Session fee on this successful speech chunk (~14s of studio pickup). */

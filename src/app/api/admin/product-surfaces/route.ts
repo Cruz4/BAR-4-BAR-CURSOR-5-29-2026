@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 import {
   getProductSurfaces,
+  ProductSurfacesMutationBlockedError,
   setProductSurfaces,
 } from '@/lib/server/product-surfaces';
+import { AppCheckError } from '@/lib/server/app-check-gate';
 import { parseProductSurfacesPatch } from '@/lib/product-surface-modes';
 
 export const runtime = 'nodejs';
@@ -35,8 +37,15 @@ export async function POST(req: Request) {
     if (error instanceof AdminAuthError) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
+    if (error instanceof AppCheckError) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    if (error instanceof ProductSurfacesMutationBlockedError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error('[admin/product-surfaces POST]', error);
     const message = error instanceof Error ? error.message : 'Failed to save product surfaces';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = /Firebase Admin is not configured/i.test(message) ? 503 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

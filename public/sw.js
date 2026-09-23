@@ -227,6 +227,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: network only (no SW Response.error() mask on failures).
-  event.respondWith(fetch(event.request));
+  // Do not intercept other routes — let the browser handle them (share pages, profile, etc.).
+  // Wrapping fetch() here only adds uncaught rejections on transient network failures.
 });

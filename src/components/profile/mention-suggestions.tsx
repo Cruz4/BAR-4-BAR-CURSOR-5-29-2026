@@ -39,7 +39,7 @@ export function MentionField({
 }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   return (
-    <div ref={anchorRef} className={cn('relative min-w-0', className)}>
+    <div ref={anchorRef} data-composer-field className={cn('relative min-w-0', className)}>
       {children}
       <MentionSuggestions
         value={value}

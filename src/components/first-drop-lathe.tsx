@@ -47,12 +47,11 @@ import {
 } from '@/components/guided-release-checklist';
 import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { cn } from '@/lib/utils';
-import type { Album, Track, TrackSection } from '@/lib/types';
+import type { Album, Track } from '@/lib/types';
 import type { ReleaseDiscoveryMetadata } from '@/lib/release-discovery';
 import { getPrivateReleaseAudio, manageRelease, pingHouseRelease, fetchHouseWorkspace, saveHouseWorkspace } from '@/lib/release-management-client';
-import { hasLiveDnaDrop, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
-import { NoLyricsDnaHint } from '@/components/no-lyrics-dna-hint';
-import { Textarea } from '@/components/ui/textarea';
+import { releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
+import { ReleaseDnaDropPanel } from '@/components/release-dna-drop-panel';
 
 type Picked = { album: Album; track: Track };
 
@@ -71,60 +70,26 @@ function offlineReleasePlacement(row: Picked): 'single' | 'album' | null {
   return albumOffline && Boolean(normalizeDropAudio(row.track.dropAudio)) ? 'album' : null;
 }
 
-function sectionsToLyricText(sections: TrackSection[] | undefined): string {
-  if (!sections?.length) return '';
-  return sections
-    .flatMap((section) => (section.bars || []).map((bar) => String(bar.text || '')))
-    .join('\n')
-    .replace(/\n+$/g, '');
+function canDeletePrivateDraft(row: Picked): boolean {
+  if (songReleasePlacement(row) || offlineReleasePlacement(row)) return false;
+  if (releaseStatusOf(row.track) !== 'draft') return false;
+  return !releaseShareIdOf(row.track) && !releaseShareIdOf({ ...row.album, tracks: row.album.tracks });
 }
 
-function lyricTextToSections(text: string): TrackSection[] {
-  const lines = text.replace(/\r\n/g, '\n').split('\n');
-  if (lines.length === 1 && !lines[0].trim()) return [];
-  return [
-    {
-      id: `section-${Date.now()}`,
-      type: 'verse',
-      bars: lines.map((line, index) => ({
-        idx: index + 1,
-        text: line,
-        accepted: true,
-        syllables: 0,
-        rhymeKey: '?',
-        lineSource: 'written' as const,
-      })),
-    },
-  ];
-}
-
-function ReleaseTitleLyricsEditor({
+function ReleaseTitleEditor({
   title,
-  lyrics,
-  lyricsHint,
   titleInputRef,
   onSaveTitle,
-  onSaveLyrics,
-  lyricsDisabled,
 }: {
   title: string;
-  lyrics: string;
-  lyricsHint?: string;
   titleInputRef?: React.Ref<HTMLInputElement>;
   onSaveTitle: (next: string) => void;
-  onSaveLyrics: (next: string) => void;
-  lyricsDisabled?: boolean;
 }) {
   const [titleDraft, setTitleDraft] = useState(title);
-  const [lyricsDraft, setLyricsDraft] = useState(lyrics);
 
   useEffect(() => {
     setTitleDraft(title);
   }, [title]);
-
-  useEffect(() => {
-    setLyricsDraft(lyrics);
-  }, [lyrics]);
 
   return (
     <div id="release-step-titleLyrics" className="scroll-mt-4 space-y-3 rounded-xl border border-fuchsia-400/25 bg-fuchsia-500/5 p-3">
@@ -142,25 +107,6 @@ function ReleaseTitleLyricsEditor({
           maxLength={120}
           placeholder="Release title"
           className="h-10 font-headline text-base font-bold uppercase tracking-tight"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-300">
-          Lyrics (optional)
-        </Label>
-        {lyricsHint ? (
-          <p className="text-[10px] leading-relaxed text-muted-foreground">{lyricsHint}</p>
-        ) : null}
-        <Textarea
-          value={lyricsDraft}
-          onChange={(event) => setLyricsDraft(event.target.value)}
-          onBlur={() => {
-            if (lyricsDraft === lyrics) return;
-            onSaveLyrics(lyricsDraft);
-          }}
-          placeholder="Paste or type lyrics if you want them on the sheet."
-          className="min-h-[7rem] font-code text-sm"
-          disabled={lyricsDisabled}
         />
       </div>
       <p id="release-step-cover" className="scroll-mt-4 text-[10px] leading-relaxed text-muted-foreground">
@@ -418,6 +364,57 @@ export function FirstDropLatheHost() {
     }
   };
 
+  const scrapPrivateDraft = async (targetAlbum: Album, targetTrack: Track) => {
+    const albumLive = releaseStatusOf({ ...targetAlbum, tracks: targetAlbum.tracks }) === 'live';
+    const trackLive = releaseStatusOf(targetTrack) === 'live';
+    if (albumLive || trackLive) {
+      toast({
+        variant: 'destructive',
+        title: 'Take the release offline first',
+        description: 'This song is tied to a live release. Take it offline before deleting the draft.',
+      });
+      return;
+    }
+    if (releaseShareIdOf(targetTrack) || releaseShareIdOf({ ...targetAlbum, tracks: targetAlbum.tracks })) {
+      toast({
+        variant: 'destructive',
+        title: 'Remove the old release record first',
+        description: 'Use Remove old release record for offline links before deleting this Vault sheet.',
+      });
+      return;
+    }
+    if (
+      !window.confirm(
+        `Delete "${targetTrack.title || 'this song'}" from your Vault?\n\nAny private master on file is permanently removed. This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setRemovingAudioId(targetTrack.id);
+    try {
+      const audio = normalizeDropAudio(targetTrack.dropAudio);
+      if (audio) await deleteDropAudioFiles(audio);
+      deleteTrack(targetAlbum.id, targetTrack.id);
+      if (picked?.track.id === targetTrack.id) {
+        setPicked(null);
+        setRightsChecked(false);
+        setPrivateAudioUrl('');
+      }
+      toast({
+        title: 'Private draft deleted',
+        description: 'The song was removed from your Vault and release catalog.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not delete draft',
+        description: error instanceof Error ? error.message : 'Try again.',
+      });
+    } finally {
+      setRemovingAudioId('');
+    }
+  };
+
   const scopedCatalog = useMemo(() => {
     if (!albumScope) return catalog;
     return catalog.filter((row) => row.album.id === albumScope);
@@ -513,18 +510,25 @@ export function FirstDropLatheHost() {
             setRightsChecked(false);
             setPrivateAudioUrl('');
             setOpen(true);
+            return;
           } catch (error) {
             clearLinkedWorkspace();
+            if (detail.albumId || detail.trackId) {
+              applyDetail(detail);
+              setOpen(true);
+              return;
+            }
             toast({
               variant: 'destructive',
               title: 'Could not open this House release',
               description: error instanceof Error ? error.message : undefined,
             });
+            return;
           }
-          return;
         }
         clearLinkedWorkspace();
         applyDetail(detail);
+        setOpen(true);
       })();
     };
     window.addEventListener(OPEN_FIRST_DROP_LATHE, onOpen);
@@ -548,12 +552,6 @@ export function FirstDropLatheHost() {
   const houseRelease = Boolean(mode === 'album' ? selectedAlbum?.houseRelease : track?.houseRelease);
   const houseLibraryNotice = Boolean(
     mode === 'album' ? selectedAlbum?.houseLibraryNotice : track?.houseLibraryNotice
-  );
-  const songMissingDna = Boolean(track && !hasLiveDnaDrop(track));
-  const albumMissingDna = Boolean(
-    selectedAlbum &&
-    !hasLiveDnaDrop(selectedAlbum) &&
-    !(selectedAlbum.tracks || []).some((row) => hasLiveDnaDrop(row))
   );
   const pickedReleasePlacement = livePicked ? songReleasePlacement(livePicked) : null;
   const pickedOfflinePlacement = livePicked ? offlineReleasePlacement(livePicked) : null;
@@ -645,7 +643,10 @@ export function FirstDropLatheHost() {
 
   const removeCatalogTrack = (row: Track) => {
     if (!selectedAlbum) return;
-    if (normalizeDropAudio(row.dropAudio)) return;
+    if (normalizeDropAudio(row.dropAudio)) {
+      void scrapPrivateDraft(selectedAlbum, row);
+      return;
+    }
     if (
       !window.confirm(
         `Remove "${row.title || 'this track'}" from the album?\n\nIt has no audio yet. This only drops it from the catalog list.`
@@ -1161,23 +1162,13 @@ export function FirstDropLatheHost() {
                 <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Different album
               </button>
 
-              <ReleaseTitleLyricsEditor
+              <ReleaseTitleEditor
                 title={selectedAlbum.title}
-                lyrics={sectionsToLyricText(selectedAlbum.tracks[selectedAlbum.tracks.length - 1]?.sections)}
-                lyricsHint={
-                  selectedAlbum.tracks.length
-                    ? `Saved on “${selectedAlbum.tracks[selectedAlbum.tracks.length - 1]?.title || 'the last track'}”. Leave blank to publish audio-only.`
-                    : 'Add a catalog track below first if you want optional lyrics on a sheet.'
-                }
                 titleInputRef={titleInputRef}
                 onSaveTitle={(next) => updateAlbum(selectedAlbum.id, { title: next })}
-                onSaveLyrics={(next) => {
-                  const target = selectedAlbum.tracks[selectedAlbum.tracks.length - 1];
-                  if (!target) return;
-                  updateTrack(selectedAlbum.id, target.id, { sections: lyricTextToSections(next) });
-                }}
-                lyricsDisabled={selectedAlbum.tracks.length === 0}
               />
+
+              <ReleaseDnaDropPanel album={selectedAlbum} />
 
               {guided ? (
                 <GuidedReleaseChecklist
@@ -1241,10 +1232,12 @@ export function FirstDropLatheHost() {
                           <span className="min-w-[12rem] flex-1 basis-48">
                             <span className="block break-words text-sm font-bold">{row.title || `Track ${index + 1}`}</span>
                             <span className={cn('block break-all font-code text-[9px]', audio ? 'text-emerald-400' : 'text-muted-foreground')}>
-                              {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet · lyrics (optional)'}
+                              {audio ? `${audio.fileName || 'Audio ready'}${audio.durationSec ? ` · ${Math.round(audio.durationSec)}s` : ''}` : 'No audio yet'}
                             </span>
-                            {audio && !hasLiveDnaDrop(row) ? (
-                              <span className="mt-1 block"><NoLyricsDnaHint variant="chip" /></span>
+                            {audio ? (
+                              <span className="mt-2 block">
+                                <ReleaseDnaDropPanel album={selectedAlbum} track={row} compact />
+                              </span>
                             ) : null}
                           </span>
                           {audio ? (
@@ -1393,8 +1386,6 @@ export function FirstDropLatheHost() {
                 </Label>
               </div>
 
-              {albumMissingDna ? <NoLyricsDnaHint /> : null}
-
               <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {selectedAlbumIsLive ? (
                   <Button
@@ -1541,41 +1532,63 @@ export function FirstDropLatheHost() {
                         const priced = isCommerceLive(normalizeDropPrice(row.track.dropPrice));
                         return (
                           <li key={`${row.album.id}-${row.track.id}`}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPicked(row);
-                                setRightsChecked(false);
-                              }}
+                            <div
                               className={cn(
-                                'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+                                'flex w-full items-center gap-2 rounded-xl border transition-colors',
                                 placement
                                   ? 'border-emerald-400/25 bg-emerald-500/[0.07] hover:border-emerald-300/55 hover:bg-emerald-500/10'
                                   : 'border-white/10 bg-black/25 hover:border-fuchsia-400/45 hover:bg-fuchsia-500/10'
                               )}
                             >
-                              <span className={cn(
-                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
-                                placement
-                                  ? 'border-emerald-400/35 bg-emerald-500/15 text-emerald-200'
-                                  : 'border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-200'
-                              )}>
-                                {placement ? <Disc3 className="h-4 w-4" /> : <Music className="h-4 w-4" />}
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block break-words text-sm font-bold">{row.track.title}</span>
-                                <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
-                                  {row.album.title}
-                                  {audio ? ' · song on file' : ' · no audio yet'}
-                                  {priced ? ' · priced' : ''}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPicked(row);
+                                  setRightsChecked(false);
+                                }}
+                                className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+                              >
+                                <span className={cn(
+                                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
+                                  placement
+                                    ? 'border-emerald-400/35 bg-emerald-500/15 text-emerald-200'
+                                    : 'border-fuchsia-400/30 bg-fuchsia-500/15 text-fuchsia-200'
+                                )}>
+                                  {placement ? <Disc3 className="h-4 w-4" /> : <Music className="h-4 w-4" />}
                                 </span>
-                              </span>
-                              {placement ? (
-                                <span className="max-w-[7.5rem] shrink-0 rounded-full border border-emerald-300/35 bg-emerald-400/10 px-2 py-1 text-center font-code text-[8px] font-bold uppercase tracking-wider text-emerald-200">
-                                  {placement === 'album' ? 'Live on album' : 'Live release'}
+                                <span className="min-w-0 flex-1">
+                                  <span className="block break-words text-sm font-bold">{row.track.title}</span>
+                                  <span className="block break-words font-code text-[9px] uppercase tracking-widest text-muted-foreground">
+                                    {row.album.title}
+                                    {audio ? ' · song on file' : ' · no audio yet'}
+                                    {priced ? ' · priced' : ''}
+                                  </span>
                                 </span>
+                                {placement ? (
+                                  <span className="max-w-[7.5rem] shrink-0 rounded-full border border-emerald-300/35 bg-emerald-400/10 px-2 py-1 text-center font-code text-[8px] font-bold uppercase tracking-wider text-emerald-200">
+                                    {placement === 'album' ? 'Live on album' : 'Live release'}
+                                  </span>
+                                ) : null}
+                              </button>
+                              {canDeletePrivateDraft(row) ? (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="ghost"
+                                  className="mr-1 h-9 w-9 shrink-0 text-red-400 hover:bg-red-500/10"
+                                  disabled={removingAudioId === row.track.id}
+                                  title="Delete private draft"
+                                  aria-label={`Delete private draft ${row.track.title}`}
+                                  onClick={() => void scrapPrivateDraft(row.album, row.track)}
+                                >
+                                  {removingAudioId === row.track.id ? (
+                                    <Loader className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
                               ) : null}
-                            </button>
+                            </div>
                           </li>
                         );
                       })}
@@ -1597,20 +1610,16 @@ export function FirstDropLatheHost() {
             >
               ← Different track
             </button>
-            <ReleaseTitleLyricsEditor
+            <ReleaseTitleEditor
               title={track?.title || ''}
-              lyrics={sectionsToLyricText(track?.sections)}
-              lyricsHint="Leave blank to publish audio-only. Lyrics stay on this sheet in The Vault."
               titleInputRef={titleInputRef}
               onSaveTitle={(next) => {
                 if (!album || !track) return;
                 updateTrack(album.id, track.id, { title: next });
               }}
-              onSaveLyrics={(next) => {
-                if (!album || !track) return;
-                updateTrack(album.id, track.id, { sections: lyricTextToSections(next) });
-              }}
             />
+
+            {album && track ? <ReleaseDnaDropPanel album={album} track={track} /> : null}
 
             {guided && album && track ? (
               <GuidedReleaseChecklist
@@ -1769,8 +1778,6 @@ export function FirstDropLatheHost() {
               </Label>
             </div>
 
-            {songMissingDna ? <NoLyricsDnaHint /> : null}
-
             <div id="release-step-publish" className="scroll-mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {pickedReleasePlacement && album && track ? (
                 <Button
@@ -1829,6 +1836,22 @@ export function FirstDropLatheHost() {
                 )}
               >
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove old release record
+              </Button>
+            ) : null}
+            {album && track && canDeletePrivateDraft({ album, track }) ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 w-full text-[10px] font-bold uppercase text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                disabled={pressing || uploading || Boolean(removingAudioId)}
+                onClick={() => void scrapPrivateDraft(album, track)}
+              >
+                {removingAudioId === track.id ? (
+                  <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Delete private draft
               </Button>
             ) : null}
             <p className="text-center text-[10px] leading-relaxed text-muted-foreground">

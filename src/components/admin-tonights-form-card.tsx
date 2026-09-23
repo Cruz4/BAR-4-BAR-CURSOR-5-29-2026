@@ -79,12 +79,10 @@ export function AdminTonightsFormCard() {
               <Moon className="h-6 w-6 text-indigo-400" />
               Tonight&apos;s Form
             </CardTitle>
-            <CardDescription className="mt-2 max-w-2xl space-y-2 text-sm leading-relaxed">
-              <p>
-                A communal 16-seat lyric sheet on The Scene — one bar per writer per night. Not a
-                collab track, not AI generation, not chat. Think open mic with numbered seats that
-                disappear at sunrise.
-              </p>
+            <CardDescription className="mt-2 max-w-2xl text-sm leading-relaxed">
+              A communal 16-seat lyric sheet on The Scene — one bar per writer per night. Not a
+              collab track, not AI generation, not chat. Think open mic with numbered seats that
+              disappear at sunrise.
             </CardDescription>
           </div>
           <Badge

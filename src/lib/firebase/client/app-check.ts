@@ -15,9 +15,14 @@ export function initClientAppCheck(): AppCheck | null {
 
   const siteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY?.trim();
   if (!siteKey) {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'production') {
       console.warn(
         '[App Check] NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY is unset — register reCAPTCHA v3 in Firebase Console → App Check.'
+      );
+    } else if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('b4b-app-check-dev-hint')) {
+      sessionStorage.setItem('b4b-app-check-dev-hint', '1');
+      console.info(
+        '[App Check] Skipped in local dev (optional). For production: Firebase Console → App Check → reCAPTCHA v3, then set NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY in .env.local.'
       );
     }
     return null;

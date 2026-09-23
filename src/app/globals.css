@@ -94,26 +94,67 @@
   body {
     @apply bg-background text-foreground font-body;
   }
+
+  /* Lyrics sheet bar lines — keep mono; never inherit social composer emoji stack. */
+  textarea[id^='bar-input-'],
+  textarea.font-code {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+    font-variant-emoji: normal !important;
+  }
+
+  .writing-surface-paper textarea,
+  .writing-surface-studio textarea {
+    font-variant-emoji: normal;
+  }
+
+  /* Wall / Booth / comment composers only (see data-composer-field on MentionField). */
+  [data-composer-field] textarea,
+  [data-composer-field] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']) {
+    font-family: Inter, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    font-variant-emoji: emoji;
+  }
 }
 
 @keyframes door-knock-punch {
   0%,
   100% {
-    transform: translateX(0) rotate(0deg) scale(1);
+    transform: scale(1) rotate(0deg);
   }
-  20% {
-    transform: translateX(4px) rotate(-14deg) scale(1.08);
+  /* First knock */
+  7% {
+    transform: scale(1.14) rotate(11deg);
   }
-  45% {
-    transform: translateX(-2px) rotate(8deg) scale(0.96);
+  14% {
+    transform: scale(0.92) rotate(-7deg);
+  }
+  21% {
+    transform: scale(1) rotate(0deg);
+  }
+  /* Second knock */
+  35% {
+    transform: scale(1.14) rotate(11deg);
+  }
+  42% {
+    transform: scale(0.92) rotate(-7deg);
+  }
+  49% {
+    transform: scale(1) rotate(0deg);
+  }
+  /* Third knock */
+  63% {
+    transform: scale(1.14) rotate(11deg);
   }
   70% {
-    transform: translateX(2px) rotate(-4deg) scale(1.02);
+    transform: scale(0.92) rotate(-7deg);
+  }
+  78% {
+    transform: scale(1.03) rotate(2deg);
   }
 }
 
 .door-knock-punch {
-  animation: door-knock-punch 0.85s ease-in-out infinite;
+  transform-origin: 72% 78%;
+  animation: door-knock-punch 1.05s ease-in-out infinite;
 }
 
 @keyframes door-knock-reveal-pop {
@@ -160,7 +201,7 @@
 }
 
 .door-knock-reveal-timer {
-  animation: door-knock-reveal-timer 3s linear forwards;
+  animation: door-knock-reveal-timer var(--door-knock-reveal-ms, 14s) linear forwards;
 }
 
 /* Visitor chrome: sky blue rgb(125 211 252), flash pink every 7s — avatar ring + Studio Tier row only. */
@@ -228,6 +269,11 @@
 }
 
 @layer utilities {
+  .font-emoji {
+    font-family: Inter, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    font-variant-emoji: emoji;
+  }
+
   .smooth-gradient-layer {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
@@ -2753,5 +2799,32 @@
     .scene-block-meteor {
       display: none;
     }
+  }
+}
+
+@keyframes render-studio-wave {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(-2.5%);
+    opacity: 0.95;
+  }
+}
+
+.render-studio-wave {
+  animation: render-studio-wave 7s ease-in-out infinite;
+}
+
+.render-studio-wave-alt {
+  animation: render-studio-wave 9s ease-in-out infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .render-studio-wave,
+  .render-studio-wave-alt {
+    animation: none;
   }
 }

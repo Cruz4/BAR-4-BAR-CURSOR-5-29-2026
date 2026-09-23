@@ -14,7 +14,8 @@ import {
   isYearlyPro,
 } from '@/lib/subscription';
 import type { User } from '@/lib/types';
-import { PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
+import { MAX_MONTHLY_RESIDENCY, PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
+import { isStudioMaxUser } from '@/lib/subscription-products';
 import { QUOTE_PRESS_SLOT_LIMIT } from '@/lib/profile/quote-press';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
@@ -67,8 +68,8 @@ export function getResidencyProgressPercent(residencyBalance: number, cap: numbe
   return Math.min(100, Math.round((residencyBalance / cap) * 100));
 }
 
-/** Approximate Ink for one full Studio Draft song (Calibration Hub default). */
-export const STUDIO_DRAFT_INK_PER_SONG = 104;
+/** Approximate Ink for one full Studio Draft song (52 bars × 3 Ink/bar). */
+export const STUDIO_DRAFT_INK_PER_SONG = 156;
 
 /** Friendly Ink tip — Studio Draft vs line-by-line (shown in onboarding surfaces). */
 export const STUDIO_DRAFT_INK_TIP =
@@ -77,11 +78,28 @@ export const STUDIO_DRAFT_INK_TIP =
 /** Shown above Ink Store pack grid */
 export const INK_STORE_PACK_CONTEXT = `Pro includes monthly residency Ink (${PRO_MONTHLY_INK.toLocaleString()}/mo on ${PRO_MONTHLY_PRICE}); packs are permanent top-ups when your pool runs out.`;
 
-export const INK_PACK_STUDIO_AMOUNT = 1000;
+export const STUDIO_MAX_MONTHLY_PRICE_AMOUNT = 9.77;
+export const STUDIO_MAX_YEARLY_BILLED_AMOUNT = 93.24;
+export const STUDIO_MAX_MONTHLY_PRICE = `$${STUDIO_MAX_MONTHLY_PRICE_AMOUNT.toFixed(2)}`;
+export const STUDIO_MAX_YEARLY_EFFECTIVE_MONTHLY = 7.77;
+export const STUDIO_MAX_MONTHLY_INK = MAX_MONTHLY_RESIDENCY;
+
+export const STUDIO_MAX_FEATURES = [
+  'Everything in Studio Pro',
+  'Generate Song from your sheet (lyrics + co-writer rails)',
+  'Vault → instrumental renders & private Approved Studio library',
+  'Local render companion + included cloud render passes',
+] as const;
+
+export function getStudioMaxHeadlinePerks(): readonly string[] {
+  return ['Pro Writer workflow + optional ACE-Step song rendering'];
+}
+
+export const INK_PACK_STUDIO_AMOUNT = 10_000;
 export const INK_PACK_STUDIO_PRICE = 7.77;
-export const INK_PACK_ARTIST_AMOUNT = 2500;
+export const INK_PACK_ARTIST_AMOUNT = 25_000;
 export const INK_PACK_ARTIST_PRICE = 17.77;
-export const INK_PACK_VAULT_AMOUNT = 5000;
+export const INK_PACK_VAULT_AMOUNT = 50_000;
 export const INK_PACK_VAULT_PRICE = 34.44;
 
 /** Visitor artists may purchase Studio Pack only — bulk packs require Pro. */
@@ -168,8 +186,15 @@ export function getVaultPackSavingsPercent(): number {
 }
 
 /** Why AKAsheet vs full-song AI apps (pricing / FAQ). */
+export const COMPETITOR_ANCHOR_COPY_WRITER =
+  'AKAsheet is a bar-by-bar songwriting workstation — you own the vault, DNA, and releases; Ink powers lyrics and drafting without a context-free prompt jukebox.';
+
 export const COMPETITOR_ANCHOR_COPY =
-  'Unlike Suno or Udio, AKAsheet is a lyric and rhyme workstation — you own the words, DNA strains, vault, and a shareable Artist Home page; Ink powers drafting and analysis, not finished audio renders.';
+  'AKAsheet is a bar-by-bar songwriting workstation with optional local-first sheet-to-song rendering on Studio Max — you own the vault, DNA, and releases; Ink powers lyrics and renders without a context-free prompt jukebox.';
+
+export function getCompetitorAnchorCopy(includeSongGeneration: boolean): string {
+  return includeSongGeneration ? COMPETITOR_ANCHOR_COPY : COMPETITOR_ANCHOR_COPY_WRITER;
+}
 
 /**
  * Three different products — keep these names distinct in UI copy:
@@ -416,7 +441,15 @@ export function getInkPackRows(isYearlyPro: boolean) {
   });
 }
 
-export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?: string) {
+export function getStudioTierPlans(
+  isCloudSyncActive: boolean,
+  user?: Pick<User, 'subscriptionTier' | 'subscriptionStatus' | 'subscriptionProduct'> | null,
+  options?: { includeStudioMax?: boolean }
+) {
+  const includeStudioMax = options?.includeStudioMax === true;
+  const subscriptionTier = user?.subscriptionTier;
+  const isMax = isStudioMaxUser(user);
+  const proCurrent = isCloudSyncActive && !isMax;
   return [
     {
       name: 'Visitor',
@@ -437,7 +470,7 @@ export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?
       description: `${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo · all Pro unlocks below`,
       headlinePerks: getProMonthlyHeadlinePerks(),
       billedText: 'Billed monthly',
-      isCurrent: isCloudSyncActive && subscriptionTier === 'monthly',
+      isCurrent: proCurrent && subscriptionTier === 'monthly',
       priceKey: 'PRO_MONTHLY' as const,
       features: [...PRO_UNLOCKS],
       cta: 'Upgrade to Monthly',
@@ -450,10 +483,39 @@ export function getStudioTierPlans(isCloudSyncActive: boolean, subscriptionTier?
       description: `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo · everything in Pro Monthly + yearly exclusives below`,
       headlinePerks: getProYearlyHeadlinePerks(),
       billedText: `${PRO_YEARLY_BILLED}/year · one charge annually`,
-      isCurrent: isCloudSyncActive && subscriptionTier === 'yearly',
+      isCurrent: proCurrent && subscriptionTier === 'yearly',
       priceKey: 'PRO_YEARLY' as const,
       features: [...PRO_UNLOCKS, ...PRO_YEARLY_EXCLUSIVES],
       cta: 'Upgrade to Yearly',
     },
+    ...(includeStudioMax
+      ? [
+          {
+            name: 'Studio Max Monthly',
+            price: STUDIO_MAX_MONTHLY_PRICE,
+            period: '/mo',
+            description: `${STUDIO_MAX_MONTHLY_INK.toLocaleString()} residency Ink/mo · song rendering on top of Pro`,
+            headlinePerks: getStudioMaxHeadlinePerks(),
+            billedText: 'Billed monthly',
+            isCurrent: isMax && subscriptionTier === 'monthly',
+            priceKey: 'MAX_MONTHLY' as const,
+            features: [...STUDIO_MAX_FEATURES],
+            cta: 'Upgrade to Studio Max',
+          },
+          {
+            name: 'Studio Max Yearly',
+            price: `$${STUDIO_MAX_YEARLY_EFFECTIVE_MONTHLY.toFixed(2)}`,
+            period: '/mo',
+            badge: `Billed ${STUDIO_MAX_YEARLY_BILLED_AMOUNT.toFixed(2)}/yr`,
+            description: `${STUDIO_MAX_MONTHLY_INK.toLocaleString()} residency Ink/mo · yearly Studio Max`,
+            headlinePerks: getStudioMaxHeadlinePerks(),
+            billedText: `$${STUDIO_MAX_YEARLY_BILLED_AMOUNT.toFixed(2)}/year · one charge annually`,
+            isCurrent: isMax && subscriptionTier === 'yearly',
+            priceKey: 'MAX_YEARLY' as const,
+            features: [...STUDIO_MAX_FEATURES],
+            cta: 'Studio Max Yearly',
+          },
+        ]
+      : []),
   ];
 }

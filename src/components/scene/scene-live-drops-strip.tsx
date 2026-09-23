@@ -5,7 +5,7 @@
  * Used on The Scene, Vault, and Edit Public Page.
  */
 
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Dna, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataContext } from '@/context/data-context';
@@ -14,30 +14,18 @@ import { dropPriceSummary, isCommerceLive, normalizeDropAudio, normalizeDropPric
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { cn } from '@/lib/utils';
 import {
+  countLiveLyricDnaDrops,
   findVaultReleaseByShareId,
   hasLiveDnaDrop,
   releaseShareIdOf,
   releaseStatusOf,
 } from '@/lib/release-management';
+import { useLinkedHouseReleases } from '@/hooks/use-linked-house-releases';
 import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
+import { useReleaseCatalogReopenListener } from '@/lib/release-catalog-navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase/client/firebase';
 import type { LinkedHouseRelease } from '@/lib/house-artist-link';
 import type { Album } from '@/lib/types';
-
-function countLiveLyricDnaDrops(albums: Album[]): number {
-  let count = 0;
-  for (const album of albums) {
-    for (const track of album.tracks || []) {
-      if (hasLiveDnaDrop(track)) count += 1;
-    }
-    if (album.id !== 'unassigned' && hasLiveDnaDrop(album)) {
-      const trackHits = (album.tracks || []).filter((track) => hasLiveDnaDrop(track)).length;
-      if (trackHits === 0) count += 1;
-    }
-  }
-  return count;
-}
 
 type ManagedAlbumDrop = {
   kind: 'album';
@@ -69,33 +57,8 @@ export function SceneLiveDropsStrip({ className }: { className?: string }) {
   const { albums, loading } = useContext(DataContext);
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [linkedHouse, setLinkedHouse] = useState<LinkedHouseRelease[]>([]);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setLinkedHouse([]);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const current = auth.currentUser;
-        if (!current || current.uid !== user.id) return;
-        const token = await current.getIdToken();
-        const houseRes = await fetch(`/api/profile/house-releases?userId=${encodeURIComponent(user.id)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = (await houseRes.json().catch(() => ({}))) as { releases?: LinkedHouseRelease[] };
-        if (cancelled) return;
-        setLinkedHouse(houseRes.ok && Array.isArray(data.releases) ? data.releases : []);
-      } catch {
-        if (!cancelled) setLinkedHouse([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  useReleaseCatalogReopenListener(useCallback(() => setOpen(true), []));
+  const { linkedHouse } = useLinkedHouseReleases(user?.id, Boolean(user?.id));
 
   const { total, saleCount, lyricPreviewCount, houseLinkedCount, dnaLiveCount, musicLiveCount } = useMemo(() => {
     const albumsOut: ManagedAlbumDrop[] = [];

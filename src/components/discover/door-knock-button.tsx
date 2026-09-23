@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { doorKnockBlockMessage, type DoorKnockQuota } from '@/lib/door-knock';
-import { playDoorKnockSound } from '@/lib/door-knock-sound';
+import { DOOR_KNOCK_PUNCH_ANIM_MS, playDoorKnockSound } from '@/lib/door-knock-sound';
 import {
   fetchDoorKnockQuota,
   knockArtistHomeDoorClient,
@@ -70,7 +70,7 @@ export function DoorKnockButton({
       }
       setSent(true);
       if (result.quota) setQuota(result.quota);
-      window.setTimeout(() => setPunching(false), 360);
+      window.setTimeout(() => setPunching(false), DOOR_KNOCK_PUNCH_ANIM_MS);
     } catch (error) {
       setPunching(false);
       toast({
@@ -99,8 +99,8 @@ export function DoorKnockButton({
     >
       <span
         className={cn(
-          'inline-block text-base leading-none',
-          punching && 'animate-[door-knock-punch_0.36s_ease-in-out]',
+          'inline-block origin-[72%_78%] text-base leading-none',
+          punching && `animate-[door-knock-punch_${DOOR_KNOCK_PUNCH_ANIM_MS}ms_ease-in-out]`,
           sent && 'grayscale opacity-60'
         )}
         aria-hidden

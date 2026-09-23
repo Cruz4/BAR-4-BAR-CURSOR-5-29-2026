@@ -74,6 +74,7 @@ import {
   Undo2,
   Disc3,
   Users,
+  Music2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -114,6 +115,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { useInkCosts } from '@/hooks/use-ink-costs';
 import { withAiAuth } from '@/lib/ai-client';
 import { useAuth } from '@/hooks/use-auth';
+import { useSongGenerationWorkbenchLive } from '@/hooks/use-song-generation-live';
 import { isProFeaturePreviewActive, isProOrTrial, SIGNUP_INK } from '@/lib/subscription';
 import { recordProTrialVaultSave } from '@/lib/pro-trial-quest-client';
 import { trackStudioEvent } from '@/lib/analytics-client';
@@ -251,6 +253,7 @@ import {
   mergeVibeVaultPresets,
 } from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
+import { GenerateSongCoWriterPanel } from './generate-song-cowriter-panel';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
 import { DnaDropLiveIndicator } from './dna-drop-live-indicator';
@@ -2547,8 +2550,9 @@ function CoWriterSectionChevron({ open, label }: { open: boolean; label: string 
   );
 }
 
-function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, onRequestDeleteSheet, canDeleteSheet = false, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar }: any) {
+function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProfile, scratchPadRef, activeSectionId, rightCollapsed, onCollapse, setImproveStyleOpen, styleVaultOpen, setStyleVaultOpen, handleSharedLineGeneration, updateAlbum, clearStyleProfile, setSaveStyleNamingOpen, isPro, sectionOpen, onSectionChange, openCoWriterSections, onApplyChestEntry, onRequestDeleteSheet, canDeleteSheet = false, mobileActive = false, trackLocked = false, completeLocked = false, tourMobilePad = false, isInkArmed, activeGeneratorBar, isGuestTryMode = false, onGuestSignupLocked }: any) {
   const { user } = useAuth();
+  const songGenerationWorkbench = useSongGenerationWorkbenchLive();
   const { tooltip, buttonLabel } = useInkCosts();
   const activeSection = track.sections.find((s:any) => s.id === activeSectionId);
   const { toast } = useToast();
@@ -2755,10 +2759,23 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             <NeuralStripItem text="INTENT" color="#0ea5e9" active={isIntentsActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="GUARD" color="#f43f5e" active={isGuardrailsActive(track)} onClick={() => onCollapse(false)} />
             <NeuralStripItem text="STYLE" color="#d946ef" active={isStyleActive(track)} onClick={() => onCollapse(false)} />
+            {songGenerationWorkbench && track.workKind !== 'instrumental' && (
+              <NeuralStripItem
+                text="SONG"
+                color="#8b5cf6"
+                active={sectionOpen.songRender}
+                onClick={() => {
+                  onSectionChange('songRender', true);
+                  onCollapse(false);
+                }}
+              />
+            )}
             </div>
         </div>
     );
   }
+
+  const songRenderSectionOpen = sectionOpen.songRender;
 
   return (
     <div className={cn("co-writer-panel-shell flex flex-col h-full bg-card border-l relative overflow-hidden w-[340px] md:max-lg:w-[248px] lg:max-xl:w-[280px] shrink-0 z-30", mobileLyricsPanelClass(mobileActive, 'right'))}>
@@ -3392,6 +3409,63 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
             </Card>
           </Collapsible>
 
+          {songGenerationWorkbench && track.workKind !== 'instrumental' && (
+            <Collapsible
+              open={songRenderSectionOpen}
+              onOpenChange={(o) => onSectionChange('songRender', o)}
+              className="space-y-1"
+            >
+              <Card
+                className={coWriterSectionCardClass(
+                  songRenderSectionOpen,
+                  'border-violet-500/35 bg-violet-500/12 dark:bg-violet-950/40 shadow-xl'
+                )}
+              >
+                <div className="co-writer-section-header p-4 flex flex-row items-center justify-between gap-1 space-y-0">
+                  <CollapsibleTrigger asChild>
+                    <div className="co-writer-section-heading space-y-0.5 cursor-pointer flex-grow min-w-0 pr-1 text-left">
+                      <CardTitle
+                        className={cn(
+                          'co-writer-section-title text-sm flex items-center gap-2 font-headline uppercase leading-none whitespace-nowrap',
+                          coWriterSectionTitleClass(songRenderSectionOpen, 'text-violet-400')
+                        )}
+                      >
+                        <Music2 className="h-4 w-4 shrink-0" /> Generate Song
+                      </CardTitle>
+                      <p
+                        className={cn(
+                          cowriterSectionSubtitle(songRenderSectionOpen),
+                          coWriterSectionAccentClass(songRenderSectionOpen, 'text-violet-300/80')
+                        )}
+                      >
+                        {songRenderSectionOpen ? 'Sheet lyrics + rails above' : 'Audio from toggles'}
+                      </p>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CoWriterSectionChevron open={songRenderSectionOpen} label="Generate Song" />
+                </div>
+                <CollapsibleContent>
+                  <GenerateSongCoWriterPanel
+                    active={songRenderSectionOpen}
+                    track={track}
+                    album={album}
+                    styleProfile={styleProfile}
+                    onGuestLocked={
+                      isGuestTryMode
+                        ? () => {
+                            void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.LOCKED_FEATURE, {
+                              feature: 'Generate Song',
+                            });
+                            onGuestSignupLocked?.('Generate Song');
+                          }
+                        : undefined
+                    }
+                  />
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
+
           <Collapsible open={sectionOpen.coWriter} onOpenChange={(o) => onSectionChange('coWriter', o)} className="space-y-1">
             <Card className={coWriterSectionCardClass(styleActive, 'border-fuchsia-500/30 bg-fuchsia-500/12 dark:bg-fuchsia-500/5 shadow-xl')} data-tour="style-suite">
                 <div className="co-writer-section-header p-4 flex flex-row items-center justify-between gap-1 space-y-0">
@@ -3716,6 +3790,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
 function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albumId: string }) {
   const { user } = useAuth();
   const router = useRouter();
+  const songGenerationWorkbench = useSongGenerationWorkbenchLive();
   const isPro = isProOrTrial(user);
   const [initTimedOut, setInitTimedOut] = useState(false);
   const { toast } = useToast();
@@ -5096,6 +5171,8 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         tourMobilePad={tourActive && isMobileLayout}
         isInkArmed={isArmed}
         activeGeneratorBar={activeGeneratorBar}
+        isGuestTryMode={isGuestTryMode}
+        onGuestSignupLocked={promptGuestSignupLockedFeature}
       />
       <GenerateSongDraftDialog
         open={generateDraftOpen}
@@ -5116,6 +5193,16 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
         onStashApprovalDraftsToChest={handleStashApprovalDraftsToChest}
         onBackgroundSessionActiveChange={setWorkstationBackgroundActive}
         initialWorkstationMode={generatorInitialMode}
+        onOpenGenerateSong={
+          songGenerationWorkbench
+            ? () => {
+                setGenerateDraftOpen(false);
+                setRightCollapsed(false);
+                if (isMobileLayout) setMobilePanelTab('cowriter');
+                openCoWriterSections('songRender');
+              }
+            : undefined
+        }
       />
       <ExportDialog open={exportDialogOpen} onOpenChange={setExportDialogOpen} album={album} tracks={[track]} exportType="track" allowDownload={isPro} />
       <ShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} type="track" id={track.id} title={track.title} albumId={album.id} existingShareId={track.shareId} />

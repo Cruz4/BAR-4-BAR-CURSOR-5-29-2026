@@ -47,6 +47,16 @@ function resolveTierFromSubscription(
   return 'monthly';
 }
 
+function resolveProductFromSubscription(subscription: Stripe.Subscription): 'writer' | 'max' {
+  if (subscription.metadata?.subscriptionProduct === 'max') return 'max';
+  const priceId = subscription.items?.data?.[0]?.price?.id;
+  if (priceId) {
+    const entry = getCatalogEntry(priceId);
+    if (entry?.type === 'subscription' && entry.product === 'max') return 'max';
+  }
+  return 'writer';
+}
+
 /** Health check — prefixes only, never full secrets. */
 export async function GET() {
   const health = webhookSecretHealth();
@@ -231,7 +241,8 @@ export async function POST(req: Request) {
 
         if (subscription.status === 'active' || subscription.status === 'trialing') {
           const tier = resolveTierFromSubscription(subscription);
-          await activateOrUpgradeProSubscription(db, userId, tier, subscription.id);
+          const product = resolveProductFromSubscription(subscription);
+          await activateOrUpgradeProSubscription(db, userId, tier, subscription.id, product);
         } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
           await deactivateSubscription(db, userId);
           void sendMembershipCanceledEmail(db, {

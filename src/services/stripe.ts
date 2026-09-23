@@ -63,11 +63,19 @@ export function useStripe() {
         if (!response.ok || data.error) throw new Error(data.error || 'Checkout failed');
 
         if (data.url) {
-          const isSubscription = priceKey === 'PRO_MONTHLY' || priceKey === 'PRO_YEARLY';
+          const isSubscription =
+            priceKey === 'PRO_MONTHLY' ||
+            priceKey === 'PRO_YEARLY' ||
+            priceKey === 'MAX_MONTHLY' ||
+            priceKey === 'MAX_YEARLY';
           trackTikTokEvent('InitiateCheckout', {
             content_id: priceKey,
             content_type: TIKTOK_CONTENT_TYPE,
-            content_name: isSubscription ? 'Studio Pro Subscription' : 'Ink Pack',
+            content_name: isSubscription
+              ? priceKey.startsWith('MAX_')
+                ? 'Studio Max Subscription'
+                : 'Studio Pro Subscription'
+              : 'Ink Pack',
           });
           window.location.href = data.url;
         } else throw new Error('No checkout URL returned');

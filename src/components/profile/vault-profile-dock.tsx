@@ -5,7 +5,7 @@
  * Artist Home visibility + The Block (feed) with social alert badge.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bell, Disc3, Globe, Link2, Settings2, Trophy, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { patchGamificationSettings } from '@/lib/gamification-client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
+import { useReleaseCatalogReopenListener } from '@/lib/release-catalog-navigation';
 
 type VaultProfileDockProps = {
   /** Horizontal strip under vault progress on < xl. */
@@ -65,6 +66,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
   const { total: alertCount } = useSocialAlerts();
   const [open, setOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  useReleaseCatalogReopenListener(useCallback(() => setCatalogOpen(true), []));
   const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
   const [saving, setSaving] = useState(false);

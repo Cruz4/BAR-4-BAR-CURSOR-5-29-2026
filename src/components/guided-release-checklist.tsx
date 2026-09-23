@@ -46,7 +46,7 @@ const STEP_COPY: Record<
   { label: string; hint: string; optional?: boolean }
 > = {
   titleLyrics: {
-    label: '1. Title & lyrics (optional)',
+    label: '1. Title',
     hint: 'Title is required. Lyrics (optional) — you can publish audio-only.',
   },
   audio: {

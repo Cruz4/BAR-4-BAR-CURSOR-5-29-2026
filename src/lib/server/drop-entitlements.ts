@@ -21,6 +21,8 @@ export type DropShareDoc = {
   releaseStatus?: 'draft' | 'live' | 'unlisted';
   dnaStatus?: 'live' | 'unlisted';
   houseRelease?: boolean;
+  hasDropAudio?: boolean;
+  releaseRemovedAt?: string;
 };
 
 export async function loadShare(db: Firestore, shareId: string): Promise<DropShareDoc | null> {
@@ -43,6 +45,11 @@ export async function loadShare(db: Firestore, shareId: string): Promise<DropSha
         : undefined,
     dnaStatus: data.dnaStatus === 'live' || data.dnaStatus === 'unlisted' ? data.dnaStatus : undefined,
     houseRelease: isHouseReleaseDocument(data),
+    hasDropAudio: data.hasDropAudio === true,
+    releaseRemovedAt:
+      typeof data.releaseRemovedAt === 'string' && data.releaseRemovedAt.trim()
+        ? data.releaseRemovedAt.trim()
+        : undefined,
   };
 }
 
@@ -60,7 +67,8 @@ export function isReleaseShareLive(share: DropShareDoc): boolean {
     dnaStatus: share.dnaStatus,
     houseRelease: share.houseRelease,
     data: payload,
-    hasDropAudio: hasReleaseAudio(payload),
+    hasDropAudio: share.hasDropAudio === true || hasReleaseAudio(payload),
+    releaseRemovedAt: share.releaseRemovedAt,
   });
   return visibility.releaseLive;
 }

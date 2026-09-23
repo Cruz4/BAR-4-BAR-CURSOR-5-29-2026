@@ -1,6 +1,11 @@
 const RECENT_EMOJIS_KEY = 'b4b-recent-emojis';
 const MAX_RECENT_EMOJIS = 16;
 
+function isUsableEmojiString(value: string): boolean {
+  if (!value || value.includes('\uFFFD')) return false;
+  return [...value].every((ch) => ch.charCodeAt(0) !== 0xfffd);
+}
+
 export function readRecentEmojis(): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -8,7 +13,9 @@ export function readRecentEmojis(): string[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0).slice(0, MAX_RECENT_EMOJIS);
+    return parsed
+      .filter((item): item is string => typeof item === 'string' && isUsableEmojiString(item))
+      .slice(0, MAX_RECENT_EMOJIS);
   } catch {
     return [];
   }

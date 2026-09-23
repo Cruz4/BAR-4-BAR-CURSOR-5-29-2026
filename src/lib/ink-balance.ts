@@ -65,6 +65,24 @@ export function computeInkSpendBreakdown(
   return items;
 }
 
+/** Restore Ink to the same pools that funded a spend (render refunds). */
+export function creditInkPools(
+  data: InkPools,
+  breakdown: Array<{ pool: InkPool; amount: number }>
+): InkPools {
+  let { residencyBalance, trialInkBalance, purchasedBalance } = normalizeInkPools(data);
+  for (const line of breakdown) {
+    if (line.pool === 'residency') residencyBalance += line.amount;
+    else if (line.pool === 'trial') trialInkBalance += line.amount;
+    else purchasedBalance += line.amount;
+  }
+  return {
+    residencyBalance: Math.max(0, residencyBalance),
+    trialInkBalance: Math.max(0, trialInkBalance),
+    purchasedBalance: Math.max(0, purchasedBalance),
+  };
+}
+
 export function inkBalanceFirestorePatch(pools: InkPools, extra: Record<string, unknown> = {}) {
   return {
     residencyBalance: pools.residencyBalance,

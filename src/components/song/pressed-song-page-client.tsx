@@ -23,6 +23,7 @@ import { manageRelease } from '@/lib/release-management-client';
 import { DataContext } from '@/context/data-context';
 import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
+import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
 import {
   DNA_DROP_UPGRADE_PATH,
   buildDnaDropLoginPath,
@@ -148,11 +149,12 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
   const lyricsDnaAttached = Boolean(summary.lyricsDnaAttached ?? summary.dnaShareId);
   const lyricsDnaOpenHref = useMemo(() => {
     if (!summary.dnaShareId || !viewerIsPro) return undefined;
-    if (summary.trackId && summary.dnaShareId === summary.shareId) {
-      return dnaDropSnapshotTrackPath(summary.shareId, summary.trackId);
+    const hubId = summary.albumShareId?.trim() || summary.dnaShareId.trim();
+    if (summary.trackId && hubId) {
+      return dnaDropSnapshotTrackPath(hubId, summary.trackId);
     }
     return resolveDnaDropHref(summary.dnaShareId, true, true);
-  }, [summary.dnaShareId, summary.trackId, summary.shareId, viewerIsPro]);
+  }, [summary.dnaShareId, summary.trackId, summary.albumShareId, viewerIsPro]);
   const lyricsDnaLockedHref = useMemo(() => {
     if (!lyricsDnaAttached || viewerIsPro) return undefined;
     if (!summary.dnaShareId) return undefined;
@@ -199,6 +201,7 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               variant="outline"
               className="gap-1.5 font-bold uppercase"
               onClick={() => {
+                if (navigateBackToReleaseCatalog(router)) return;
                 if (window.history.length > 1) router.back();
                 else router.push(artistHref || '/');
               }}

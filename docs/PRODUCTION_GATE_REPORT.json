@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-27T22:29:38.450Z",
-  "overall": "pass",
+  "generatedAt": "2026-09-23T05:04:58.343Z",
+  "overall": "warning",
   "summary": {
-    "pass": 12,
-    "warning": 0,
+    "pass": 11,
+    "warning": 1,
     "blocked": 0
   },
   "findings": [
@@ -40,8 +40,8 @@
     {
       "id": "release_management",
       "label": "Releases · Management invariants",
-      "status": "pass",
-      "detail": "verify:release-management passed"
+      "status": "warning",
+      "detail": "node:internal/process/esm_loader:40\r\n      internalBinding('errors').triggerUncaughtException(\r\n                                ^\r\n\r\nAssertionError [ERR_ASSERTION]: DM thread must full-bleed Msgs atmosphere\r\n    at assert (g:\\Bar 4 Bar App $\\BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56\\scripts\\verify-release-management.ts:356:8)\r\n    at Object.<anonymous> (g:\\Bar 4 Bar App $\\BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56\\scripts\\verify-release-management.ts:370:54)\r\n    at Module._compile (node:internal/modules/cjs/loader:1376:14)\r\n    at Object.transformer (G:\\Bar 4 Bar App $\\BAR 4 BAR FULL APP 5-28-2026 YOYO SAVE VER56\\node_modules\\tsx\\dist\\register-BLUABhh3.cjs:9:3252)\r\n    at Module.load (node:internal/modules/cjs/loader:1207:32)\r\n    at Module._load (node:internal/modules/cjs/loader:102"
     },
     {
       "id": "product_surfaces",

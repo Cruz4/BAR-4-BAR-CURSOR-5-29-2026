@@ -336,6 +336,45 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      match /renderJobs/{jobId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /generatedTakes/{takeId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /renderDevices/{deviceId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /renderPairing/{code} {
+        allow read, write: if false;
+      }
+
+      match /artistSignatures/{modelId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /voiceMatches/{modelId} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /renderUsage/{monthKey} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
+      match /downloadUsage/{monthKey} {
+        allow read: if isOwnerOrAdmin(userId);
+        allow write: if false;
+      }
+
       match /albums/{albumId} {
         allow read: if isOwnerOrAdmin(userId);
         allow create: if isAdmin()
@@ -555,6 +594,10 @@ service cloud.firestore {
       match /assets/{assetId} {
         allow read: if true;
         allow write: if false;
+      }
+
+      match /profileViewTicks/{tickId} {
+        allow read, write: if false;
       }
     }
 

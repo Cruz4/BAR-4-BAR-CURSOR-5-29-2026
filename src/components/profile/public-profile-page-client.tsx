@@ -7,6 +7,8 @@ import { StudioLoader } from '@/components/studio-loader';
 import { ArtistHome } from '@/components/profile/artist-home';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { trackShareCardEvent } from '@/lib/gamification-client';
+import { recordProfileViewClient } from '@/lib/profile-view-client';
+import { auth } from '@/lib/firebase/client/firebase';
 import type { ArtistHomeConfig } from '@/lib/profile/modules';
 import { publicProfileView } from '@/lib/profile/public-profile-view';
 import { profileHref, sanitizeProfileSlugParam } from '@/lib/profile/profile-slug';
@@ -70,7 +72,12 @@ export function PublicProfilePageClient({
 
     const load = async (trackOpen = false) => {
       try {
-        const res = await fetch(`/api/profile/${encodeURIComponent(cleanSlug)}`, { cache: 'no-store' });
+        const headers: HeadersInit = { cache: 'no-store' };
+        const token = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => null) : null;
+        if (token) {
+          (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+        }
+        const res = await fetch(`/api/profile/${encodeURIComponent(cleanSlug)}`, headers);
         if (!res.ok) {
           // Keep already-rendered profile data during a background refresh.
           if (!cancelled && trackOpen) setError(true);
@@ -88,7 +95,12 @@ export function PublicProfilePageClient({
           return;
         }
         if (cancelled) return;
-        setProfile(view.profile);
+        const ownerProfileViewCount =
+          typeof data.ownerProfileViewCount === 'number' ? data.ownerProfileViewCount : undefined;
+        setProfile({
+          ...view.profile,
+          ...(ownerProfileViewCount !== undefined ? { ownerProfileViewCount } : {}),
+        });
         setConfig(view.config);
         setError(false);
         if (trackOpen) void trackShareCardEvent('share_card_opened', { slug: liveSlug });
@@ -112,6 +124,39 @@ export function PublicProfilePageClient({
       window.removeEventListener('pageshow', refreshReleaseState);
     };
   }, [slug, router, initialData]);
+
+  useEffect(() => {
+    if (!profile?.slug || !profile.userId) return;
+    if (user?.id && user.id === profile.userId) return;
+    recordProfileViewClient(profile.slug);
+  }, [profile?.slug, profile?.userId, user?.id]);
+
+  useEffect(() => {
+    const slug = profile?.slug;
+    if (!slug || !user?.id || !profile?.userId || user.id !== profile.userId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token || cancelled) return;
+        const res = await fetch(`/api/profile/${encodeURIComponent(slug)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (typeof data.ownerProfileViewCount !== 'number' || cancelled) return;
+        setProfile((current) =>
+          current ? { ...current, ownerProfileViewCount: data.ownerProfileViewCount } : current
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.slug, profile?.userId, user?.id]);
 
   if (loading) {
     return (

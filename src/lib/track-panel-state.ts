@@ -7,7 +7,8 @@ export type CoWriterSectionKey =
   | 'creativeEffects'
   | 'scratchPad'
   | 'sheetTakes'
-  | 'draftChest';
+  | 'draftChest'
+  | 'songRender';
 
 export type CoWriterSections = Record<CoWriterSectionKey, boolean>;
 
@@ -27,6 +28,7 @@ export const DEFAULT_SECTIONS_CLOSED: CoWriterSections = {
   scratchPad: false,
   sheetTakes: false,
   draftChest: false,
+  songRender: false,
 };
 
 export const DEFAULT_TRACK_UI: TrackUILayout = {

@@ -15,7 +15,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useConfigSurfaceFlags, configSurfaceAllows, type ConfigSurfaceFeature } from '@/hooks/use-config-surface-flags';
 import { firstDropsFeeCashoutLine } from '@/lib/drop-commerce';
 import { AI_COSTS } from '@/lib/costs';
-import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY } from '@/lib/studio-tiers';
+import { STUDIO_DRAFT_INK_TIP, COMPETITOR_ANCHOR_COPY, getCompetitorAnchorCopy } from '@/lib/studio-tiers';
+import { useSongGenerationLive } from '@/hooks/use-song-generation-live';
 import {
   areStudioTipsEnabled,
   clearTrackSheetNavigation,
@@ -134,9 +135,13 @@ export function StudioTips() {
   const pathname = usePathname();
   const { user } = useAuth();
   const flags = useConfigSurfaceFlags();
+  const songGenerationLive = useSongGenerationLive();
   const tipPool = React.useMemo(
-    () => STUDIO_TIPS.filter((t) => configSurfaceAllows(t.feature, flags)),
-    [flags]
+    () =>
+      STUDIO_TIPS.filter((t) => configSurfaceAllows(t.feature, flags)).map((t) =>
+        t.id === 40 ? { ...t, text: getCompetitorAnchorCopy(songGenerationLive) } : t
+      ),
+    [flags, songGenerationLive]
   );
   const [currentTipIdx, setCurrentTipIdx] = useState(0);
   const [isVisible, setIsVisible] = useState(false);

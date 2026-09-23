@@ -38,6 +38,7 @@ type DnaDropAlbumHubProps = {
   releaseAudioHub?: boolean;
   artistName?: string;
   artistSlug?: string | null;
+  artistUserId?: string | null;
 };
 
 function trackSubtitle(track: DnaDropTrackPayload, firstDropsOn: boolean, canViewDna: boolean): string {
@@ -144,6 +145,7 @@ export function DnaDropAlbumHub({
   releaseAudioHub = false,
   artistName: artistNameProp,
   artistSlug,
+  artistUserId,
 }: DnaDropAlbumHubProps) {
   const creditedArtist = artistNameProp?.trim() || ownerName;
   const listenHubId = hubShareId?.trim() || shareId;
@@ -171,7 +173,12 @@ export function DnaDropAlbumHub({
         <h3 className="font-headline text-xl sm:text-3xl font-bold uppercase tracking-tight">
           {releaseAudioHub ? 'Album' : 'Sequence'} · {album.title}
         </h3>
-        <ShareArtistLink name={creditedArtist} slug={artistSlug} className="pt-0.5" />
+        <ShareArtistLink
+          name={creditedArtist}
+          slug={artistSlug}
+          userId={artistUserId}
+          className="pt-0.5"
+        />
         <p className="text-[11px] text-muted-foreground font-code leading-relaxed max-w-2xl">
           {canViewDna
             ? 'This is a frozen lyric snapshot, not the album in your vault. Open a strand to read that song’s lyrics and Creative DNA.'
@@ -225,6 +232,7 @@ export function DnaDropAlbumHub({
                     <ShareArtistLink
                       name={creditedArtist}
                       slug={artistSlug}
+                      userId={artistUserId}
                       showLabel={false}
                       size="sm"
                       disableLink={Boolean(rowHref)}

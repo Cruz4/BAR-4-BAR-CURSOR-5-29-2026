@@ -1,6 +1,6 @@
 # Project rules
 
-- AKAsheet is a bar-by-bar AI songwriting workstation and artist home—not a full-song or finished-audio generator. Ink powers drafting and analysis in the sheet; you own the vault, DNA, page, scene, and releases.
+- AKAsheet is a bar-by-bar AI songwriting workstation and artist home with optional local-first sheet-to-song rendering on Studio Max—not a context-free prompt jukebox. Ink powers drafting, analysis, and metered renders; you own the vault, DNA, page, scene, and releases.
 - Preserve the existing architecture, visual identity, Firebase data, Stripe billing, Ink economy, and user-facing behavior.
 - Never rewrite an entire file when a targeted change will work.
 - Never alter unrelated files.

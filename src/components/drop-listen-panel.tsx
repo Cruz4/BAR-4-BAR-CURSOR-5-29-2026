@@ -42,6 +42,7 @@ import { useDropArtistChrome } from '@/hooks/use-drop-artist-chrome';
 import { useMediaElementAnalyser } from '@/hooks/use-media-element-analyser';
 import { studioNameClass, type StudioNameChrome } from '@/lib/studio-tier-chrome';
 import type { PublicMusicMetadata } from '@/lib/music-discovery-metadata';
+import { GENERATED_IN_APP_LABEL } from '@/lib/song-generation/provenance';
 
 type DropPlayerArtistAttribution = {
   href?: string;
@@ -91,6 +92,7 @@ export function DropListenPanel({
   pressing,
   albumTitle,
   albumHref,
+  generatedInApp = false,
 }: {
   shareId: string;
   title: string;
@@ -127,6 +129,8 @@ export function DropListenPanel({
   pressing?: import('@/lib/profile/pressing').PressingConfig;
   albumTitle?: string;
   albumHref?: string;
+  /** Mandatory disclosure for AKAsheet-generated masters */
+  generatedInApp?: boolean;
 }) {
   const { user, authReady } = useAuth();
   const { toast } = useToast();
@@ -230,10 +234,10 @@ export function DropListenPanel({
     } catch (e: unknown) {
       const raw = e instanceof Error ? e.message : undefined;
       setSrc(null);
-      const staleFeaturedSelection = Boolean(
-        featuredByUserId && raw && /no longer featured|no longer public|not public|offline/i.test(raw)
+      const quietStreamMiss = Boolean(
+        raw && /no longer featured|no longer public|not public|offline|music releases is off/i.test(raw)
       );
-      if (!staleFeaturedSelection) {
+      if (!quietStreamMiss) {
         toast({
           variant: 'destructive',
           title: 'Audio unavailable',
@@ -638,6 +642,11 @@ export function DropListenPanel({
                 >
                   {title}
                 </Link>
+                {generatedInApp ? (
+                  <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-amber-200/90">
+                    {GENERATED_IN_APP_LABEL}
+                  </p>
+                ) : null}
                 {artistAttribution ? (
                   <p className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1 text-[9px] font-bold uppercase tracking-widest text-white/70">
                     <span>Original artist</span>

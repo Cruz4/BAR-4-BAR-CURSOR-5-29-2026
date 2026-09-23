@@ -54,7 +54,8 @@ import { BrandLockup } from '@/components/brand-lockup';
 import {
   getCheckoutFromPath,
   getDropBuyIntentFromPath,
-  getProCheckoutLabel,
+  getSubscriptionCheckoutLabel,
+  isStudioMaxCheckoutPriceKey,
   getSafeNextPath,
 } from '@/lib/checkout-intent';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
@@ -430,11 +431,12 @@ function LoginForm() {
               <Card className="w-full border-accent/30 bg-accent/10 backdrop-blur-md relative z-50">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-headline uppercase tracking-wide flex items-center gap-2 text-accent">
-                    <Zap className="h-4 w-4" /> Studio Pro Checkout
+                    <Zap className="h-4 w-4" />{' '}
+                    {isStudioMaxCheckoutPriceKey(proCheckoutIntent) ? 'Studio Max Checkout' : 'Studio Pro Checkout'}
                   </CardTitle>
                   <CardDescription className="text-[11px] font-code leading-relaxed text-left">
                     Create your account or sign in — you&apos;ll go straight to Stripe for{' '}
-                    <strong className="text-foreground">{getProCheckoutLabel(proCheckoutIntent)}</strong>.
+                    <strong className="text-foreground">{getSubscriptionCheckoutLabel(proCheckoutIntent)}</strong>.
                     Card required — Pro activates when Stripe checkout completes.
                   </CardDescription>
                 </CardHeader>

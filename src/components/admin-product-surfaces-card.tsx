@@ -24,9 +24,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import {
   EMERGENCY_MODES,
+  normalizeProductSurfacesConfig,
   PRODUCT_SURFACE_MODES,
   PRODUCT_SURFACES_CHANGED_EVENT,
   PRODUCT_SURFACES_DEFAULTS,
+  SONG_GENERATION_SURFACE_MODES,
   RELEASE_COMPOSER_MODES,
   RELEASE_ROOM_MODES,
   SUPPORT_CIRCLE_MODES,
@@ -36,6 +38,7 @@ import {
   type ProductSurfacesConfig,
   type ReleaseComposerMode,
   type ReleaseRoomMode,
+  type SongGenerationSurfaceMode,
   type SupportCircleMode,
 } from '@/lib/product-surface-modes';
 
@@ -107,16 +110,7 @@ export function AdminProductSurfacesCard() {
         const data = (await response.json()) as ProductSurfacesAdminConfig & { error?: string };
         if (!response.ok) throw new Error(data.error || 'Failed to load');
         setConfig(data);
-        setDraft({
-          ceoDashboard: data.ceoDashboard,
-          supportCircle: data.supportCircle,
-          releaseComposer: data.releaseComposer,
-          discoveryRails: data.discoveryRails,
-          sharing: data.sharing,
-          sceneWeather: data.sceneWeather,
-          releaseRoom: data.releaseRoom,
-          emergency: data.emergency,
-        });
+        setDraft(normalizeProductSurfacesConfig(data));
       })
       .catch((error) => console.warn('[admin product surfaces]', error))
       .finally(() => setLoading(false));
@@ -139,16 +133,7 @@ export function AdminProductSurfacesCard() {
       if (!response.ok) throw new Error(data.error || 'Save failed');
 
       setConfig(data);
-      setDraft({
-        ceoDashboard: data.ceoDashboard,
-        supportCircle: data.supportCircle,
-        releaseComposer: data.releaseComposer,
-        discoveryRails: data.discoveryRails,
-        sharing: data.sharing,
-        sceneWeather: data.sceneWeather,
-        releaseRoom: data.releaseRoom,
-        emergency: data.emergency,
-      });
+      setDraft(normalizeProductSurfacesConfig(data));
       window.dispatchEvent(
         new CustomEvent(PRODUCT_SURFACES_CHANGED_EVENT, { detail: draft })
       );
@@ -306,6 +291,71 @@ export function AdminProductSurfacesCard() {
                 value={draft.emergency}
                 options={EMERGENCY_MODES}
                 onChange={(v) => patchDraft('emergency', v as EmergencyMode)}
+              />
+              <ModeSelect
+                id="songGeneration"
+                label="Song generation"
+                hint="Studio Max render studio and APIs. Pair with roster tier MAX MO / MAX YR and Song generation beta or on."
+                modes={[
+                  { value: 'off', meaning: 'Hidden — default.' },
+                  { value: 'beta', meaning: 'Invited / internal beta.' },
+                  { value: 'on', meaning: 'General availability for Max subscribers.' },
+                ]}
+                value={draft.songGeneration}
+                options={SONG_GENERATION_SURFACE_MODES}
+                onChange={(v) => patchDraft('songGeneration', v as SongGenerationSurfaceMode)}
+              />
+              <ModeSelect
+                id="cloudRendering"
+                label="Cloud rendering"
+                hint="Metered GPU fallback + cloud passes."
+                modes={[
+                  { value: 'off', meaning: 'Local companion only.' },
+                  { value: 'beta', meaning: 'Budget-capped cloud beta.' },
+                  { value: 'on', meaning: 'Cloud route enabled per plan.' },
+                ]}
+                value={draft.cloudRendering}
+                options={SONG_GENERATION_SURFACE_MODES}
+                onChange={(v) => patchDraft('cloudRendering', v as SongGenerationSurfaceMode)}
+              />
+              <ModeSelect
+                id="stemsMidi"
+                label="Stems & MIDI"
+                hint="ACE extract + Basic Pitch MIDI."
+                modes={[
+                  { value: 'off', meaning: 'Disabled.' },
+                  { value: 'beta', meaning: 'Beta testers.' },
+                  { value: 'on', meaning: 'Enabled for Max.' },
+                ]}
+                value={draft.stemsMidi}
+                options={SONG_GENERATION_SURFACE_MODES}
+                onChange={(v) => patchDraft('stemsMidi', v as SongGenerationSurfaceMode)}
+              />
+              <ModeSelect
+                id="artistSignature"
+                label="Artist Signature"
+                hint="LoRA style/timbre adapters."
+                modes={[
+                  { value: 'off', meaning: 'Disabled.' },
+                  { value: 'beta', meaning: 'Beta training/render.' },
+                  { value: 'on', meaning: 'Enabled.' },
+                ]}
+                value={draft.artistSignature}
+                options={SONG_GENERATION_SURFACE_MODES}
+                onChange={(v) => patchDraft('artistSignature', v as SongGenerationSurfaceMode)}
+              />
+              <ModeSelect
+                id="voiceMatch"
+                label="Voice Match"
+                hint="SVC beta — legal gate required."
+                modes={[
+                  { value: 'off', meaning: 'Disabled until license clearance.' },
+                  { value: 'beta', meaning: 'Internal/legal beta only.' },
+                  { value: 'on', meaning: 'Not recommended until counsel sign-off.' },
+                ]}
+                value={draft.voiceMatch}
+                options={SONG_GENERATION_SURFACE_MODES}
+                onChange={(v) => patchDraft('voiceMatch', v as SongGenerationSurfaceMode)}
               />
             </div>
 

@@ -763,4 +763,11 @@ export async function initializeUserUsage(
   } catch (founderErr) {
     console.warn('[usage-init] founder welcome seed skipped', founderErr);
   }
+
+  try {
+    const { migrateInkEconomyV2IfNeeded } = await import('@/lib/server/ink-economy-migration');
+    await migrateInkEconomyV2IfNeeded(userId);
+  } catch (migrationErr) {
+    console.warn('[usage-init] ink economy v2 migration skipped', migrationErr);
+  }
 }

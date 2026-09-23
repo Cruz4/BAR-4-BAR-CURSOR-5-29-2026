@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmojiFontText } from '@/components/profile/emoji-font-text';
 import { splitRichText } from '@/lib/profile/inline-links';
 import { profileHref } from '@/lib/profile/profile-slug';
 
@@ -41,7 +42,11 @@ export function MentionText({ text }: { text: string }) {
             </a>
           );
         }
-        return <span key={`t-${index}`}>{part.value}</span>;
+        return (
+          <span key={`t-${index}`}>
+            <EmojiFontText text={part.value} />
+          </span>
+        );
       })}
     </>
   );

@@ -472,7 +472,10 @@ export function SheetMsgsDock({
                   })
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1.5 border-t border-white/10 p-2">
+              <div
+                className="flex shrink-0 items-center gap-1.5 border-t border-white/10 p-2"
+                data-composer-field
+              >
                 <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
                 <Input
                   ref={composeRef}

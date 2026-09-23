@@ -43,6 +43,41 @@ export function buildDnaDropLoginPath(
   return `${buildLoginPath(dnaDropSharePath(shareId))}&intent=${intent}`;
 }
 
+function buildDnaDropSnapshotLoginPath(
+  albumShareId: string,
+  trackId: string,
+  kind: DnaDropAccessKind = 'view'
+): string {
+  const intent = kind === 'import' ? 'dna-import' : 'dna-drop';
+  return `${buildLoginPath(dnaDropSnapshotTrackPath(albumShareId, trackId))}&intent=${intent}`;
+}
+
+export type LiveDnaDropLinkTarget = {
+  shareId: string;
+  type: 'album' | 'track';
+  albumShareId?: string;
+  trackId?: string;
+};
+
+/** Prefer album snapshot + ?track= for strands nested under a live album DNA drop. */
+export function resolveLiveDnaDropItemHref(
+  drop: LiveDnaDropLinkTarget,
+  signedIn: boolean,
+  isPro = true
+): string {
+  if (drop.type === 'album') {
+    return resolveDnaDropHref(drop.shareId, signedIn, isPro);
+  }
+  const albumShareId = drop.albumShareId?.trim();
+  const trackId = drop.trackId?.trim();
+  if (albumShareId && trackId && albumShareId !== drop.shareId.trim()) {
+    if (!signedIn) return buildDnaDropSnapshotLoginPath(albumShareId, trackId, 'view');
+    if (!isPro) return DNA_DROP_UPGRADE_PATH;
+    return dnaDropSnapshotTrackPath(albumShareId, trackId);
+  }
+  return resolveDnaDropHref(drop.shareId, signedIn, isPro);
+}
+
 /**
  * Click destination for a Lyrics DNA Drop (lyric snapshot), not a music release.
  * Guests go to sign-in. Signed-in members open the share page, which sends

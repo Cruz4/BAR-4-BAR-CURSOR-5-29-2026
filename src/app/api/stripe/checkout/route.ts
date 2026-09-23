@@ -15,6 +15,8 @@ import { enqueueAdminAlert } from '@/lib/server/admin-alerts';
 import { getTrustedAppOrigin } from '@/lib/server/trusted-origin';
 import { getPublicAppUrl } from '@/lib/app-url';
 import { withCheckoutCard3ds } from '@/lib/stripe-checkout-security';
+import { getProductSurfaces } from '@/lib/server/product-surfaces';
+import { isSongGenerationSurfaceLive } from '@/lib/product-surface-modes';
 
 export const runtime = 'nodejs';
 
@@ -23,12 +25,16 @@ function checkoutAlertDetail(
   priceKey?: string
 ): string {
   if (catalogEntry.type === 'subscription') {
-    return catalogEntry.tier === 'yearly' ? 'Studio Pro Yearly' : 'Studio Pro Monthly';
+    const product = catalogEntry.product === 'max' ? 'Studio Max' : 'Studio Pro';
+    return catalogEntry.tier === 'yearly' ? `${product} Yearly` : `${product} Monthly`;
   }
   if (typeof priceKey === 'string' && priceKey.trim()) {
     return priceKey.trim().replace(/_/g, ' ');
   }
-  return `Ink pack (${catalogEntry.inkAmount} Ink)`;
+  if ('inkAmount' in catalogEntry) {
+    return `Ink pack (${catalogEntry.inkAmount} Ink)`;
+  }
+  return `Cloud pass pack (${catalogEntry.cloudPassAmount} passes)`;
 }
 
 export async function POST(req: Request) {
@@ -64,8 +70,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unknown or unsupported price' }, { status: 400 });
     }
 
+    if (
+      catalogEntry.type === 'subscription' &&
+      catalogEntry.product === 'max'
+    ) {
+      const surfaces = await getProductSurfaces();
+      if (!isSongGenerationSurfaceLive(surfaces.songGeneration)) {
+        return NextResponse.json(
+          { error: 'Studio Max is not available yet.' },
+          { status: 403 }
+        );
+      }
+    }
+
     const isSubscription = catalogEntry.type === 'subscription';
-    const inkAmount = catalogEntry.type === 'one_time' ? catalogEntry.inkAmount : 0;
+    const inkAmount =
+      catalogEntry.type === 'one_time' && 'inkAmount' in catalogEntry ? catalogEntry.inkAmount : 0;
     const origin = getTrustedAppOrigin(req);
 
     let stripeCustomerId: string | undefined;
@@ -113,7 +133,12 @@ export async function POST(req: Request) {
         userId,
         inkAmount: inkAmount.toString(),
         type: isSubscription ? 'subscription' : 'one_time',
-        ...(isSubscription ? { subscriptionTier: catalogEntry.tier } : {}),
+        ...(isSubscription
+          ? {
+              subscriptionTier: catalogEntry.tier,
+              ...(catalogEntry.product === 'max' ? { subscriptionProduct: 'max' } : {}),
+            }
+          : {}),
         ...(userData?.referredBy ? { referredBy: String(userData.referredBy) } : {}),
         ...(userData?.referralCode ? { referralCode: String(userData.referralCode) } : {}),
       },
@@ -140,6 +165,7 @@ export async function POST(req: Request) {
         metadata: {
           userId,
           subscriptionTier: catalogEntry.tier,
+          ...(catalogEntry.product === 'max' ? { subscriptionProduct: 'max' } : {}),
         },
       };
       // No Stripe trial — free demo + pay-now Pro only.

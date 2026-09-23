@@ -48,7 +48,7 @@ import {
   type ModuleContext,
 } from '@/components/profile/profile-modules';
 import { useAuth } from '@/hooks/use-auth';
-import { resolveDnaDropHref } from '@/lib/dna-drop-access';
+import { resolveLiveDnaDropItemHref } from '@/lib/dna-drop-access';
 import { fetchGamificationSummary } from '@/lib/gamification-client';
 import { trackGuestSignupCta } from '@/lib/guest-funnel-client';
 import { guestTryHref } from '@/lib/guest-try';
@@ -71,6 +71,7 @@ import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
+import { compactReachCount } from '@/lib/profile-view-client';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -409,6 +410,14 @@ export function ArtistHome({
             <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">
               {tokens.plateSerial}
               {tokens.autoDrift ? ' · restless' : ''}
+              {isOwner && !previewMode && typeof profile.ownerProfileViewCount === 'number' ? (
+                <>
+                  {' · '}
+                  {profile.ownerProfileViewCount === 1
+                    ? '1 profile visit'
+                    : `${compactReachCount(profile.ownerProfileViewCount)} profile visits`}
+                </>
+              ) : null}
             </span>
           </div>
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2 [&_button]:shrink-0">
@@ -600,7 +609,7 @@ export function ArtistHome({
                         showFirstDropsStorefront && 'max-sm:w-full max-sm:basis-full'
                       )}
                     >
-                      <Link href={resolveDnaDropHref(dnaDrops[0].shareId, Boolean(user))} className="inline-flex max-w-full items-center gap-1.5">
+                      <Link href={resolveLiveDnaDropItemHref(dnaDrops[0], Boolean(user))} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0 truncate">
                           {dnaDrops[0].type === 'album' ? '1 album DNA live' : '1 lyric drop live'}

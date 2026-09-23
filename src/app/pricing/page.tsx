@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,8 @@ import {
   MonitorPlay,
   Mic,
   BrainCircuit,
-  MessageSquare
+  MessageSquare,
+  Music2,
 } from 'lucide-react';
 import { LegalFooter } from '@/components/legal-footer';
 import { LoginStudioAtmosphere } from '@/components/marketing/login-studio-atmosphere';
@@ -59,7 +60,14 @@ import {
   getMusicReleaseTierFaqAnswer,
   getPostSharingFaqAnswer,
   getProCheckoutCtaLine,
+  STUDIO_MAX_MONTHLY_PRICE,
+  STUDIO_MAX_YEARLY_EFFECTIVE_MONTHLY,
+  STUDIO_MAX_YEARLY_BILLED_AMOUNT,
+  STUDIO_MAX_MONTHLY_INK,
+  STUDIO_MAX_FEATURES,
+  getStudioMaxHeadlinePerks,
 } from '@/lib/studio-tiers';
+import { buildStudioMaxCheckoutPath } from '@/lib/checkout-intent';
 import { getFirstDropsCashoutFaqAnswer, getFirstDropsWhatFaqAnswer } from '@/lib/drop-commerce';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { FREE_ALBUM_LIMIT, FREE_TRACK_LIMIT, SIGNUP_INK } from '@/lib/subscription';
@@ -72,6 +80,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { buildLoginPath, buildProCheckoutPath } from '@/lib/checkout-intent';
 import { vaultHref } from '@/lib/scene-home';
 import { getStoredMarketingRef } from '@/lib/marketing-attribution';
+import { useSongGenerationLive } from '@/hooks/use-song-generation-live';
 
 function proFeatureIcon(text: string) {
   if (text.includes('Roadmap') || text.includes('feedback')) return MessageSquare;
@@ -94,6 +103,7 @@ export default function PricingPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
+  const songGenerationLive = useSongGenerationLive();
 
   useEffect(() => {
     if (!user) return;
@@ -110,6 +120,20 @@ export default function PricingPage() {
   }, [user]);
 
   const handleSelectPlan = (tierName: string) => {
+    if (tierName === 'Studio Max') {
+      trackUpgradeClick('pricing', {
+        tier: tierName,
+        billing: isYearly ? 'yearly' : 'monthly',
+        skipTrial: true,
+      });
+      const checkoutPath = buildStudioMaxCheckoutPath(isYearly);
+      if (user) {
+        router.push(checkoutPath);
+      } else {
+        router.push(buildLoginPath(checkoutPath));
+      }
+      return;
+    }
     if (tierName !== 'Visitor') {
       trackUpgradeClick('pricing', {
         tier: tierName,
@@ -129,7 +153,7 @@ export default function PricingPage() {
     }
   };
 
-  const TIERS = [
+  const allTiers = [
     {
       name: 'Visitor',
       price: '$0',
@@ -171,8 +195,37 @@ export default function PricingPage() {
       cta: getProCheckoutCtaLine(isYearly ? 'yearly' : 'monthly'),
       variant: 'default' as const,
       popular: true
-    }
+    },
+    {
+      name: 'Studio Max',
+      price: isYearly
+        ? `$${STUDIO_MAX_YEARLY_EFFECTIVE_MONTHLY.toFixed(2)}`
+        : STUDIO_MAX_MONTHLY_PRICE,
+      period: '/mo',
+      billedText: isYearly
+        ? `Billed annually ($${STUDIO_MAX_YEARLY_BILLED_AMOUNT.toFixed(2)})`
+        : 'Billed monthly',
+      description:
+        'Everything in Pro Writer plus sheet-to-song rendering, Approved Studio library, and local/cloud render passes.',
+      membership: 'Render Studio',
+      ink: `${STUDIO_MAX_MONTHLY_INK.toLocaleString()} residency Ink/mo included`,
+      headlinePerks: getStudioMaxHeadlinePerks(),
+      features: STUDIO_MAX_FEATURES.map((text) => ({
+        text,
+        icon: text.includes('sheet') || text.includes('Generate') ? Music2 : Wand2,
+        highlight: 'pro' as const,
+        hide: false,
+      })),
+      cta: isYearly ? 'Go Studio Max Yearly' : 'Go Studio Max Monthly',
+      variant: 'default' as const,
+      popular: false,
+    },
   ];
+
+  const TIERS = useMemo(
+    () => (songGenerationLive ? allTiers : allTiers.filter((t) => t.name !== 'Studio Max')),
+    [songGenerationLive, isYearly]
+  );
 
   const FAQS = [
     {
@@ -277,7 +330,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-20 items-stretch max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mb-20 items-stretch max-w-6xl mx-auto">
           {TIERS.map((tier) => (
             <Card key={tier.name} className={cn("relative flex flex-col border-2 transition-all duration-500 backdrop-blur-2xl group", tier.popular && isYearly ? "border-accent bg-accent/5 shadow-2xl scale-105 z-10" : "border-white/5 bg-card/40")}>
               {(tier.popular && isYearly) && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-accent text-white px-4 py-1 text-[8px] font-bold uppercase tracking-[0.2em] rounded-full shadow-lg z-20">Recommended Choice</div>}

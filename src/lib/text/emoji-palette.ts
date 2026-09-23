@@ -9,12 +9,12 @@ export const EMOJI_PALETTE: EmojiPaletteGroup[] = [
     label: 'Vibes',
     emojis: [
       '😀', '😂', '😊', '😍', '😎', '🤩', '😭', '😢', '😤', '😮', '🙃', '😏',
-      '🥳', '😈', '😇', '🤓', '🧐', '🤠', '😴', '🫠',
+      '🥳', '😈', '😇', '🤓', '🧐', '🤠', '😴', '🫠', '🫨', '💃', '🕺', '🗣️', '📣',
     ],
   },
   {
     label: 'Fire',
-    emojis: ['🔥', '💯', '⚡', '✨', '🚀', '💥', '🎯', '👑', '💎', '🖤', '💜', '💙'],
+    emojis: ['🔥', '💯', '⚡', '✨', '🚀', '💥', '🎯', '👑', '💎', '🖤', '💜', '💙', '🏆', '🥇', '🎊', '🎆', '🍾', '🥂'],
   },
   {
     label: 'Music',
@@ -51,11 +51,14 @@ export const EMOJI_PALETTE: EmojiPaletteGroup[] = [
   },
   {
     label: 'Symbols',
-    emojis: ['✅', '❌', '⚠️', '‼️', '❓', '❗', '💬', '💭', '➕', '➖', '✖️', '➡️', '⬅️', '⬆️', '⬇️', '🔴', '🟢', '🔵', '🟡', '🟣', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛', '⬜', '♻️', '▶️', '⛔', '🚫', '🛑', '🆗', '🆕', '🆓', 'ℹ️', '™️', '©️', '®️', '🎉', '🔔', '🎲', '🎱'],
+    emojis: ['✅', '❌', '⚠️', '‼️', '❓', '❗', '💬', '💭', '➕', '➖', '✖️', '➡️', '⬅️', '⬆️', '⬇️', '🔴', '🟢', '🔵', '🟡', '🟣', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫', '⬛', '⬜', '♻️', '▶️', '⛔', '🚫', '🛑', '🆗', '🆕', '🆓', 'ℹ️', '™️', '©️', '®️', '🎉', '🔔', '🎲', '🎱', '⏳', '⌛'],
   },
   {
     label: 'Hands',
-    emojis: ['👍', '👎', '👏', '🙌', '🤝', '🙏', '👊', '✊', '🤙', '✌️', '🤘', '👋', '✍️', '🖐️', '☝️', '💪'],
+    emojis: [
+      '👍', '👎', '👏', '🙌', '🤝', '🙏', '👊', '✊', '🤙', '✌️', '🤘', '👋', '✍️', '🖐️', '☝️', '💪',
+      '🫵', '🫵🏽', '👇', '👇🏽', '🫱', '🫲', '🫷', '🫸', '👐', '🙇',
+    ],
   },
   {
     label: 'Hearts',
@@ -66,7 +69,7 @@ export const EMOJI_PALETTE: EmojiPaletteGroup[] = [
     emojis: [
       '🧘', '🧘‍♂️', '🧘‍♀️', '🛀', '💆', '🧖', '☮️', '🕊️', '😌', '🥱', '😮‍💨',
       '🦵', '🦶', '🫶', '🤌', '🫡', '🫢', '🫣', '🤭', '🤫', '🍵', '☕', '🧋',
-      '🍃', '🪷', '🌺', '💫', '🪩', '🛸', '🌌', '🎭', '🪄', '🔮', '🧿', '💭',
+      '🍃', '🪷', '🌺', '💫', '🪩', '🛸', '🌌', '🎭', '🪄', '🔮', '🧿', '💭', '🧊', '🪬',
     ],
   },
 ];
@@ -323,6 +326,31 @@ const EMOJI_KEYWORDS: Record<string, string[]> = {
   '🎭': ['theater', 'drama', 'masks'],
   '🪄': ['magic', 'wand', 'sparkle'],
   '🔮': ['crystal ball', 'mystic', 'fortune'],
+  '🫵': ['you', 'point', 'viewer', 'index'],
+  '🫵🏽': ['you', 'point', 'viewer', 'medium skin'],
+  '👇': ['down', 'point', 'index'],
+  '👇🏽': ['down', 'point', 'medium skin'],
+  '⏳': ['hourglass', 'wait', 'time'],
+  '⌛': ['hourglass done', 'time'],
+  '🫱': ['right hand', 'handshake'],
+  '🫲': ['left hand'],
+  '🫷': ['push left', 'stop'],
+  '🫸': ['push right'],
+  '👐': ['open hands', 'jazz hands'],
+  '🙇': ['bow', 'sorry', 'thanks'],
+  '🏆': ['trophy', 'win'],
+  '🥇': ['gold', 'first', 'medal'],
+  '🎊': ['confetti', 'celebrate'],
+  '🎆': ['fireworks', 'celebrate'],
+  '🍾': ['champagne', 'celebrate'],
+  '🥂': ['cheers', 'toast'],
+  '🫨': ['shake', 'shock', 'vibrate'],
+  '💃': ['dance', 'salsa'],
+  '🕺': ['dance', 'disco'],
+  '🗣️': ['speak', 'talk', 'shout'],
+  '📣': ['megaphone', 'announce'],
+  '🧊': ['ice', 'cold', 'cube'],
+  '🪬': ['hamsa', 'protect', 'evil eye'],
 };
 
 export function emojiMatchesQuery(emoji: string, query: string): boolean {

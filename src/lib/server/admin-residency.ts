@@ -9,14 +9,15 @@ import {
 } from '@/lib/admin-residency';
 import { cancelActiveStripeBillingForUser } from '@/lib/server/cancel-user-stripe-billing';
 import { patchPublicStudioBadge } from '@/lib/server/public-studio-badge';
-import { getCatalogEntry } from '@/lib/stripe-catalog';
-import { activateOrUpgradeProSubscription } from '@/lib/stripe-fulfillment';
+import { getCatalogEntry, MAX_INCLUDED_CLOUD_PASSES_MONTHLY } from '@/lib/stripe-catalog';
+import { activateOrUpgradeProSubscription, refillProResidency } from '@/lib/stripe-fulfillment';
 import { getStripe, isStripeMissingCustomerError } from '@/lib/stripe-server';
 
 export type AdminResidencyResult = {
   mode: AdminResidencyMode;
   subscriptionStatus: 'active' | 'none';
   subscriptionTier: 'monthly' | 'yearly' | 'none';
+  subscriptionProduct?: 'writer' | 'max';
   proSource?: 'admin' | 'stripe';
   message: string;
 };
@@ -111,6 +112,7 @@ export async function applyAdminResidency(
     await userRef.update({
       subscriptionStatus: 'none',
       subscriptionTier: 'none',
+      subscriptionProduct: FieldValue.delete(),
       proSource: FieldValue.delete(),
       subscriptionId: FieldValue.delete(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -120,38 +122,61 @@ export async function applyAdminResidency(
       mode,
       subscriptionStatus: 'none',
       subscriptionTier: 'none',
+      subscriptionProduct: undefined,
       message: 'Back to Visitor (LOCAL). Stripe membership cancelled if they had one.',
     };
   }
 
-  if (mode === 'admin-monthly' || mode === 'admin-yearly') {
-    const tier = mode === 'admin-yearly' ? 'yearly' : 'monthly';
-    await userRef.update({
+  if (
+    mode === 'admin-monthly' ||
+    mode === 'admin-yearly' ||
+    mode === 'admin-max-monthly' ||
+    mode === 'admin-max-yearly'
+  ) {
+    const tier =
+      mode === 'admin-yearly' || mode === 'admin-max-yearly' ? 'yearly' : 'monthly';
+    const product = mode.startsWith('admin-max') ? 'max' : 'writer';
+    const userUpdate: Record<string, unknown> = {
       subscriptionStatus: 'active',
       subscriptionTier: tier,
+      subscriptionProduct: product,
       proSource: 'admin',
       updatedAt: FieldValue.serverTimestamp(),
       freeEditableTrackIds: FieldValue.delete(),
       freeEditableSelectionAt: FieldValue.delete(),
-    });
+    };
+    if (product === 'max') {
+      userUpdate.cloudRenderPassesBalance = MAX_INCLUDED_CLOUD_PASSES_MONTHLY;
+    } else {
+      userUpdate.cloudRenderPassesBalance = FieldValue.delete();
+    }
+    await userRef.update(userUpdate);
+    await refillProResidency(db, targetUserId, tier);
     await patchPublicStudioBadge(db, targetUserId, 'pro');
+    const productLabel = product === 'max' ? 'Studio Max' : 'Pro Writer';
     return {
       mode,
       subscriptionStatus: 'active',
       subscriptionTier: tier,
+      subscriptionProduct: product,
       proSource: 'admin',
-      message: `${residencyModeLabel(mode)} — stays Pro until you change it. Stripe cannot take this off.`,
+      message: `${residencyModeLabel(mode)} (${productLabel}) — stays until you change it. Stripe cannot take admin tiers off.`,
     };
   }
 
   const wantTier = mode === 'stripe-yearly' ? 'yearly' : 'monthly';
   const sub = await findLiveStripeSubscription(userData, wantTier);
-  await activateOrUpgradeProSubscription(db, targetUserId, wantTier, sub.id);
+  const priceId = sub.items?.data?.[0]?.price?.id;
+  const catalogEntry = priceId ? getCatalogEntry(priceId) : undefined;
+  const product =
+    catalogEntry?.type === 'subscription' && catalogEntry.product === 'max' ? 'max' : 'writer';
+  await activateOrUpgradeProSubscription(db, targetUserId, wantTier, sub.id, product);
   return {
     mode,
     subscriptionStatus: 'active',
     subscriptionTier: wantTier,
+    subscriptionProduct: product,
     proSource: 'stripe',
-    message: `${residencyModeLabel(mode)} — follows their Stripe membership.`,
+    message: `${residencyModeLabel(mode)} — follows their Stripe membership (${product === 'max' ? 'Studio Max' : 'Pro Writer'}).`,
   };
 }

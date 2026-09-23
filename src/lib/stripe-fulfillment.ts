@@ -2,7 +2,10 @@ import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
 import { calculateNetRevenue } from '@/lib/billing';
-import { getResidencyRefillForTier } from '@/lib/stripe-catalog';
+import {
+  getResidencyRefillForTier,
+  MAX_INCLUDED_CLOUD_PASSES_MONTHLY,
+} from '@/lib/stripe-catalog';
 import { recordStudioEvent } from '@/lib/server/studio-analytics';
 import { recordInkLedgerEntries } from '@/lib/server/ink-ledger';
 import { inkBalanceFirestorePatch, normalizeInkPools } from '@/lib/ink-balance';
@@ -17,6 +20,7 @@ export type FulfillmentMetadata = {
   inkAmount?: string;
   type?: string;
   subscriptionTier?: string;
+  subscriptionProduct?: string;
   shareId?: string;
   artistId?: string;
   scope?: string;
@@ -70,12 +74,15 @@ export async function fulfillCheckoutSession(
 
   if (isSubscription) {
     const tier = metadata.subscriptionTier === 'yearly' ? 'yearly' : 'monthly';
-    const refillAmount = getResidencyRefillForTier(tier);
+    const product = metadata.subscriptionProduct === 'max' ? 'max' : 'writer';
+    const refillAmount = getResidencyRefillForTier(tier, product);
     proRefillAmount = refillAmount;
     residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
     const userUpdate: Record<string, unknown> = {
       subscriptionStatus: 'active',
       subscriptionTier: tier,
+      subscriptionProduct: product,
+      billingInterval: tier,
       proSource: 'stripe',
       updatedAt: FieldValue.serverTimestamp(),
       freeEditableTrackIds: FieldValue.delete(),
@@ -83,6 +90,9 @@ export async function fulfillCheckoutSession(
     };
     if (extras?.subscriptionId) userUpdate.subscriptionId = extras.subscriptionId;
     if (extras?.stripeCustomerId) userUpdate.stripeCustomerId = extras.stripeCustomerId;
+    if (product === 'max') {
+      userUpdate.cloudRenderPassesBalance = MAX_INCLUDED_CLOUD_PASSES_MONTHLY;
+    }
 
     // FieldValue.delete() values are valid Firestore update payloads; Admin typing is overly strict here.
     batch.update(userRef, userUpdate as any);
@@ -174,9 +184,10 @@ export async function refillProResidency(
   const userRef = db.collection('users').doc(userId);
   const [beforeSnap, userSnap] = await Promise.all([usageRef.get(), userRef.get()]);
   const poolsBefore = normalizeInkPools(beforeSnap.data() || {});
-  const refillAmount = getResidencyRefillForTier(tier);
-  const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
   const userData = userSnap.data() || {};
+  const product = userData.subscriptionProduct === 'max' ? 'max' : 'writer';
+  const refillAmount = getResidencyRefillForTier(tier, product);
+  const residencyCredit = Math.max(0, refillAmount - poolsBefore.residencyBalance);
   const userName =
     (typeof userData.displayName === 'string' && userData.displayName.trim()) ||
     (typeof userData.email === 'string' && userData.email.trim()) ||
@@ -233,7 +244,8 @@ export async function activateOrUpgradeProSubscription(
   db: Firestore,
   userId: string,
   tier: 'monthly' | 'yearly',
-  subscriptionId?: string | null
+  subscriptionId?: string | null,
+  product: 'writer' | 'max' = 'writer'
 ) {
   const userRef = db.collection('users').doc(userId);
   const userSnap = await userRef.get();
@@ -249,11 +261,15 @@ export async function activateOrUpgradeProSubscription(
   const userUpdate: Record<string, unknown> = {
     subscriptionStatus: 'active',
     subscriptionTier: tier,
+    subscriptionProduct: product,
     proSource: 'stripe',
     updatedAt: FieldValue.serverTimestamp(),
     freeEditableTrackIds: FieldValue.delete(),
     freeEditableSelectionAt: FieldValue.delete(),
   };
+  if (product === 'max') {
+    userUpdate.cloudRenderPassesBalance = MAX_INCLUDED_CLOUD_PASSES_MONTHLY;
+  }
   if (subscriptionId) userUpdate.subscriptionId = subscriptionId;
   await userRef.update(userUpdate);
   await patchPublicStudioBadge(db, userId, 'pro');
@@ -472,6 +488,7 @@ export async function fulfillPaidCheckoutSession(
       inkAmount: metadata?.inkAmount,
       type: isSubscriptionCheckout ? 'subscription' : metadata?.type,
       subscriptionTier: metadata?.subscriptionTier,
+      subscriptionProduct: metadata?.subscriptionProduct,
     },
     session.amount_total || 0,
     { subscriptionId, stripeCustomerId }

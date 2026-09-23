@@ -1,6 +1,13 @@
 
 export const PRO_CHECKOUT_KEYS = ['PRO_MONTHLY', 'PRO_YEARLY'] as const;
+export const STUDIO_MAX_CHECKOUT_KEYS = ['MAX_MONTHLY', 'MAX_YEARLY'] as const;
+export const SUBSCRIPTION_CHECKOUT_KEYS = [
+  ...PRO_CHECKOUT_KEYS,
+  ...STUDIO_MAX_CHECKOUT_KEYS,
+] as const;
 export type ProCheckoutPriceKey = (typeof PRO_CHECKOUT_KEYS)[number];
+export type StudioMaxCheckoutPriceKey = (typeof STUDIO_MAX_CHECKOUT_KEYS)[number];
+export type SubscriptionCheckoutPriceKey = (typeof SUBSCRIPTION_CHECKOUT_KEYS)[number];
 
 export type ProCheckoutOptions = {
   /** @deprecated Stripe trial removed — always charges immediately */
@@ -11,8 +18,25 @@ export function isProCheckoutPriceKey(key: string | null | undefined): key is Pr
   return key === 'PRO_MONTHLY' || key === 'PRO_YEARLY';
 }
 
+export function isStudioMaxCheckoutPriceKey(
+  key: string | null | undefined
+): key is StudioMaxCheckoutPriceKey {
+  return key === 'MAX_MONTHLY' || key === 'MAX_YEARLY';
+}
+
+export function isSubscriptionCheckoutPriceKey(
+  key: string | null | undefined
+): key is SubscriptionCheckoutPriceKey {
+  return isProCheckoutPriceKey(key) || isStudioMaxCheckoutPriceKey(key);
+}
+
 export function buildProCheckoutPath(isYearly: boolean, _options?: ProCheckoutOptions): string {
   const checkout: ProCheckoutPriceKey = isYearly ? 'PRO_YEARLY' : 'PRO_MONTHLY';
+  return `/usage?tab=cloud&checkout=${checkout}`;
+}
+
+export function buildStudioMaxCheckoutPath(isYearly: boolean): string {
+  const checkout: StudioMaxCheckoutPriceKey = isYearly ? 'MAX_YEARLY' : 'MAX_MONTHLY';
   return `/usage?tab=cloud&checkout=${checkout}`;
 }
 
@@ -85,10 +109,10 @@ export function getDropBuyIntentFromPath(path: string): DropBuyIntent | null {
   };
 }
 
-export function getCheckoutFromPath(path: string): ProCheckoutPriceKey | null {
+export function getCheckoutFromPath(path: string): SubscriptionCheckoutPriceKey | null {
   const url = parsePathUrl(path);
   const checkout = url?.searchParams.get('checkout') ?? null;
-  return isProCheckoutPriceKey(checkout) ? checkout : null;
+  return isSubscriptionCheckoutPriceKey(checkout) ? checkout : null;
 }
 
 /** Stripe trial removed — Pro checkout always charges immediately. */
@@ -98,4 +122,10 @@ export function getCheckoutTrialFromPath(_path: string): boolean {
 
 export function getProCheckoutLabel(priceKey: ProCheckoutPriceKey): string {
   return priceKey === 'PRO_YEARLY' ? 'Pro Yearly' : 'Pro Monthly';
+}
+
+export function getSubscriptionCheckoutLabel(priceKey: SubscriptionCheckoutPriceKey): string {
+  if (priceKey === 'MAX_YEARLY') return 'Studio Max Yearly';
+  if (priceKey === 'MAX_MONTHLY') return 'Studio Max Monthly';
+  return getProCheckoutLabel(priceKey);
 }

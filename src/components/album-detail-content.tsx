@@ -38,7 +38,6 @@ import {
   CassetteTape,
   Move,
   Sparkles,
-  Globe,
   ScanLine,
   Save,
   FolderOpen,
@@ -96,7 +95,7 @@ import {
   } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { ExportDialog } from './export-dialog';
-import { ShareDialog } from './share-dialog';
+import { AlbumVaultReleasePanel } from '@/components/album-vault-release-panel';
 import { TooltipProvider } from './ui/tooltip';
 import { DataContext } from '@/context/data-context';
 import { useAuth } from '@/hooks/use-auth';
@@ -104,6 +103,7 @@ import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { GUEST_TRY_PATH, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { vaultHref } from '@/lib/scene-home';
+import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
 import {
   canUserAddTrack,
   countUserTracks,
@@ -964,7 +964,6 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const [looseSearch, setLooseSearch] = useState('');
   const [looseSort, setLooseSort] = useState<LooseTrackSort>('newest');
   const [looseFilter, setLooseFilter] = useState<LooseTrackFilter>('all');
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [extractingAlbumDna, setExtractingAlbumDna] = useState(false);
   const [saveAlbumDnaOpen, setSaveAlbumDnaOpen] = useState(false);
   const [confirmExtractOpen, setConfirmExtractOpen] = useState(false);
@@ -1258,7 +1257,15 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         <AlbumPageAtmosphere />
 
         <div className="relative z-20 container mx-auto px-3 sm:px-6 py-6 sm:py-10 min-w-0 md:pl-32">
-            <Button variant="ghost" size="sm" onClick={() => router.push(vaultHref())} className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (navigateBackToReleaseCatalog(router)) return;
+                router.push(vaultHref());
+              }}
+              className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
+            >
                 <ChevronLeft className="mr-2 h-4 w-4" /> Vault
             </Button>
 
@@ -1406,9 +1413,22 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       variant="outline"
                                       size="sm"
                                       className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-fuchsia-400/40 rounded-xl bg-fuchsia-500/10 text-fuchsia-200 hover:bg-fuchsia-500/20 md:w-auto md:flex-none md:px-4"
-                                      onClick={() => openFirstDropLathe({ albumId: album.id, mode: 'album' })}
+                                      onClick={() =>
+                                        openFirstDropLathe({
+                                          albumId: album.id,
+                                          mode: 'album',
+                                          ...(releaseShareIdOf({ ...album, tracks: album.tracks })
+                                            ? {
+                                                shareId: releaseShareIdOf({ ...album, tracks: album.tracks }),
+                                              }
+                                            : {}),
+                                        })
+                                      }
                                     >
-                                      <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Release album
+                                      <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" />{' '}
+                                      {releaseStatusOf({ ...album, tracks: album.tracks }) === 'live'
+                                        ? 'Manage album release'
+                                        : 'Release album'}
                                     </Button>
                                     <Button
                                       variant="outline"
@@ -1420,29 +1440,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     </Button>
                                   </>
                                 ) : null}
-                                {!isUnassignedVault && (
-                                  isPro ? (
-                                    <Button variant="outline" size="sm" className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 md:w-auto md:flex-none md:px-4" onClick={() => setShareDialogOpen(true)}>
-                                      <Globe className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Lyrics DNA Drop
-                                    </Button>
-                                  ) : (
-                                    <LockedProFeatureButton
-                                      feature="Lyrics DNA Drop"
-                                      benefit="Publish, view, download, and import Lyrics DNA Drops — Pro only."
-                                      ctaLabel="Publish Lyrics DNA Drop — Go Pro"
-                                      ctaHref="/usage?tab=cloud&highlight=dna-drop"
-                                      icon={Globe}
-                                      iconClassName="text-primary"
-                                      label="Lyrics DNA Drop"
-                                      variant="outline"
-                                      className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-primary/30 bg-primary/5 text-primary md:w-auto md:flex-none md:px-4"
-                                    />
-                                  )
-                                )}
                             </div>
                         </CardHeader>
                         {!isUnassignedVault ? (
                           <div className="flex flex-col gap-3 border-b border-border px-4 sm:px-6 md:px-8 py-4 dark:border-white/5">
+                            <AlbumVaultReleasePanel album={album} />
                             {album.tracks?.length > 0 ? (
                               <div className="relative w-full">
                                 <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1979,17 +1981,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         tracks={album.tracks} 
         exportType="album" 
       />
-      {!isUnassignedVault && (
-        <ShareDialog
-          open={shareDialogOpen}
-          onOpenChange={setShareDialogOpen}
-          type="album"
-          id={album.id}
-          title={album.title}
-          existingShareId={album.shareId}
-        />
-      )}
-
+      
       <AlertDialog open={!!trackToDelete} onOpenChange={(o) => !o && setTrackToDelete(null)}>
           <AlertDialogContent className="bg-card border-2">
               <AlertDialogHeader>

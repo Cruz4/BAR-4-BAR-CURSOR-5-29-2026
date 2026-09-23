@@ -20,7 +20,14 @@ export const INK_ACTION_LABELS: Record<InkActionKey, string> = {
   transcribeVoiceNote: 'Voice transcript',
   runCreativeEffect: 'Creative Effect',
   aiVideoDirector: 'AI Video Director',
-  aiMusicCowriter: 'AI Music Co-Writer',
+  aiMusicCowriter: 'Generate Song (legacy key)',
+  renderSong: 'Generate Song',
+  renderInstrumental: 'Generate Instrumental',
+  renderRepaint: 'Repaint Section',
+  renderStemBundle: 'Stem Bundle',
+  renderMidiStem: 'Stem to MIDI',
+  renderVoiceMatch: 'Voice Match Pass',
+  renderSignatureTrain: 'Artist Signature Training',
 };
 
 export function inkTooltip(action: InkActionKey, cost?: number): string {

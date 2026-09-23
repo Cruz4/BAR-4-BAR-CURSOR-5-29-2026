@@ -157,6 +157,15 @@ export type DropPrice = {
   suggestedCents?: number;
 };
 
+export type DropAudioProvenance = {
+  generatedInApp: boolean;
+  sourceGeneratedTakeId?: string;
+  recipeHash?: string;
+  modelFamily?: string;
+  modelRevision?: string;
+  disclosedAt?: string;
+};
+
 export type DropAudioMeta = {
   storagePath: string;
   previewPath?: string;
@@ -165,6 +174,7 @@ export type DropAudioMeta = {
   byteSize?: number;
   fileName?: string;
   uploadedAt: string;
+  audioProvenance?: DropAudioProvenance;
 };
 
 export type DropLibraryEntry = {

@@ -212,6 +212,8 @@ interface GenerateSongDraftDialogProps {
   ) => void;
   /** True when dialog is closed but a soft-close session or in-flight generation is still active. */
   onBackgroundSessionActiveChange?: (active: boolean) => void;
+  /** Open sheet-native Generate Song (lyrics + rails on the track). */
+  onOpenGenerateSong?: () => void;
 }
 
 const DEFAULT_STRUCTURE_PRESET = {
@@ -443,6 +445,7 @@ export function GenerateSongDraftDialog({
   onStashApprovalDraftsToChest,
   onBackgroundSessionActiveChange,
   initialWorkstationMode = 'select',
+  onOpenGenerateSong,
 }: GenerateSongDraftDialogProps) {
   const { user } = useAuth();
   const isPro = isProOrTrial(user);
@@ -3301,6 +3304,16 @@ export function GenerateSongDraftDialog({
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-[220px] text-[10px] leading-snug">{DNA_HUB_TOOLTIPS.approvalReplace}</TooltipContent>
                           </Tooltip>
+                          {onOpenGenerateSong ? (
+                            <Button
+                              variant="secondary"
+                              size="lg"
+                              className="w-full h-11 sm:h-12 text-xs font-bold rounded-full"
+                              onClick={() => onOpenGenerateSong()}
+                            >
+                              <Wand2 className="mr-2 h-4 w-4 shrink-0" /> Generate Song (Co-Writer)
+                            </Button>
+                          ) : null}
                       </div>
                   )}
               </div>

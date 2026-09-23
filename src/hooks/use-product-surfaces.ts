@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
+  isSongGenerationSurfaceLive,
   normalizeProductSurfacesConfig,
   PRODUCT_SURFACES_CHANGED_EVENT,
   PRODUCT_SURFACES_DEFAULTS,
@@ -15,6 +16,7 @@ const REFRESH_INTERVAL_MS = 30_000;
 type CacheShape = ProductSurfacesConfig & {
   updatedAt?: string | null;
   source?: ProductSurfacesPublicStatus['source'];
+  devSongGenerationWorkbench?: boolean;
 };
 
 function readSurfacesCache(): CacheShape | null {
@@ -85,6 +87,7 @@ export function useProductSurfaces() {
         ...normalizeProductSurfacesConfig(next),
         source: next.source === 'admin' ? 'admin' : 'default',
         updatedAt: typeof next.updatedAt === 'string' ? next.updatedAt : null,
+        devSongGenerationWorkbench: next.devSongGenerationWorkbench === true ? true : undefined,
       };
       writeSurfacesCache(normalized);
       if (!cancelled) setSurfaces(normalized);
@@ -159,4 +162,18 @@ export function useProductSurfaces() {
     refresh,
     surfaces,
   };
+}
+
+/** Admin → Product Surfaces → Song generation beta/on (pricing, SEO, checkout). */
+export function useSongGenerationLive(): boolean {
+  const { songGeneration } = useProductSurfaces();
+  return isSongGenerationSurfaceLive(songGeneration);
+}
+
+/** Sheet / vault / render UI — admin Song generation, or opt-in dev override flag. */
+export function useSongGenerationWorkbenchLive(): boolean {
+  const { songGeneration, devSongGenerationWorkbench } = useProductSurfaces();
+  return (
+    isSongGenerationSurfaceLive(songGeneration) || Boolean(devSongGenerationWorkbench)
+  );
 }

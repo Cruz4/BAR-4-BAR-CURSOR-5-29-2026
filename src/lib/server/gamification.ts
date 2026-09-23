@@ -1527,6 +1527,8 @@ export type LiveDnaDropSummary = {
   albumTitle?: string;
   /** Parent album DNA share id when this track is nested under that album. */
   albumShareId?: string;
+  /** Vault track id for album snapshot ?track= links. */
+  trackId?: string;
   /** 0-based position in the parent album tracklist (set order). */
   trackIndex?: number;
   /** Live track count on album cards. */
@@ -1708,6 +1710,10 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
         typeof (track as { shareId?: unknown }).shareId === 'string'
           ? (track as { shareId: string }).shareId.trim()
           : '';
+      const trackId =
+        typeof (track as { id?: unknown }).id === 'string'
+          ? (track as { id: string }).id.trim()
+          : '';
       if (!shareId) continue;
       const linkedShare = shareDocsById.get(shareId);
       if (
@@ -1729,6 +1735,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           type: 'track',
           albumTitle: existing.albumTitle || albumTitle,
           albumShareId,
+          ...(trackId ? { trackId } : {}),
           trackIndex,
           updatedAt: existing.updatedAt || albumUpdatedAt,
         });
@@ -1739,6 +1746,7 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
           type: 'track',
           albumTitle,
           albumShareId,
+          ...(trackId ? { trackId } : {}),
           trackIndex,
           updatedAt: albumUpdatedAt,
         });
@@ -1763,12 +1771,13 @@ export async function getLiveDnaDropsForUser(userId: string): Promise<LiveDnaDro
       return b.updatedAt.localeCompare(a.updatedAt);
     })
     .slice(0, 48)
-    .map(({ shareId, title, type, albumTitle, albumShareId, trackIndex, trackCount, hasDropAudio, releaseLive, dnaLive, houseRelease, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
+    .map(({ shareId, title, type, albumTitle, albumShareId, trackId, trackIndex, trackCount, hasDropAudio, releaseLive, dnaLive, houseRelease, dropPriceSummary, playCount, previewCount, purchaseCount, firstBuyerName }) => ({
       shareId,
       title,
       type,
       ...(albumTitle ? { albumTitle } : {}),
       ...(albumShareId ? { albumShareId } : {}),
+      ...(trackId ? { trackId } : {}),
       ...(typeof trackIndex === 'number' ? { trackIndex } : {}),
       ...(typeof trackCount === 'number' ? { trackCount } : {}),
       ...(hasDropAudio ? { hasDropAudio: true } : {}),
@@ -2701,3 +2710,36 @@ export async function prestigeResetForUser(userId: string): Promise<Gamification
 }
 
 export { countNonEmptyBars };
+
+const RENDER_ACHIEVEMENT_MAP: Record<string, string> = {
+  first_playback: 'render_first_playback',
+  keeper_take: 'render_keeper_take',
+  beat_on_deck: 'render_beat_on_deck',
+  surgical_session: 'render_surgical_session',
+  session_split: 'render_session_split',
+  signature_set: 'render_signature_set',
+  sheet_to_stage: 'render_sheet_to_stage',
+};
+
+/** Server-verified render workflow trophies (no Ink farming). */
+export async function noteRenderAchievement(
+  userId: string,
+  key: keyof typeof RENDER_ACHIEVEMENT_MAP
+): Promise<void> {
+  if (!hasAdminFirestoreCredentials()) return;
+  const achievementId = RENDER_ACHIEVEMENT_MAP[key];
+  if (!achievementId) return;
+  const db = await getDb();
+  await db.doc(`users/${userId}/gamification/renderFlags`).set(
+    { [key]: true, updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+  const userSnap = await db.doc(`users/${userId}`).get();
+  const displayName = String(userSnap.data()?.displayName || 'Artist');
+  await processGamificationEvent(
+    userId,
+    'ai_action',
+    { renderAchievementKey: key, achievementId },
+    displayName
+  );
+}

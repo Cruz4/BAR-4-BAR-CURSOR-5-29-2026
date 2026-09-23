@@ -9,6 +9,16 @@ export type SupportCircleMode = 'legacy' | 'crm' | 'off';
 export type ReleaseComposerMode = 'legacy' | 'guided' | 'off';
 export type EmergencyMode = 'normal' | 'read_only' | 'maintenance';
 
+export type SongGenerationSurfaceMode = 'off' | 'beta' | 'on';
+
+export type SongGenerationSurfaces = {
+  songGeneration: SongGenerationSurfaceMode;
+  cloudRendering: SongGenerationSurfaceMode;
+  artistSignature: SongGenerationSurfaceMode;
+  voiceMatch: SongGenerationSurfaceMode;
+  stemsMidi: SongGenerationSurfaceMode;
+};
+
 export type ProductSurfacesConfig = {
   ceoDashboard: ProductSurfaceMode;
   supportCircle: SupportCircleMode;
@@ -18,6 +28,11 @@ export type ProductSurfacesConfig = {
   sceneWeather: ProductSurfaceMode;
   releaseRoom: ReleaseRoomMode;
   emergency: EmergencyMode;
+  songGeneration: SongGenerationSurfaceMode;
+  cloudRendering: SongGenerationSurfaceMode;
+  artistSignature: SongGenerationSurfaceMode;
+  voiceMatch: SongGenerationSurfaceMode;
+  stemsMidi: SongGenerationSurfaceMode;
 };
 
 export type ProductSurfacesAdminConfig = ProductSurfacesConfig & {
@@ -29,9 +44,17 @@ export type ProductSurfacesAdminConfig = ProductSurfacesConfig & {
 export type ProductSurfacesPublicStatus = ProductSurfacesConfig & {
   updatedAt: string | null;
   source: 'admin' | 'default';
+  /** Dev only: RENDER_DEV_AUTO_WORKER=true — show sheet render UI without flipping admin. */
+  devSongGenerationWorkbench?: boolean;
 };
 
 /** Safe defaults — new surfaces stay off/legacy until an admin opts in. */
+export const SONG_GENERATION_SURFACE_MODES: readonly SongGenerationSurfaceMode[] = [
+  'off',
+  'beta',
+  'on',
+] as const;
+
 export const PRODUCT_SURFACES_DEFAULTS: ProductSurfacesConfig = {
   ceoDashboard: 'legacy',
   supportCircle: 'legacy',
@@ -41,6 +64,11 @@ export const PRODUCT_SURFACES_DEFAULTS: ProductSurfacesConfig = {
   sceneWeather: 'legacy',
   releaseRoom: 'off',
   emergency: 'normal',
+  songGeneration: 'off',
+  cloudRendering: 'off',
+  artistSignature: 'off',
+  voiceMatch: 'off',
+  stemsMidi: 'off',
 };
 
 export const PRODUCT_SURFACE_MODES: readonly ProductSurfaceMode[] = [
@@ -70,6 +98,13 @@ export const EMERGENCY_MODES: readonly EmergencyMode[] = [
 ] as const;
 
 export const PRODUCT_SURFACES_CHANGED_EVENT = 'b4b:product-surfaces-changed';
+
+/** Public song render / Studio Max surfaces are hidden unless admin sets beta or on. */
+export function isSongGenerationSurfaceLive(
+  mode: SongGenerationSurfaceMode | undefined | null
+): boolean {
+  return mode === 'beta' || mode === 'on';
+}
 
 function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
   return typeof value === 'string' && (allowed as readonly string[]).includes(value);
@@ -105,6 +140,21 @@ export function normalizeProductSurfacesConfig(
     emergency: isOneOf(data.emergency, EMERGENCY_MODES)
       ? data.emergency
       : PRODUCT_SURFACES_DEFAULTS.emergency,
+    songGeneration: isOneOf(data.songGeneration, SONG_GENERATION_SURFACE_MODES)
+      ? data.songGeneration
+      : PRODUCT_SURFACES_DEFAULTS.songGeneration,
+    cloudRendering: isOneOf(data.cloudRendering, SONG_GENERATION_SURFACE_MODES)
+      ? data.cloudRendering
+      : PRODUCT_SURFACES_DEFAULTS.cloudRendering,
+    artistSignature: isOneOf(data.artistSignature, SONG_GENERATION_SURFACE_MODES)
+      ? data.artistSignature
+      : PRODUCT_SURFACES_DEFAULTS.artistSignature,
+    voiceMatch: isOneOf(data.voiceMatch, SONG_GENERATION_SURFACE_MODES)
+      ? data.voiceMatch
+      : PRODUCT_SURFACES_DEFAULTS.voiceMatch,
+    stemsMidi: isOneOf(data.stemsMidi, SONG_GENERATION_SURFACE_MODES)
+      ? data.stemsMidi
+      : PRODUCT_SURFACES_DEFAULTS.stemsMidi,
   };
 }
 
@@ -128,6 +178,11 @@ export function parseProductSurfacesPatch(
     ['sceneWeather', PRODUCT_SURFACE_MODES],
     ['releaseRoom', RELEASE_ROOM_MODES],
     ['emergency', EMERGENCY_MODES],
+    ['songGeneration', SONG_GENERATION_SURFACE_MODES],
+    ['cloudRendering', SONG_GENERATION_SURFACE_MODES],
+    ['artistSignature', SONG_GENERATION_SURFACE_MODES],
+    ['voiceMatch', SONG_GENERATION_SURFACE_MODES],
+    ['stemsMidi', SONG_GENERATION_SURFACE_MODES],
   ];
 
   for (const [key, allowed] of checks) {

@@ -10,7 +10,7 @@ import { CassetteTape, Disc3, ChevronRight, Gift, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDropPulseLine } from '@/lib/drop-pulse';
 import { useAuth } from '@/hooks/use-auth';
-import { resolveDnaDropHref } from '@/lib/dna-drop-access';
+import { resolveLiveDnaDropItemHref } from '@/lib/dna-drop-access';
 
 export type LiveDnaDropItem = {
   shareId: string;
@@ -20,6 +20,8 @@ export type LiveDnaDropItem = {
   albumTitle?: string;
   /** Parent album DNA share id when nested under that album. */
   albumShareId?: string;
+  /** Vault track id when this strand opens on the album snapshot. */
+  trackId?: string;
   /** 0-based album tracklist position (set order). */
   trackIndex?: number;
   trackCount?: number;
@@ -56,7 +58,7 @@ export function LiveDnaDropLinkCard({
     ? `/song/${drop.shareId}`
     : firstDrop
       ? `/share/${drop.shareId}`
-      : resolveDnaDropHref(drop.shareId, Boolean(user));
+      : resolveLiveDnaDropItemHref(drop, Boolean(user));
 
   return (
     <Link

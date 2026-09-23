@@ -1,11 +1,25 @@
 import { NextResponse } from 'next/server';
+import { getAuth } from '@/lib/firebase/server';
 import { getPublicProfile } from '@/lib/server/gamification';
 import { getAchievement } from '@/lib/gamification/achievements';
 import { rankFromXp } from '@/lib/gamification/ranks';
+import { readProfileViewCount } from '@/lib/server/profile-views';
 
 export const runtime = 'nodejs';
 
-export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+async function optionalUid(req: Request): Promise<string | null> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const auth = await getAuth();
+    const decoded = await auth.verifyIdToken(header.slice('Bearer '.length));
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const profile = await getPublicProfile(slug);
@@ -19,6 +33,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       .filter(Boolean);
 
     const rank = rankFromXp(Number(profileData.xp || 0), true);
+    const viewerId = await optionalUid(req);
+    const ownerId = typeof profileData.userId === 'string' ? profileData.userId : '';
+    const ownerProfileViewCount =
+      viewerId && ownerId && viewerId === ownerId
+        ? readProfileViewCount(profileData)
+        : undefined;
 
     return NextResponse.json({
       ...profile,
@@ -26,6 +46,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       rankId: rank.id,
       rankLabel: rank.label,
       badges,
+      ...(ownerProfileViewCount !== undefined ? { ownerProfileViewCount } : {}),
     });
   } catch (err) {
     console.error('[profile/slug]', err);

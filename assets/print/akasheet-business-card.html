@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AKAsheet — Business card v2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Playfair+Display:ital@0;1&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-deep: #05060c;
+        --bg-mid: #0a1020;
+        --pink: #ec4899;
+        --violet: #a855f7;
+        --cyan: #22d3ee;
+        --cyan-dim: #0891b2;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --bleed: 0.125in;
+        --card-w: 3.5in;
+        --card-h: 2in;
+        --trim-w: calc(var(--card-w) + var(--bleed) * 2);
+        --trim-h: calc(var(--card-h) + var(--bleed) * 2);
+        --grad-brand: linear-gradient(135deg, #f472b6 0%, #c084fc 45%, #818cf8 100%);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        background: #121218;
+        color: var(--text);
+        padding: 24px;
+      }
+
+      .sheet-header {
+        max-width: 920px;
+        margin: 0 auto 20px;
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .sheet-header h1 {
+        font-family: Syne, sans-serif;
+        font-size: 18px;
+        background: var(--grad-brand);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 6px;
+      }
+
+      .sheet {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 36px 52px;
+        justify-content: center;
+      }
+
+      .side-label {
+        text-align: center;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.35em;
+        color: #64748b;
+        margin-bottom: 8px;
+      }
+
+      .card {
+        width: var(--trim-w);
+        height: var(--trim-h);
+        padding: var(--bleed);
+        background: #0a0a10;
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.65);
+      }
+
+      .card-inner {
+        width: var(--card-w);
+        height: var(--card-h);
+        position: relative;
+        overflow: hidden;
+        border-radius: 3px;
+      }
+
+      /* ——— Atmosphere ——— */
+      .bg {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(168, 85, 247, 0.14), transparent 55%),
+          radial-gradient(ellipse 80% 50% at 20% 100%, rgba(34, 211, 238, 0.18), transparent 50%),
+          radial-gradient(ellipse 50% 40% at 95% 30%, rgba(236, 72, 153, 0.1), transparent 45%),
+          linear-gradient(180deg, #0c1224 0%, var(--bg-deep) 55%, #030408 100%);
+      }
+
+      .grid-faint {
+        position: absolute;
+        inset: 0;
+        opacity: 0.06;
+        background-image: linear-gradient(rgba(34, 211, 238, 0.5) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(34, 211, 238, 0.5) 1px, transparent 1px);
+        background-size: 0.12in 0.12in;
+      }
+
+      .constellation {
+        position: absolute;
+        width: 0.55in;
+        height: 0.45in;
+        opacity: 0.85;
+      }
+
+      .constellation.tl {
+        top: 0.06in;
+        left: 0.08in;
+      }
+
+      .constellation.tr {
+        top: 0.05in;
+        right: 0.06in;
+        transform: scaleX(-1);
+      }
+
+      .dna-wave {
+        position: absolute;
+        left: -5%;
+        right: -5%;
+        bottom: 0.22in;
+        height: 0.35in;
+        opacity: 0.95;
+        pointer-events: none;
+      }
+
+      .url-bar {
+        position: absolute;
+        bottom: 0.06in;
+        left: 0.12in;
+        right: 0.12in;
+        display: flex;
+        align-items: center;
+        gap: 0.06in;
+        z-index: 4;
+      }
+
+      .url-bar .rule {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.5), transparent);
+      }
+
+      .url-bar span {
+        font-size: 0.052in;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: var(--cyan);
+      }
+
+      .safe {
+        position: relative;
+        z-index: 3;
+        height: 100%;
+        padding: 0.1in 0.14in 0.2in;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* Logo stack + real mark */
+      .logo-stack {
+        position: relative;
+        width: 0.52in;
+        height: 0.52in;
+        margin-bottom: 0.04in;
+      }
+
+      .logo-stack .frame {
+        position: absolute;
+        border: 1px solid rgba(236, 72, 153, 0.35);
+        border-radius: 6px;
+        background: rgba(10, 15, 30, 0.6);
+        box-shadow: 0 0 12px rgba(236, 72, 153, 0.15);
+      }
+
+      .logo-stack .f1 {
+        inset: 0;
+        transform: translate(-3px, -3px);
+        opacity: 0.35;
+      }
+
+      .logo-stack .f2 {
+        inset: 0;
+        transform: translate(-1px, -1px);
+        opacity: 0.55;
+      }
+
+      .logo-stack .f3 {
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-color: rgba(244, 114, 182, 0.55);
+        box-shadow: 0 0 20px rgba(236, 72, 153, 0.35), 0 0 40px rgba(34, 211, 238, 0.15);
+      }
+
+      .logo-stack .f3 img {
+        width: 78%;
+        height: 78%;
+        object-fit: contain;
+        filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.5));
+      }
+
+      .wordmark {
+        font-family: Syne, system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 0.34in;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        text-align: center;
+      }
+
+      .wordmark .aka {
+        background: var(--grad-brand);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .wordmark .sheet {
+        color: #fff;
+      }
+
+      .ribbon {
+        margin: 0.05in auto 0.06in;
+        display: flex;
+        align-items: center;
+        gap: 0.06in;
+        width: 100%;
+        max-width: 3.1in;
+      }
+
+      .ribbon .line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.55), transparent);
+      }
+
+      .ribbon .tagline {
+        font-size: 0.046in;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--cyan);
+        text-align: center;
+        line-height: 1.25;
+        text-transform: uppercase;
+      }
+
+      .description {
+        margin-top: 0.02in;
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 0.065in;
+        font-style: italic;
+        color: #e2e8f0;
+        text-align: center;
+        line-height: 1.3;
+        padding: 0 0.06in;
+      }
+
+      .home-callout {
+        margin-top: 0.06in;
+        padding: 0.035in 0.08in;
+        border: 1px solid rgba(34, 211, 238, 0.35);
+        border-radius: 4px;
+        background: rgba(34, 211, 238, 0.06);
+        font-size: 0.044in;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #a5f3fc;
+        text-align: center;
+        line-height: 1.35;
+        max-width: 100%;
+      }
+
+      .home-callout strong {
+        color: #fff;
+      }
+
+      .pills {
+        margin-top: auto;
+        padding-top: 0.05in;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.03in 0.05in;
+        font-size: 0.04in;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: var(--cyan-dim);
+        text-transform: uppercase;
+      }
+
+      .pills .dot {
+        color: rgba(34, 211, 238, 0.5);
+      }
+
+      /* ——— BACK ——— */
+      .back .safe {
+        flex-direction: row;
+        align-items: stretch;
+        padding: 0.1in 0.12in 0.14in;
+        gap: 0.1in;
+      }
+
+      .back .copy {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .back .eyebrow {
+        font-size: 0.044in;
+        font-weight: 700;
+        letter-spacing: 0.26em;
+        color: var(--cyan);
+        margin-bottom: 0.03in;
+      }
+
+      .back .url-big {
+        font-family: Syne, sans-serif;
+        font-weight: 800;
+        font-size: 0.19in;
+        line-height: 1.05;
+        margin-bottom: 0.05in;
+      }
+
+      .back .url-big .aka {
+        background: var(--grad-brand);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .back .url-big .domain {
+        color: #fff;
+      }
+
+      .back .promo {
+        font-size: 0.05in;
+        font-weight: 700;
+        color: var(--pink);
+        line-height: 1.3;
+        margin-bottom: 0.02in;
+      }
+
+      .back .promo-sub {
+        font-size: 0.042in;
+        color: #cbd5e1;
+        margin-bottom: 0.06in;
+        line-height: 1.35;
+      }
+
+      .back .promo-sub em {
+        color: #f9a8d4;
+        font-style: normal;
+        font-weight: 700;
+      }
+
+      .back .features {
+        list-style: none;
+        flex: 1;
+      }
+
+      .back .features li {
+        display: flex;
+        gap: 0.06in;
+        align-items: flex-start;
+        margin-bottom: 0.04in;
+        font-size: 0.044in;
+        line-height: 1.35;
+        color: #cbd5e1;
+      }
+
+      .back .icon {
+        width: 0.14in;
+        height: 0.14in;
+        flex-shrink: 0;
+        border-radius: 3px;
+        border: 1px solid rgba(34, 211, 238, 0.4);
+        background: rgba(34, 211, 238, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 0.01in;
+      }
+
+      .back .icon svg {
+        width: 0.08in;
+        height: 0.08in;
+        stroke: var(--cyan);
+        fill: none;
+        stroke-width: 2;
+      }
+
+      .back .landing-note {
+        font-size: 0.038in;
+        color: var(--muted);
+        margin-top: 0.04in;
+        line-height: 1.4;
+      }
+
+      .back .landing-note b {
+        color: var(--cyan);
+        font-weight: 700;
+      }
+
+      .vinyl {
+        position: absolute;
+        right: -0.08in;
+        bottom: -0.05in;
+        width: 0.55in;
+        height: 0.55in;
+        opacity: 0.35;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .qr-col {
+        width: 0.92in;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .qr-bracket {
+        position: relative;
+        padding: 0.05in;
+      }
+
+      .qr-bracket::before,
+      .qr-bracket::after {
+        content: '';
+        position: absolute;
+        width: 0.12in;
+        height: 0.12in;
+        border: 2px solid var(--pink);
+        pointer-events: none;
+      }
+
+      .qr-bracket::before {
+        top: 0;
+        left: 0;
+        border-right: none;
+        border-bottom: none;
+        box-shadow: 0 0 8px rgba(236, 72, 153, 0.5);
+      }
+
+      .qr-bracket::after {
+        bottom: 0;
+        right: 0;
+        border-left: none;
+        border-top: none;
+        box-shadow: 0 0 8px rgba(236, 72, 153, 0.5);
+      }
+
+      .qr-inner {
+        background: #fff;
+        padding: 0.04in;
+        position: relative;
+      }
+
+      .qr-inner img {
+        display: block;
+        width: 0.72in;
+        height: 0.72in;
+      }
+
+      .qr-logo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 0.16in;
+        height: 0.16in;
+        background: #0a1020;
+        border-radius: 4px;
+        padding: 2px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .qr-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .scan {
+        margin-top: 0.045in;
+        font-size: 0.038in;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: var(--cyan);
+      }
+
+      .back .footer {
+        position: absolute;
+        bottom: 0.055in;
+        left: 0.12in;
+        font-size: 0.034in;
+        color: #64748b;
+        z-index: 4;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+          padding: 0;
+        }
+        .sheet-header,
+        .no-print {
+          display: none !important;
+        }
+        .card {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sheet-header no-print">
+      <h1>AKAsheet business card — Creative DNA style</h1>
+      <p>
+        Uses <code>public/Logo.png</code>. QR → <code>https://akasheet.com/?ref=card</code> (free home / pressing landing).
+        Also see <code>/welcome</code> for full marketing. Print at 100% · 3.5×2 in trim + 0.125 in bleed.
+      </p>
+    </div>
+
+    <div class="sheet">
+      <!-- FRONT -->
+      <div>
+        <p class="side-label">FRONT</p>
+        <div class="card">
+          <div class="card-inner">
+            <div class="bg"></div>
+            <div class="grid-faint"></div>
+            <svg class="constellation tl" viewBox="0 0 80 64" aria-hidden="true">
+              <circle cx="12" cy="20" r="1.5" fill="#22d3ee" />
+              <circle cx="40" cy="8" r="1.2" fill="#f472b6" />
+              <circle cx="68" cy="24" r="1.5" fill="#22d3ee" />
+              <circle cx="28" cy="48" r="1" fill="#a78bfa" />
+              <line x1="12" y1="20" x2="40" y2="8" stroke="#22d3ee" stroke-width="0.5" opacity="0.5" />
+              <line x1="40" y1="8" x2="68" y2="24" stroke="#f472b6" stroke-width="0.5" opacity="0.4" />
+              <line x1="12" y1="20" x2="28" y2="48" stroke="#22d3ee" stroke-width="0.5" opacity="0.35" />
+            </svg>
+            <svg class="constellation tr" viewBox="0 0 80 64" aria-hidden="true">
+              <circle cx="12" cy="20" r="1.5" fill="#22d3ee" />
+              <circle cx="40" cy="8" r="1.2" fill="#f472b6" />
+              <circle cx="68" cy="24" r="1.5" fill="#22d3ee" />
+              <line x1="12" y1="20" x2="40" y2="8" stroke="#22d3ee" stroke-width="0.5" opacity="0.5" />
+            </svg>
+            <svg class="dna-wave" viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="dnaG" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#22d3ee" stop-opacity="0" />
+                  <stop offset="25%" stop-color="#22d3ee" />
+                  <stop offset="50%" stop-color="#f472b6" />
+                  <stop offset="75%" stop-color="#a855f7" />
+                  <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0,30 Q50,5 100,30 T200,30 T300,30 T400,30"
+                fill="none"
+                stroke="url(#dnaG)"
+                stroke-width="2.5"
+                opacity="0.9"
+              />
+              <path
+                d="M0,30 Q50,55 100,30 T200,30 T300,30 T400,30"
+                fill="none"
+                stroke="url(#dnaG)"
+                stroke-width="2"
+                opacity="0.65"
+              />
+            </svg>
+
+            <div class="safe">
+              <div class="logo-stack">
+                <div class="frame f1"></div>
+                <div class="frame f2"></div>
+                <div class="frame f3">
+                  <img src="../../public/Logo.png" alt="" />
+                </div>
+              </div>
+              <h1 class="wordmark"><span class="aka">AKA</span><span class="sheet">sheet</span></h1>
+              <div class="ribbon" aria-label="Brand tagline">
+                <span class="line"></span>
+                <span class="tagline">Put Your World Within Reach</span>
+                <span class="line"></span>
+              </div>
+              <p class="description">Lyric App &amp; Social Music Drop Platform</p>
+              <p class="home-callout">
+                <strong>Free at akasheet.com</strong> — press your Artist Home live,<br />
+                try the bar sheet, then sign up for AI Ink
+              </p>
+              <div class="pills">
+                <span>Lyrics</span><span class="dot">•</span>
+                <span>Creative DNA</span><span class="dot">•</span>
+                <span>Vault</span><span class="dot">•</span>
+                <span>The Scene</span>
+              </div>
+            </div>
+            <div class="url-bar">
+              <span class="rule"></span>
+              <span>akasheet.com</span>
+              <span class="rule"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div>
+        <p class="side-label">BACK</p>
+        <div class="card">
+          <div class="card-inner">
+            <div class="bg"></div>
+            <div class="grid-faint"></div>
+            <svg class="constellation tr" style="opacity: 0.6" viewBox="0 0 80 64" aria-hidden="true">
+              <circle cx="50" cy="12" r="1.5" fill="#f472b6" />
+              <circle cx="70" cy="30" r="1.2" fill="#22d3ee" />
+            </svg>
+            <svg class="vinyl" viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="48" fill="#0f172a" stroke="#334155" stroke-width="1" />
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#1e293b" stroke-width="0.5" />
+              <circle cx="50" cy="50" r="28" fill="none" stroke="#1e293b" stroke-width="0.5" />
+              <circle cx="50" cy="50" r="12" fill="#22d3ee" opacity="0.3" />
+              <path d="M50,2 A48,48 0 0 1 98,50" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.4" />
+            </svg>
+
+            <div class="safe back">
+              <div class="copy">
+                <p class="eyebrow">STUDIO ACCESS</p>
+                <p class="url-big">
+                  <span class="aka">aka</span><span class="domain">sheet.com</span>
+                </p>
+                <p class="promo">250 FREE INK FOR AI</p>
+                <p class="promo-sub">
+                  <em>Ink</em> powers bar-by-bar Co-Writer, Rhyme Pulse &amp; analysis — not full songs.
+                  No credit card to start.
+                </p>
+                <ul class="features">
+                  <li>
+                    <span class="icon"
+                      ><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg
+                    ></span>
+                    <span>Start on the <b>free home</b> — live pressing playground before signup</span>
+                  </li>
+                  <li>
+                    <span class="icon"
+                      ><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16l6-10 6 10M8 12h8" /></svg
+                    ></span>
+                    <span>Organize albums, tracks &amp; Creative DNA in your Vault</span>
+                  </li>
+                  <li>
+                    <span class="icon"
+                      ><svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8" /></svg
+                    ></span>
+                    <span>Go live on <b>The Scene</b> — Artist Home, imprints &amp; drops</span>
+                  </li>
+                </ul>
+                <p class="landing-note">
+                  Scan for <b>akasheet.com/?ref=card</b> · Support: akasheet.support@gmail.com
+                </p>
+              </div>
+              <div class="qr-col">
+                <div class="qr-bracket">
+                  <div class="qr-inner">
+                    <img
+                      src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&amp;data=https%3A%2F%2Fakasheet.com%2F%3Fref%3Dcard&amp;margin=0"
+                      alt=""
+                      width="280"
+                      height="280"
+                    />
+                    <div class="qr-logo">
+                      <img src="../../public/Logo.png" alt="" />
+                    </div>
+                  </div>
+                </div>
+                <p class="scan">SCAN TO ENTER</p>
+              </div>
+            </div>
+            <p class="footer">© AKAsheet · Put Your World Within Reach</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

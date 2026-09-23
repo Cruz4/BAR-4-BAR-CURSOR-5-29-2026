@@ -17,6 +17,7 @@ import {
   type QuotePressTokens,
 } from '@/lib/profile/quote-press';
 import { imprintDisplayText } from '@/lib/profile/imprint-word-break';
+import { EmojiFontText } from '@/components/profile/emoji-font-text';
 import { MentionText } from '@/components/profile/mention-text';
 
 const GRAIN_URI =
@@ -369,7 +370,11 @@ function renderDisplayChunk(
   const display = imprintDisplayText(chunk);
   return (
     <span key={key} style={style}>
-      {withMentions ? <MentionText text={display} /> : display}
+      {withMentions ? (
+        <MentionText text={display} />
+      ) : (
+        <EmojiFontText text={display} style={style} />
+      )}
     </span>
   );
 }
@@ -413,7 +418,11 @@ function ImprintTextBody({
 
   if (!sorted.length) {
     const display = imprintDisplayText(text);
-    const body = withMentions ? <MentionText text={display} /> : display;
+    const body = withMentions ? (
+      <MentionText text={display} />
+    ) : (
+      <EmojiFontText text={display} style={baseTextStyle(tokens)} />
+    );
     return <span style={baseTextStyle(tokens)}>{body}</span>;
   }
 
@@ -435,7 +444,11 @@ function ImprintTextBody({
           color: hl.style.color || tokens.accentColor,
         }}
       >
-        {withMentions ? <MentionText text={imprintDisplayText(chunk)} /> : imprintDisplayText(chunk)}
+        {withMentions ? (
+          <MentionText text={imprintDisplayText(chunk)} />
+        ) : (
+          <EmojiFontText text={imprintDisplayText(chunk)} style={{ color: hl.style.color || tokens.accentColor }} />
+        )}
       </span>
     );
     cursor = hl.end;
