@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Camera, Download, Route, Sparkles } from 'lucide-react';
+import { Download, Globe2, Route, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
@@ -38,6 +38,13 @@ function isBrandNewStudioAccount(createdAt: string | undefined): boolean {
 
 const WHATS_NEW_ITEMS = [
   {
+    title: 'Reach analytics & profile visits',
+    desc: 'On your Artist Home, tap the visit count (owners only) for geo, referrers, 7d/30d/90d/All time, unique people vs total wall opens. DNA drops have their own reach on each link.',
+    icon: Globe2,
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/5',
+  },
+  {
     title: 'The Imprint',
     desc: 'Your Booth — tap Imprint while you type. Your words become a live quote card on your wall. Pro unlocks mix faders, shuffle, and five saved styles.',
     icon: Sparkles,
@@ -63,15 +70,6 @@ const WHATS_NEW_ITEMS = [
     bgColor: 'bg-violet-500/5',
     pathLabel: 'Path: Play or buy',
     pathLaneId: 'play-buy',
-  },
-  {
-    title: 'Photos, clips, and a track',
-    desc: 'Shoot or upload on a post or comment, crop and filter, attach a Library or released song, and trim clips to 40 seconds.',
-    icon: Camera,
-    color: 'text-fuchsia-400',
-    bgColor: 'bg-fuchsia-500/5',
-    pathLabel: 'Path: Post a photo or clip',
-    pathLaneId: 'post-clip',
   },
 ] as const;
 
