@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     const result = await searchPublicMusicNetwork({
       query,
       viewerIdentity,
-      excludeUserId: viewerUserId || undefined,
+      viewerUserId: viewerUserId || undefined,
       limit,
       filters,
     });

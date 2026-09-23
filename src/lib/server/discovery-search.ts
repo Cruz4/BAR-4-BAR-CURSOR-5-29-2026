@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getDb } from '@/lib/firebase/server';
+import { getArtistHomeConfig } from '@/lib/server/artist-home';
 import { buildDiscoveryMatch } from '@/lib/discovery-graph';
 import {
   normalizeDiscoverySearchFilters,
@@ -397,10 +398,57 @@ function queryScore(query: string, title: string, haystack: string): number {
   return score;
 }
 
+function profileRowWithLiveIdentity(
+  row: PublicProfileSearchRow,
+  liveConfig: Awaited<ReturnType<typeof getArtistHomeConfig>>
+): PublicProfileSearchRow {
+  const liveIdentity = liveConfig.featured.soundIdentity;
+  if (!liveIdentity) return row;
+  const publicText = [
+    liveConfig.featured.tagline || '',
+    liveConfig.featured.bio || '',
+    liveIdentity.currentFocus || '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return {
+    ...row,
+    identity: liveIdentity,
+    publicText: publicText || row.publicText,
+    haystack: [
+      row.displayName,
+      row.slug,
+      'artist music person creator profile',
+      'genre style mood vibe influence scene region location',
+      ...identityStrings(liveIdentity),
+      publicText || row.publicText,
+    ]
+      .join(' ')
+      .toLocaleLowerCase(),
+  };
+}
+
+async function loadViewerProfileSearchRow(userId: string): Promise<PublicProfileSearchRow | null> {
+  const uid = clean(userId, 128);
+  if (!uid) return null;
+  try {
+    const db = await getDb();
+    const byUser = await db.collection('publicProfiles').where('userId', '==', uid).limit(5).get();
+    let rows = profileRows(byUser.docs);
+    let row = rows.find((entry) => entry.userId === uid) ?? rows[0] ?? null;
+    if (!row) return null;
+    const liveConfig = await getArtistHomeConfig(uid).catch(() => null);
+    if (liveConfig) row = profileRowWithLiveIdentity(row, liveConfig);
+    return row;
+  } catch {
+    return null;
+  }
+}
+
 export async function searchPublicMusicNetwork(input: {
   query: string;
   viewerIdentity?: ArtistHomeSoundIdentity;
-  excludeUserId?: string;
+  viewerUserId?: string;
   limit: number;
   filters?: DiscoverySearchFilters;
 }): Promise<{ hits: DiscoverySearchHit[]; total: number }> {
@@ -411,19 +459,35 @@ export async function searchPublicMusicNetwork(input: {
     filters.influence || filters.region || filters.collaboration
   );
   if (query.length < 2 && !filterActive) return { hits: [], total: 0 };
-  const data = await catalog();
+  const catalogData = await catalog();
+  let profiles = catalogData.profiles;
+  if (input.viewerUserId) {
+    const liveConfig = await getArtistHomeConfig(input.viewerUserId).catch(() => null);
+    if (liveConfig) {
+      profiles = profiles.map((profile) =>
+        profile.userId === input.viewerUserId
+          ? profileRowWithLiveIdentity(profile, liveConfig)
+          : profile
+      );
+    }
+    if (!profiles.some((profile) => profile.userId === input.viewerUserId)) {
+      const viewerRow = await loadViewerProfileSearchRow(input.viewerUserId);
+      if (viewerRow) profiles = [...profiles, viewerRow];
+    }
+  }
   const scored: Array<{ score: number; hit: DiscoverySearchHit }> = [];
 
-  for (const profile of data.profiles) {
-    if (input.excludeUserId && profile.userId === input.excludeUserId) continue;
+  for (const profile of profiles) {
     if (!matchesFilters('person', profile.identity, profile.publicText, undefined, filters)) continue;
     const textScore = query.length >= 2 ? queryScore(query, profile.displayName, profile.haystack) : 1;
     if (!textScore) continue;
     const match = buildDiscoveryMatch(input.viewerIdentity, profile.identity, 'taste');
     const kinds = (profile.identity?.kinds || []).map(publicIdentityLabel);
     const tags = [...kinds, ...(profile.identity?.genres || []), profile.identity?.region || ''].filter(Boolean).slice(0, 4);
+    const selfBoost =
+      input.viewerUserId && profile.userId === input.viewerUserId ? 10 : 0;
     scored.push({
-      score: textScore + match.score * 0.5,
+      score: textScore + match.score * 0.5 + selfBoost,
       hit: {
         kind: 'person',
         id: profile.userId,
@@ -441,7 +505,7 @@ export async function searchPublicMusicNetwork(input: {
     });
   }
 
-  for (const drop of data.drops) {
+  for (const drop of catalogData.drops) {
     if (!matchesFilters('drop', drop.identity, drop.publicText, drop.metadata, filters)) continue;
     const textScore = query.length >= 2 ? queryScore(query, drop.title, drop.haystack) : 1;
     if (!textScore) continue;
@@ -480,8 +544,7 @@ export async function searchPublicMusicNetwork(input: {
     });
   }
 
-  for (const post of data.posts) {
-    if (input.excludeUserId && post.ownerId === input.excludeUserId) continue;
+  for (const post of catalogData.posts) {
     if (!matchesFilters('post', post.identity, post.publicText, undefined, filters)) continue;
     const textScore = query.length >= 2 ? queryScore(query, post.text.slice(0, 100), post.haystack) : 1;
     if (!textScore) continue;
