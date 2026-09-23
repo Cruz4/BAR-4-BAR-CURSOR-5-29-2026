@@ -52,6 +52,16 @@ export async function recordPostView(
     guestId: uid ? null : guest || null,
   });
   await batch.commit();
+  if (ownerId) {
+    const { mirrorPostViewTickToProfile } = await import('@/lib/server/profile-views');
+    await mirrorPostViewTickToProfile(db, {
+      ownerId,
+      tickId,
+      viewerId: uid,
+      guestId: guest,
+      at: nowIso,
+    }).catch(() => undefined);
+  }
   const after = Number(data.viewCount) || 0;
   return { counted: true, viewCount: after + 1 };
 }

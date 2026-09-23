@@ -24,6 +24,7 @@ import { DataContext } from '@/context/data-context';
 import { MusicDiscoveryTags } from '@/components/music-discovery-tags';
 import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
+import { ShareReachStrip } from '@/components/reach/share-reach-strip';
 import {
   DNA_DROP_UPGRADE_PATH,
   buildDnaDropLoginPath,
@@ -217,7 +218,16 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
               </Button>
             ) : null}
           </div>
-          <Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ShareReachStrip
+              shareId={summary.shareId}
+              ownerId={summary.ownerId}
+              landingCount={summary.landingCount}
+              legacyViews={summary.legacyShareViews}
+              reachDisplayCount={summary.reachDisplayCount}
+            />
+            <Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button>
+          </div>
         </div>
         <section className="rounded-3xl border border-fuchsia-400/35 bg-black/60 p-5 shadow-[0_0_70px_rgba(236,72,153,.16)] backdrop-blur-md sm:p-8">
           <div className="mb-5 flex items-center gap-3">
@@ -253,7 +263,9 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
                   className="shrink-0"
                 />
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}</p>
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5" /> Released {new Date(summary.releasedAt).toLocaleDateString()}
+              </p>
             </div>
           </div>
           <MusicDiscoveryTags metadata={summary.metadata} soundAsText hideAlbum={Boolean(albumHref && albumTitle)} className="mb-5" />

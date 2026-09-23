@@ -95,10 +95,23 @@ export function PublicProfilePageClient({
           return;
         }
         if (cancelled) return;
+        const profileViewCount =
+          typeof data.profileViewCount === 'number'
+            ? data.profileViewCount
+            : typeof data.ownerProfileViewCount === 'number'
+              ? data.ownerProfileViewCount
+              : undefined;
+        const profileViewCountUnique =
+          typeof data.profileViewCountUnique === 'number' ? data.profileViewCountUnique : undefined;
+        const legacyProfilePageLoads =
+          typeof data.legacyProfilePageLoads === 'number' ? data.legacyProfilePageLoads : undefined;
         const ownerProfileViewCount =
           typeof data.ownerProfileViewCount === 'number' ? data.ownerProfileViewCount : undefined;
         setProfile({
           ...view.profile,
+          ...(profileViewCount !== undefined ? { profileViewCount } : {}),
+          ...(profileViewCountUnique !== undefined ? { profileViewCountUnique } : {}),
+          ...(legacyProfilePageLoads !== undefined ? { legacyProfilePageLoads } : {}),
           ...(ownerProfileViewCount !== undefined ? { ownerProfileViewCount } : {}),
         });
         setConfig(view.config);
@@ -145,9 +158,23 @@ export function PublicProfilePageClient({
         });
         if (!res.ok || cancelled) return;
         const data = await res.json();
-        if (typeof data.ownerProfileViewCount !== 'number' || cancelled) return;
+        if (cancelled) return;
+        const count =
+          typeof data.profileViewCount === 'number'
+            ? data.profileViewCount
+            : typeof data.ownerProfileViewCount === 'number'
+              ? data.ownerProfileViewCount
+              : undefined;
+        if (typeof count !== 'number') return;
         setProfile((current) =>
-          current ? { ...current, ownerProfileViewCount: data.ownerProfileViewCount } : current
+          current
+            ? {
+                ...current,
+                ownerProfileViewCount: count,
+                profileViewCount: count,
+                profileViewCountUnique: count,
+              }
+            : current
         );
       } catch {
         /* ignore */

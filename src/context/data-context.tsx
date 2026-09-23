@@ -36,6 +36,7 @@ import {
   pushStyleOutbox,
   readOutbox,
 } from '@/lib/offline/sync-outbox';
+import { mergeRejectedLines } from '@/lib/style-rejection-ledger';
 import {
   buildAlbumDropPayload,
   buildTrackDropPayload,
@@ -95,6 +96,7 @@ interface DataContextType {
   clearVault: () => Promise<void>;
   moveTrack: (trackId: string, fromAlbumId: string, toAlbumId: string) => void;
   updateStyleProfile: (analysis: string, metrics?: any) => void;
+  recordRejectedLines: (lines: string[]) => void;
   dropDNA: (type: 'album' | 'track', id: string, options?: { albumId?: string }) => Promise<string>;
   updateDNA: (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => Promise<string>;
   revokeDNA: (type: 'album' | 'track', id: string, shareId: string, options?: { albumId?: string }) => Promise<void>;
@@ -122,6 +124,7 @@ export const DataContext = createContext<DataContextType>({
   clearVault: async () => {},
   moveTrack: () => {},
   updateStyleProfile: () => {},
+  recordRejectedLines: () => {},
   dropDNA: async () => '',
   updateDNA: async () => '',
   revokeDNA: async () => {},
@@ -658,6 +661,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             ownerId: userId,
             history: [{ timestamp: new Date().toISOString(), analysis: 'Initial neutral style profile. Train on existing lyrics to customize co-writer logic.' }],
             trainingRefs: [],
+            rejectedLines: [],
             updatedAt: new Date().toISOString()
           };
           setStyleProfile(defaultProfile);
@@ -877,19 +881,64 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [albums]);
 
   const updateStyleProfile = useCallback((analysis: string, metrics?: any) => {
-    const newProfile = { 
-      id: styleProfile?.id || `style-${user?.id}`, ownerId: user!.id, history: analysis ? [{ timestamp: new Date().toISOString(), analysis, metrics }, ...(styleProfile?.history || [])].slice(0, 10) : [], trainingRefs: [], updatedAt: new Date().toISOString()
+    const newProfile: StyleProfile = {
+      id: styleProfile?.id || `style-${user!.id}`,
+      ownerId: user!.id,
+      history: analysis
+        ? [{ timestamp: new Date().toISOString(), analysis, metrics }, ...(styleProfile?.history || [])].slice(0, 10)
+        : styleProfile?.history || [],
+      trainingRefs: styleProfile?.trainingRefs ?? [],
+      rejectedLines: styleProfile?.rejectedLines ?? [],
+      updatedAt: new Date().toISOString(),
     };
-    setStyleProfile(newProfile as any);
+    setStyleProfile(newProfile);
     if (!user) return;
     if (isBrowserOffline()) {
-      const count = pushStyleOutbox(user.id, stripForFirestore(newProfile) as Record<string, unknown>);
+      const count = pushStyleOutbox(
+        user.id,
+        stripForFirestore(newProfile) as unknown as Record<string, unknown>
+      );
       setSyncPendingCount(count);
       setCloudSaveStatus('offline');
       return;
     }
     void setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), newProfile);
   }, [styleProfile, user]);
+
+  const recordRejectedLines = useCallback(
+    (lines: string[]) => {
+      if (!user || !lines.length) return;
+      const prev = styleProfile?.rejectedLines ?? [];
+      const merged = mergeRejectedLines(prev, lines);
+      if (merged.length === prev.length && merged.every((line, i) => line === prev[i])) return;
+      const newProfile: StyleProfile = {
+        id: styleProfile?.id || `style-${user.id}`,
+        ownerId: user.id,
+        history:
+          styleProfile?.history ?? [
+            {
+              timestamp: new Date().toISOString(),
+              analysis: 'Initial neutral style profile. Train on existing lyrics to customize co-writer logic.',
+            },
+          ],
+        trainingRefs: styleProfile?.trainingRefs ?? [],
+        rejectedLines: merged,
+        updatedAt: new Date().toISOString(),
+      };
+      setStyleProfile(newProfile);
+      if (isBrowserOffline()) {
+        const count = pushStyleOutbox(
+          user.id,
+          stripForFirestore(newProfile) as unknown as Record<string, unknown>
+        );
+        setSyncPendingCount(count);
+        setCloudSaveStatus('offline');
+        return;
+      }
+      void setDoc(doc(db, 'users', user.id, 'styleProfile', 'main'), newProfile);
+    },
+    [styleProfile, user]
+  );
 
   const resolveTrackForDrop = useCallback(
     (trackId: string, albumId?: string) => {
@@ -1373,7 +1422,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       albums, styleProfile, loading, isCloudSyncActive, cloudSaveStatus, syncPendingCount, isOfflineMode,
       flushCloudNow, syncVaultToCloud,
       addAlbum, updateAlbum, deleteAlbum, getAlbumById,
-      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, dropDNA, updateDNA, revokeDNA
+      addTrack, updateTrack, deleteTrack, getTrackById, mergeData, clearVault, moveTrack, updateStyleProfile, recordRejectedLines, dropDNA, updateDNA, revokeDNA
     }}>{children}</DataContext.Provider>
   );
 };

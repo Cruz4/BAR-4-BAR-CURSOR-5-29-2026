@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAuth, getDb } from '@/lib/firebase/server';
-import { normalizeGuestId } from '@/lib/guest-identity';
 import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
 import { recordProfileView } from '@/lib/server/profile-views';
+import { visitorContextFromRequest } from '@/lib/server/reach-analytics';
+import { resolveVisitorGuestId } from '@/lib/server/visitor-guest';
 import { checkRateLimit } from '@/lib/server/rate-limit';
 
 export const runtime = 'nodejs';
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     const viewerId = await optionalUid(req);
-    const guestId = normalizeGuestId(body?.guestId);
+    const guestId = resolveVisitorGuestId(req, body?.guestId);
     const ip = clientIp(req);
     const rateKey = viewerId
       ? `profile-view:${viewerId}`
@@ -60,11 +61,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, counted: false });
     }
 
+    const ctx = await visitorContextFromRequest(req);
     const result = await recordProfileView(db, {
       slug: resolved.slug,
       ownerId: resolved.userId,
       viewerId,
       guestId,
+      ctx,
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

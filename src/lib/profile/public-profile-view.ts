@@ -4,6 +4,23 @@ import { normalizeArtistHomeConfig, type ArtistHomeConfig } from '@/lib/profile/
 import { normalizeProfilePhotoMode } from '@/lib/gamification/types';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
 
+const LEGACY_PROFILE_KEYS = [
+  'views',
+  'pageViews',
+  'profilePageViews',
+  'legacyPageLoads',
+  'legacyProfileViews',
+] as const;
+
+function legacyProfileLoadsFromRaw(data: Record<string, unknown>): number {
+  let max = 0;
+  for (const key of LEGACY_PROFILE_KEYS) {
+    const n = Number(data[key]);
+    if (Number.isFinite(n) && n > max) max = Math.floor(n);
+  }
+  return max;
+}
+
 export type PublicProfileView = {
   profile: PublicProfileData;
   config: ArtistHomeConfig;
@@ -84,6 +101,20 @@ export function publicProfileView(raw: unknown, fallbackSlug: string): PublicPro
         : [],
       slug: liveSlug,
       studioBadge: parseStudioBadge(data.studioBadge),
+      ...((): Partial<PublicProfileData> => {
+        const unique =
+          typeof data.profileViewCount === 'number' && Number.isFinite(data.profileViewCount)
+            ? Math.max(0, Math.floor(data.profileViewCount))
+            : 0;
+        const legacy = legacyProfileLoadsFromRaw(data);
+        return {
+          ...(unique > 0 ? { profileViewCount: unique, profileViewCountUnique: unique } : {}),
+          ...(legacy > 0 ? { legacyProfilePageLoads: legacy } : {}),
+        };
+      })(),
+      ...(typeof data.ownerProfileViewCount === 'number'
+        ? { ownerProfileViewCount: Math.max(0, Math.floor(data.ownerProfileViewCount)) }
+        : {}),
     },
   };
 }

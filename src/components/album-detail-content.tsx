@@ -94,6 +94,7 @@ import {
     SelectValue,
   } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import { AlbumMotifDebtsPanel } from '@/components/album-motif-debts-panel';
 import { ExportDialog } from './export-dialog';
 import { AlbumVaultReleasePanel } from '@/components/album-vault-release-panel';
 import { TooltipProvider } from './ui/tooltip';
@@ -104,6 +105,7 @@ import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { GUEST_TRY_PATH, isGuestTryAlbumId, isGuestTrySheetEnabled } from '@/lib/guest-try';
 import { vaultHref } from '@/lib/scene-home';
 import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
+import { ShareReachStrip } from '@/components/reach/share-reach-strip';
 import {
   canUserAddTrack,
   countUserTracks,
@@ -1189,6 +1191,13 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
   const isUnassignedVault = album?.id === 'unassigned';
   const realAlbums = albums.filter(a => a.id !== 'unassigned');
 
+  const liveAlbumReleaseShareId = useMemo(() => {
+    if (!album || isUnassignedVault) return undefined;
+    const bundle = { ...album, tracks: album.tracks };
+    if (releaseStatusOf(bundle) !== 'live') return undefined;
+    return releaseShareIdOf(bundle);
+  }, [album, isUnassignedVault]);
+
   const displayedLooseTracks = useMemo(() => {
     if (!isUnassignedVault || !album?.tracks) return [];
     const q = looseSearch.trim().toLowerCase();
@@ -1257,17 +1266,26 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
         <AlbumPageAtmosphere />
 
         <div className="relative z-20 container mx-auto px-3 sm:px-6 py-6 sm:py-10 min-w-0 md:pl-32">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (navigateBackToReleaseCatalog(router)) return;
-                router.push(vaultHref());
-              }}
-              className="mb-4 sm:mb-6 -ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
-            >
-                <ChevronLeft className="mr-2 h-4 w-4" /> Vault
-            </Button>
+            <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (navigateBackToReleaseCatalog(router)) return;
+                  router.push(vaultHref());
+                }}
+                className="-ml-1 sm:-ml-4 font-bold text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-all"
+              >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Vault
+              </Button>
+              {liveAlbumReleaseShareId && user?.id === album.ownerId ? (
+                <ShareReachStrip
+                  shareId={liveAlbumReleaseShareId}
+                  ownerId={album.ownerId}
+                  className="text-[10px]"
+                />
+              ) : null}
+            </div>
 
             {albumTierLocked && (
               <div className="mb-6 rounded-xl border border-pink-500/25 bg-pink-500/10 px-4 py-3 flex items-center gap-2">
@@ -1922,6 +1940,34 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                         />
                                     </div>
                                 ))}
+                                <div className="space-y-2 pt-4 border-t border-emerald-500/15">
+                                  <Label className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
+                                    Album motifs (ledger)
+                                  </Label>
+                                  <p className="text-[9px] text-muted-foreground leading-snug">
+                                    One line per motif the album owes — not a repeat checklist. Open means it never landed in lyrics yet.
+                                  </p>
+                                  <Textarea
+                                    placeholder="Neon rain&#10;Father&apos;s voicemail&#10;Empty highway"
+                                    className="bg-background/40 border-emerald-500/10 min-h-[88px] text-xs leading-relaxed focus:border-emerald-500/40 font-code"
+                                    value={(album.thingsToSay ?? []).join('\n')}
+                                    readOnly={albumTierLocked}
+                                    onChange={(e) => {
+                                      const lines = e.target.value
+                                        .split('\n')
+                                        .map((l) => l.trim())
+                                        .filter(Boolean);
+                                      handleAlbumUpdate({ thingsToSay: lines });
+                                    }}
+                                  />
+                                  {album.tracks?.[0] ? (
+                                    <AlbumMotifDebtsPanel
+                                      album={album}
+                                      track={{ ...album.tracks[0], id: '__album_overview__' }}
+                                      compact
+                                    />
+                                  ) : null}
+                                </div>
                             </CardContent>
                         </Card>
                     )}

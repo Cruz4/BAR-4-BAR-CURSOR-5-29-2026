@@ -53,7 +53,11 @@ export type PublicProfileData = {
   /** Live Studio Pro / Visitor chrome — from users.subscriptionStatus. */
   studioBadge?: 'pro' | 'free';
   /** Live public music releases and lyric DNA pages. */
-  /** Owner-only — unique Artist Home visits (from GET /api/profile when authenticated as owner). */
+  /** Unique Artist Home visits (publicProfiles.profileViewCount). */
+  profileViewCount?: number;
+  profileViewCountUnique?: number;
+  legacyProfilePageLoads?: number;
+  /** Owner-only mirror — same count, refreshed when authenticated as owner. */
   ownerProfileViewCount?: number;
   liveDnaDrops?: Array<{
     shareId: string;

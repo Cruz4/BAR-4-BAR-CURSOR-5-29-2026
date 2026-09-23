@@ -212,6 +212,10 @@ import {
 } from '@/lib/tier-limits';
 import { getTrackLimitBanner } from '@/lib/free-vault-copy';
 import { withLineSource } from '@/lib/gamification/line-attribution';
+import { countLineSyllables } from '@/lib/lyrics-analysis/syllables';
+import { lineEndWord, multisyllabicMatch, rhymeKey, NEAR_RHYME_THRESHOLD } from '@/lib/lyrics-analysis/rhyme';
+import { formatRejectedLinesForPrompt } from '@/lib/style-rejection-ledger';
+import { AlbumMotifDebtsPanel } from '@/components/album-motif-debts-panel';
 import {
   loadTrackUILayout,
   saveTrackUILayout,
@@ -1530,7 +1534,7 @@ function lineGenInkKey(mode: 'next' | 'previous', sectionId: string, barIdx: num
   return `generateNextLine-${mode}-${sectionId}-${barIdx}`;
 }
 
-function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, handleRunRhymeScan, generationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
+function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeGeneratorBar, setActiveGeneratorBar, activeBarText, setActiveBarText, setFreestyleOpen, album, setSmartStructureOpen, isRhymeLoading, rhymePulseArmed = false, isInkArmed, handleRunRhymeScan, generationOptions, handleAcceptOption, handleDismissGenerationOptions, handleUndo, canUndo, isMinimized, setIsMinimized, mobileActive = true, leftCollapsed = false, rightCollapsed = false, trackLocked = false, isGuestTryMode = false, onNewStarter, onRecordRejectedLines, collabEnabled = false, collabUserId, collabUserName, collabUserSlug, collabFriendships = [], collabIsOwner = false, collabShareOpen = false, onCollabShareOpenChange, onCollabSheetIdChange }: any) {
   const isPhoneView = useIsMobile();
   const [fontSize, setFontSize] = useState<'xs' | 'sm' | 'md' | 'lg'>('md');
   const responsiveDefaultSizeAppliedRef = useRef(false);
@@ -1666,6 +1670,11 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
       if (trackLocked) {
         toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
         return;
+      }
+      const section = track.sections.find((s: { id: string }) => s.id === sId);
+      const removed = section?.bars.find((b: { idx: number }) => b.idx === bIdx);
+      if (removed?.text?.trim() && removed.lineSource === 'generated' && typeof onRecordRejectedLines === 'function') {
+        onRecordRejectedLines([removed.text.trim()]);
       }
       onUpdateTrack({
           sections: track.sections.map((s: any) => 
@@ -1842,12 +1851,37 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
 
   const freestyleUnlocked = isProOrTrial(user);
 
+  const activeBarMetrics = useMemo(() => {
+    const text = activeBarText.trim();
+    if (!text || !activeGeneratorBar) return null;
+    const section = track.sections.find((s: { id: string }) => s.id === activeGeneratorBar.sectionId);
+    const priorLine = section?.bars.find((b: { idx: number }) => b.idx === activeGeneratorBar.idx - 1)?.text?.trim();
+    const syllables = countLineSyllables(text);
+    let rhymeHint = '';
+    if (priorLine) {
+      const match = multisyllabicMatch(priorLine, text);
+      if (match.depth >= 1 && match.score >= NEAR_RHYME_THRESHOLD) {
+        rhymeHint = match.depth >= 2 ? 'Rhymes with line above' : 'Near-rhyme with line above';
+      } else {
+        rhymeHint = 'No end rhyme with line above';
+      }
+    }
+    return { syllables, rhymeHint };
+  }, [activeBarText, activeGeneratorBar, track.sections]);
+
   const handleOpenFreestyle = () => {
     if (trackLocked) {
       toast({ variant: 'destructive', ...TRACK_LOCKED_TOAST });
       return;
     }
     if (!freestyleUnlocked) return;
+    if (!activeGeneratorBar) {
+      toast({
+        title: 'Select a line first',
+        description: 'Tap the bar you want to fill, then hit Freestyle.',
+      });
+      return;
+    }
     setFreestyleOpen(true);
   };
 
@@ -2356,6 +2390,12 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                 }} 
                                 className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
                             />
+                            {activeBarMetrics && !generationOptions ? (
+                              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground max-md:w-full md:order-last md:basis-full md:pl-1">
+                                {activeBarMetrics.syllables} syll
+                                {activeBarMetrics.rhymeHint ? ` · ${activeBarMetrics.rhymeHint}` : ''}
+                              </p>
+                            ) : null}
                             {sheetEmpty && typeof onNewStarter === 'function' && !trackLocked ? (
                               <Hint
                                 actionSafe
@@ -2484,7 +2524,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     actionSafe
                                     content={
                                       <p className="text-[10px] font-bold leading-snug">
-                                        Freestyle recording — capture voice and drop bars onto the sheet. {tooltip('freestyleTranscription')}
+                                        Freestyle — rap into the active line (not the bottom of the sheet). {tooltip('freestyleTranscription')}
                                       </p>
                                     }
                                   >
@@ -2497,7 +2537,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                   <LockedProFeatureButton
                                     feature="Freestyle Recording"
                                     benefit="Capture voice memos and drop transcribed bars onto your sheet in the flow."
-                                    example="Record a 30-second freestyle and paste the bars mid-verse without leaving the workstation."
+                                    example="Select a line, tap Freestyle, rap that bar, then Use on this bar."
                                     icon={Mic}
                                     iconClassName="text-primary"
                                     label={<span className="truncate hidden md:inline">Freestyle</span>}
@@ -2746,6 +2786,19 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
   const vibeActive = isVibeActive(track);
   const intentsMasterOn = isIntentsMasterEnabled(track);
   const trackIntents = resolveTrackIntentPool(track, album);
+  const handleAddAlbumMotifToIntents = (motif: string) => {
+    const trimmed = motif.trim();
+    if (!trimmed) return;
+    const pool = resolveTrackIntentPool(track, album);
+    const nextRefs = Array.isArray(track.intentRefs) ? [...track.intentRefs] : [...pool];
+    if (!nextRefs.some((i) => i.toLowerCase() === trimmed.toLowerCase())) nextRefs.push(trimmed);
+    onUpdateTrack({
+      intentRefs: nextRefs,
+      checkedIntents: [...new Set([...(track.checkedIntents ?? []), trimmed])],
+      intentsEnabled: true,
+    });
+    toast({ title: 'Added to Intents', description: trimmed });
+  };
   const guardActive = isGuardrailsActive(track);
   const styleActive = isStyleActive(track);
 
@@ -3026,6 +3079,13 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 />
                             </div>
                         ))}
+                        {!isLooseTrack && inheritFromAlbumOn ? (
+                          <AlbumMotifDebtsPanel
+                            album={album}
+                            track={track}
+                            onAddToIntents={handleAddAlbumMotifToIntents}
+                          />
+                        ) : null}
                     </CardContent>
                 </CollapsibleContent>
             </Card>
@@ -3794,7 +3854,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   const isPro = isProOrTrial(user);
   const [initTimedOut, setInitTimedOut] = useState(false);
   const { toast } = useToast();
-  const { getTrackById, updateTrack, deleteTrack, styleProfile, updateStyleProfile, updateAlbum, albums, loading: vaultLoading } = useContext(DataContext);
+  const { getTrackById, updateTrack, deleteTrack, styleProfile, updateStyleProfile, recordRejectedLines, updateAlbum, albums, loading: vaultLoading } = useContext(DataContext);
   const { setGenerating } = useUIState();
   const { refundInk, addUsageLog, registerAiContext } = useUsage();
   const { getEffectiveCost } = useInkCosts();
@@ -4518,6 +4578,55 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     updateTrack(albumId, trackId, updates);
   }, [track, albumId, trackId, albums, user, updateTrack, toast, isCollabGuest]);
 
+  const freestylePriorLines = useMemo(() => {
+    if (!activeGeneratorBar || !track) return [];
+    const section = track.sections.find((s) => s.id === activeGeneratorBar.sectionId);
+    if (!section) return [];
+    return section.bars
+      .filter((b) => b.idx < activeGeneratorBar.idx && b.text.trim())
+      .sort((a, b) => a.idx - b.idx)
+      .map((b) => b.text.trim())
+      .slice(-4);
+  }, [activeGeneratorBar, track]);
+
+  const freestyleBarHint = useMemo(() => {
+    if (!activeGeneratorBar || !track) return '';
+    const section = track.sections.find((s) => s.id === activeGeneratorBar.sectionId);
+    if (!section) return '';
+    return `Line ${String(activeGeneratorBar.idx).padStart(2, '0')} · ${section.type}`;
+  }, [activeGeneratorBar, track]);
+
+  const applyFreestyleToActiveBar = useCallback(
+    (raw: string) => {
+      const text = raw.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text || !activeGeneratorBar || !track) return;
+      const { sectionId, idx } = activeGeneratorBar;
+      const endWord = lineEndWord(text);
+      const syllables = countLineSyllables(text);
+      const rhymeKeyVal = endWord ? rhymeKey(endWord) : '?';
+      handleUpdateTrack({
+        sections: track.sections.map((s) =>
+          s.id === sectionId
+            ? {
+                ...s,
+                bars: s.bars.map((b) =>
+                  b.idx === idx
+                    ? withLineSource(
+                        { ...b, text, syllables, rhymeKey: rhymeKeyVal, accepted: true },
+                        'written'
+                      )
+                    : b
+                ),
+              }
+            : s
+        ),
+      });
+      setActiveBarText(text);
+      setFreestyleOpen(false);
+    },
+    [activeGeneratorBar, track, handleUpdateTrack]
+  );
+
   const handleCollabSheetIdChange = useCallback(
     (id: string | null) => {
       if (isCollabGuest || track?.ownerId !== user?.id) return;
@@ -4792,6 +4901,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           ? buildAlbumAlreadyUsed(album, track.id)
           : null;
         const instructions = track.specialInstructions?.trim();
+        const rejectedLinesSummary = formatRejectedLinesForPrompt(styleProfile?.rejectedLines);
         const res = await lazyGenerateNextLine(
           await withAiAuth({
             userName: user?.displayName,
@@ -4826,6 +4936,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
             mustIncludeWords: isGuardrailsActive(track) ? track.guardrails?.mustIncludeWords : undefined,
             customInstructions: instructions || undefined,
             isOpeningStarter: mode === 'starter',
+            rejectedLinesSummary: rejectedLinesSummary || undefined,
           })
         );
         if (!res || res.length === 0) throw new Error('Synthesis produced no results.');
@@ -4848,6 +4959,9 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
   };
 
   const handleDismissGenerationOptions = useCallback(() => {
+    if (generationOptions?.length && !isGuestTryMode) {
+      recordRejectedLines(generationOptions.map((o: { line: string }) => o.line));
+    }
     if (isGuestTryMode && generationOptions) {
       void trackGuestFunnelEvent(GUEST_FUNNEL_EVENTS.OPTION_DISMISS, {});
       if (guestDemoRemaining !== null && guestDemoRemaining <= 0) {
@@ -4856,7 +4970,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     }
     setGenerationOptions(null);
     setPendingGenCtx(null);
-  }, [isGuestTryMode, generationOptions, guestDemoRemaining]);
+  }, [isGuestTryMode, generationOptions, guestDemoRemaining, recordRejectedLines]);
 
   const handleApplyChestEntry = useCallback(
     (entry: DraftChestEntry, action: 'append' | 'replace') => {
@@ -4949,6 +5063,12 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
     const { mode, sId, bIdx } = pendingGenCtx;
     // Server computes phonetic syllables/rhymeKey for generated options — persist them.
     const acceptedOption = generationOptions?.find((o: any) => o.line === line);
+    if (generationOptions?.length && !isGuestTryMode) {
+      const rejected = generationOptions
+        .filter((o: { line: string }) => o.line !== line)
+        .map((o: { line: string }) => o.line);
+      if (rejected.length) recordRejectedLines(rejected);
+    }
 
     if (mode === 'starter') {
       const newSections = track.sections.map((s) => {
@@ -5132,7 +5252,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           return;
         }
         setSmartStructureOpen(open);
-      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} onNewStarter={handleNewStarter} collabEnabled={collabSheetOn && Boolean(user) && !isGuestTryMode} collabUserId={user?.id} collabUserName={user?.displayName || 'Artist'} collabUserSlug={summary.profileSlug} collabFriendships={friendships} collabIsOwner={track.ownerId === user?.id} collabShareOpen={collabShareOpen} onCollabShareOpenChange={setCollabShareOpen} onCollabSheetIdChange={handleCollabSheetIdChange} />
+      }} isRhymeLoading={isRhymeLoading} rhymePulseArmed={isArmed('findRhymes')} isInkArmed={isArmed} activeSectionId={activeSectionId} handleRunRhymeScan={handleRunRhymeScan} generationOptions={generationOptions} setGenerationOptions={setGenerationOptions} handleAcceptOption={handleAcceptOption} handleDismissGenerationOptions={handleDismissGenerationOptions} handleUndo={handleUndo} canUndo={sectionsHistory.length > 0} isMinimized={isMinimized} setIsMinimized={setIsMinimized} mobileActive={isMobileLayout && mobilePanelTab === 'lyrics'} leftCollapsed={leftCollapsed} rightCollapsed={rightCollapsed} trackLocked={editsLocked} isGuestTryMode={isGuestTryMode} onNewStarter={handleNewStarter} onRecordRejectedLines={recordRejectedLines} collabEnabled={collabSheetOn && Boolean(user) && !isGuestTryMode} collabUserId={user?.id} collabUserName={user?.displayName || 'Artist'} collabUserSlug={summary.profileSlug} collabFriendships={friendships} collabIsOwner={track.ownerId === user?.id} collabShareOpen={collabShareOpen} onCollabShareOpenChange={setCollabShareOpen} onCollabSheetIdChange={handleCollabSheetIdChange} />
       <RightPanel 
         track={track} 
         album={album} 
@@ -5227,7 +5347,18 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <FreestylePad open={freestyleOpen} onOpenChange={setFreestyleOpen} onAddFreestyle={(text) => { const lines = text.split('. ').filter(l => l.trim()); const activeS = track.sections.find(s => s.id === activeSectionId) || track.sections[0]; const startIdx = activeS.bars.length + 1; const newBars = lines.map((l, i) => withLineSource({ idx: startIdx + i, text: l.trim(), accepted: true, syllables: l.trim().split(' ').length, rhymeKey: '?' }, 'written')); handleUpdateTrack({ sections: track.sections.map(s => s.id === activeS.id ? { ...s, bars: [...s.bars, ...newBars] } : s) }); setFreestyleOpen(false); }} disabled={editsLocked} trackVibe={track.vibe} albumTheme={album.theme} styleProfileSummary={effectiveStyleProfile.history[0]?.analysis || ''} isPro={isPro} />
+      <FreestylePad
+        open={freestyleOpen}
+        onOpenChange={setFreestyleOpen}
+        onApplyToActiveBar={applyFreestyleToActiveBar}
+        disabled={editsLocked}
+        trackVibe={track.vibe}
+        albumTheme={album.theme}
+        styleProfileSummary={effectiveStyleProfile.history[0]?.analysis || ''}
+        isPro={isPro}
+        priorSheetLines={freestylePriorLines}
+        activeBarHint={freestyleBarHint}
+      />
       <SmartStructureDialog
         open={smartStructureOpen}
         onOpenChange={(open: boolean) => { if (open && editsLocked) { toast({ ...(tierLocked ? TIER_LIMIT_LOCKED_TOAST : TRACK_LOCKED_TOAST), variant: 'destructive' }); return; } setSmartStructureOpen(open); }}

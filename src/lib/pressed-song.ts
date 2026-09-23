@@ -101,6 +101,11 @@ export type PressedSongSummary = {
     pressing?: PressingConfig;
   };
   publicTotals: { plays: number; buyers: number };
+  /** Unique share landings (deduped); legacy views when landing not backfilled yet. */
+  landingCount?: number;
+  legacyShareViews?: number;
+  /** max(unique, legacy) for header display */
+  reachDisplayCount?: number;
   member?: {
     qualifiedListeningDays: number;
     completions: number;

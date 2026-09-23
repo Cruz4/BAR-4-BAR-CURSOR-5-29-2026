@@ -12,6 +12,7 @@ import { trackLyricBarCount, type DnaDropAlbumPayload } from '@/lib/dna-drop';
 import { buildAlbumReleasePlayables } from '@/lib/album-release-playables';
 import type { Track } from '@/lib/types';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
+import { resolveShareReachDisplay } from '@/lib/server/reach-display';
 
 function nonnegative(value: unknown): number {
   return Math.max(0, Math.floor(Number(value) || 0));
@@ -149,6 +150,7 @@ export async function getPressedSongSummary(
       ? share.data.title
       : publicMusicMetadataFromTrack(selectedTrack || share.data).albumTitle ||
         (typeof share.data?.albumTitle === 'string' ? share.data.albumTitle : undefined);
+  const reach = await resolveShareReachDisplay(db, shareId, shareRaw);
   const base: PressedSongSummary = {
     shareId,
     ...(trackId ? { trackId } : {}),
@@ -183,6 +185,9 @@ export async function getPressedSongSummary(
       plays: nonnegative(shareRaw.playCount) + nonnegative(shareRaw.previewCount),
       buyers: nonnegative(shareRaw.purchaseCount),
     },
+    landingCount: reach.unique,
+    legacyShareViews: reach.legacy,
+    reachDisplayCount: reach.display,
   };
   if (albumLevel && share.type === 'album' && share.data) {
     const albumPayload = share.data as unknown as DnaDropAlbumPayload;

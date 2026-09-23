@@ -1,4 +1,5 @@
 import type { LockDnaSnapshot } from '@/lib/lock/types';
+import { lineEndWord, multisyllabicMatch, nearRhymeScore } from '@/lib/lyrics-analysis/rhyme';
 
 function tokens(text: string): Set<string> {
   return new Set(
@@ -11,13 +12,20 @@ function tokens(text: string): Set<string> {
   );
 }
 
-function endSound(text: string): string {
-  const words = text.trim().split(/\s+/);
-  const raw = (words[words.length - 1] || '').replace(/[^a-zA-Z']/g, '').toLowerCase();
-  if (!raw) return '';
-  if (raw.length <= 3) return raw;
-  const cluster = raw.match(/[aeiouy]{1,2}[a-z']*$/i);
-  return (cluster ? cluster[0] : raw.slice(-3)).toLowerCase();
+/** 0..1 phonetic end-rhyme vs the seed bar (ARPABET/heuristic, not spelling). */
+function seedEndRhymeScore(seedBar: string, echoText: string): number {
+  const seedWord = lineEndWord(seedBar);
+  const echoWord = lineEndWord(echoText);
+  if (!seedWord || !echoWord) return 0;
+  if (seedWord.toLowerCase() === echoWord.toLowerCase()) return 0.35;
+
+  const multi = multisyllabicMatch(seedBar, echoText, 4);
+  if (multi.depth >= 1) {
+    const depthBoost = multi.depth >= 2 ? 0.12 : 0;
+    return Math.min(1, 0.45 + multi.score * 0.45 + depthBoost);
+  }
+
+  return Math.min(1, nearRhymeScore(seedWord, echoWord) * 0.92);
 }
 
 function dnaCorpus(dna?: LockDnaSnapshot | null): string {
@@ -41,7 +49,7 @@ export type LockScoreResult = {
 
 /**
  * Free guest-safe heuristic — no Ink / no model call.
- * Overlap vs DNA snapshot + end-sound hitch vs seed.
+ * Overlap vs DNA snapshot + phonetic end-rhyme vs seed.
  */
 export function scoreEchoAgainstLock(input: {
   echoText: string;
@@ -66,14 +74,7 @@ export function scoreEchoAgainstLock(input: {
     overlap = hits / Math.max(2, Math.min(echoTok.size, 10));
   }
 
-  const seedEnd = endSound(input.seedBar);
-  const echoEnd = endSound(echo);
-  let rhyme = 0;
-  if (seedEnd && echoEnd) {
-    if (seedEnd === echoEnd) rhyme = 1;
-    else if (seedEnd.slice(-2) === echoEnd.slice(-2)) rhyme = 0.55;
-    else if (seedEnd.slice(-1) === echoEnd.slice(-1)) rhyme = 0.25;
-  }
+  const rhyme = seedEndRhymeScore(input.seedBar, echo);
 
   const lengthPenalty = echo.length < 12 ? 0.15 : echo.length > 220 ? 0.1 : 0;
   const raw = Math.round(Math.min(100, Math.max(0, overlap * 62 + rhyme * 38 - lengthPenalty * 100)));

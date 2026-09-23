@@ -257,6 +257,8 @@ export interface StyleProfile {
     ownerId: string;
     history: StyleAnalysis[];
     trainingRefs: string[];
+    /** AI lines the artist dismissed — feeds co-writer guardrails (not public). */
+    rejectedLines?: string[];
     updatedAt: string;
 }
 
@@ -280,6 +282,8 @@ export interface ProjectShare {
   updatedAt?: string;
   views: number;
   imports: number;
+  /** Deduped unique page landings (server-tracked). */
+  landingCount?: number;
   /** Lightweight First Drops flags for Discover / share page. */
   hasDropAudio?: boolean;
   houseRelease?: boolean;

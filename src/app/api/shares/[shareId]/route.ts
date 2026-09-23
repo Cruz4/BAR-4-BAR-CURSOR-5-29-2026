@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase/server';
-import { canonicalShareVisibility } from '@/lib/server/dna-visibility';
+import { canonicalShareVisibility, resolveSupersededDnaShareRedirect } from '@/lib/server/dna-visibility';
 import { resolveAlbumHubShareId } from '@/lib/pressed-song';
-import { isHouseReleaseDocument, releaseShareIdFromShareDocument } from '@/lib/release-management';
+import {
+  isHouseReleaseDocument,
+  releaseShareIdFromShareDocument,
+  shareDocumentVisibility,
+} from '@/lib/release-management';
 import type { ProjectShare } from '@/lib/types';
 import { resolveShareArtistCredit } from '@/lib/server/share-artist-credit';
+import { resolveShareReachDisplay } from '@/lib/server/reach-display';
 
 export const runtime = 'nodejs';
 
@@ -36,7 +41,22 @@ export async function GET(
       visibility = { ...visibility, releaseLive: true };
     }
     if (!visibility || (!visibility.dnaLive && !visibility.releaseLive)) {
-      return NextResponse.json({ error: 'Not public' }, { status: 404 });
+      const redirectShareId = await resolveSupersededDnaShareRedirect(db, shareId, raw);
+      if (redirectShareId) {
+        return NextResponse.json(
+          { error: 'Superseded', canonicalShareId: redirectShareId },
+          { status: 404 }
+        );
+      }
+      const documentVisibility = shareDocumentVisibility(raw);
+      if (documentVisibility.releaseLive || isHouseReleaseDocument(raw)) {
+        visibility = {
+          dnaLive: documentVisibility.dnaLive,
+          releaseLive: true,
+        };
+      } else {
+        return NextResponse.json({ error: 'Not public' }, { status: 404 });
+      }
     }
     const share: ProjectShare = {
       id: snap.id,
@@ -49,6 +69,10 @@ export async function GET(
       ...(typeof raw.updatedAt === 'string' ? { updatedAt: raw.updatedAt } : {}),
       views: typeof raw.views === 'number' ? raw.views : 0,
       imports: typeof raw.imports === 'number' ? raw.imports : 0,
+      landingCount:
+        typeof raw.landingCount === 'number' && Number.isFinite(raw.landingCount)
+          ? Math.max(0, Math.floor(raw.landingCount))
+          : 0,
       ...(typeof raw.hasDropAudio === 'boolean' ? { hasDropAudio: raw.hasDropAudio } : {}),
       ...(typeof raw.houseRelease === 'boolean' ? { houseRelease: raw.houseRelease } : {}),
       ...(typeof raw.houseArtistId === 'string' ? { houseArtistId: raw.houseArtistId } : {}),
@@ -95,6 +119,9 @@ export async function GET(
           })();
 
     const artist = await resolveShareArtistCredit(db, raw);
+    const reach = await resolveShareReachDisplay(db, shareId, raw);
+    share.landingCount = reach.unique;
+    share.views = reach.legacy;
 
     return NextResponse.json({
       share,

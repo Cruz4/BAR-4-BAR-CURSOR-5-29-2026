@@ -56,6 +56,8 @@ const GenerateNextLineInputSchema = z.object({
   customInstructions: z.string().optional(),
   /** True when generating an opening starter (empty prior bars). */
   isOpeningStarter: z.boolean().optional(),
+  /** Lines the artist dismissed — avoid repeating these ideas/phrases. */
+  rejectedLinesSummary: z.string().optional(),
 });
 export type GenerateNextLineInput = z.infer<typeof GenerateNextLineInputSchema>;
 
@@ -136,6 +138,11 @@ Ensure the generated line is primarily about these concepts or imagery while mai
 **STYLE FIDELITY:**
 Mimic the technical patterns found in this profile: {{styleProfileSummary}}. 
 **IMPORTANT**: Focus on the flow, vocabulary level, and rhyme complexity. **NEVER** reuse literal phrases or recurring words found in the style profile description. 
+
+{{#if rejectedLinesSummary}}
+**REJECTED SUGGESTIONS (DO NOT REPEAT THESE LINES OR CLOSE PARAPHRASES):**
+{{{rejectedLinesSummary}}}
+{{/if}}
 
 **VIBE:**
 - Genre: {{vibe.genre}}

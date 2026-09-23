@@ -44,16 +44,21 @@ import {
   truncateFreestyleContextField,
 } from '@/lib/freestyle-transcription-context';
 import { mergeFreestyleTranscriptChunk, sanitizeFreestyleTranscript } from '@/lib/freestyle-transcript';
+import { normalizeSingleBarTranscript } from '@/lib/style-rejection-ledger';
 
 interface FreestylePadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddFreestyle: (text: string) => void;
+  /** Writes transcribed speech onto the active bar in the workstation. */
+  onApplyToActiveBar: (text: string) => void;
   disabled: boolean;
   trackVibe: Track['vibe'];
   albumTheme: string;
   styleProfileSummary: string;
   isPro: boolean;
+  /** Bars above the active line — helps studio STT stay on-scheme. */
+  priorSheetLines?: string[];
+  activeBarHint?: string;
 }
 
 /** Complete segment length (stop/start with requestData flush) */
@@ -62,7 +67,18 @@ const STUDIO_RECORDER_RESTART_MS = 120;
 const STUDIO_AUDIO_BITS_PER_SECOND = 96_000;
 const MIN_CHUNK_BYTES = 1000;
 
-export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, trackVibe, albumTheme, styleProfileSummary, isPro }: FreestylePadProps) {
+export function FreestylePad({
+  open,
+  onOpenChange,
+  onApplyToActiveBar,
+  disabled,
+  trackVibe,
+  albumTheme,
+  styleProfileSummary,
+  isPro,
+  priorSheetLines = [],
+  activeBarHint,
+}: FreestylePadProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isListening, setIsListening] = useState(false);
@@ -97,13 +113,23 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
   const { getEffectiveCost, tooltip } = useInkCosts();
   const { runWithInk, isArmed } = useTouchInkRunner();
 
+  const sheetPriorTail = useMemo(() => {
+    if (!priorSheetLines.length) return '';
+    return priorSheetLines
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join('\n')
+      .slice(-FREESTYLE_PRIOR_TAIL_CHARS);
+  }, [priorSheetLines]);
+
   const transcriptionContext = useMemo(
     () => ({
       albumTheme: truncateFreestyleContextField(albumTheme),
       trackVibeSummary: formatTrackVibeForTranscription(trackVibe),
       styleProfileSummary: truncateFreestyleContextField(styleProfileSummary, 600),
+      sheetPriorTail,
     }),
-    [albumTheme, trackVibe, styleProfileSummary]
+    [albumTheme, trackVibe, styleProfileSummary, sheetPriorTail]
   );
 
   const clearSegmentTimer = useCallback(() => {
@@ -276,12 +302,15 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
       studioChunkQueueRef.current.push({
         blob,
         mimeType,
-        priorTranscriptTail: transcriptRef.current.slice(-FREESTYLE_PRIOR_TAIL_CHARS).trim(),
+        priorTranscriptTail: (
+          transcriptionContext.sheetPriorTail ||
+          transcriptRef.current.slice(-FREESTYLE_PRIOR_TAIL_CHARS).trim()
+        ),
         sessionId,
       });
       void drainStudioChunkQueue();
     },
-    [drainStudioChunkQueue]
+    [drainStudioChunkQueue, transcriptionContext.sheetPriorTail]
   );
 
   const scheduleStudioRecorderRestart = useCallback((recorder: MediaRecorder) => {
@@ -582,8 +611,11 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
     }
   }, [open, stopListening, discardStaleStudioWork]);
 
-  const lines = transcript.split('. ').filter((l) => l.trim().length > 0);
-  const liveLine = interimTranscript.trim();
+  const combinedTranscript = normalizeSingleBarTranscript(
+    `${transcript} ${interimTranscript}`.trim()
+  );
+  const lines = combinedTranscript ? [combinedTranscript] : [];
+  const liveLine = interimTranscript.trim() && !transcript.includes(interimTranscript) ? interimTranscript.trim() : '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -591,13 +623,16 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
         <DialogHeader>
           <DialogTitle className="font-headline text-3xl flex items-center gap-3">
             <Mic className={cn('h-8 w-8 text-primary', isListening && 'animate-pulse')} />
-            FREESTYLE PAD
+            RAP THIS BAR
           </DialogTitle>
-          <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            {pickupMode === 'browser'
-              ? 'Live speech pickup (experimental)'
-              : 'Studio mic · words appear every ~3s while you rap'}{' '}
-            {!isPro && '· (30s demo limit)'}
+          <DialogDescription className="font-code text-[10px] uppercase tracking-widest text-muted-foreground flex flex-col gap-1 items-start">
+            <span>
+              {activeBarHint ? `Filling ${activeBarHint} · ` : ''}
+              {pickupMode === 'browser'
+                ? 'Live speech pickup (experimental)'
+                : 'Studio mic · one bar lands on your active line'}
+              {!isPro && ' · (30s demo limit)'}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -722,13 +757,13 @@ export function FreestylePad({ open, onOpenChange, onAddFreestyle, disabled, tra
             </Button>
             <Button
               onClick={() => {
-                const final = (transcript + ' ' + interimTranscript).trim();
-                if (final) onAddFreestyle(final);
+                const final = normalizeSingleBarTranscript(`${transcript} ${interimTranscript}`.trim());
+                if (final) onApplyToActiveBar(final);
               }}
               disabled={disabled || (!transcript && !interimTranscript) || isListening || isStudioTranscribing}
               className="h-11 sm:h-12 px-4 sm:px-8 font-bold shadow-xl gap-1.5 sm:gap-2 text-[10px] sm:text-sm uppercase tracking-widest flex-1 sm:flex-none min-w-0"
             >
-              <PlusCircle className="h-4 w-4 shrink-0" /> <span className="truncate">Add to Editor</span>
+              <PlusCircle className="h-4 w-4 shrink-0" /> <span className="truncate">Use on this bar</span>
             </Button>
           </div>
         </DialogFooter>

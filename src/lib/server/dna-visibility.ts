@@ -3,6 +3,8 @@ import 'server-only';
 import type { Firestore } from 'firebase-admin/firestore';
 import {
   canonicalDnaShareIds,
+  dnaShareIdentity,
+  isDnaShareLineage,
   releaseShareIdFromShareDocument,
   shareDocumentVisibility,
 } from '@/lib/release-management';
@@ -56,4 +58,33 @@ export async function canonicalShareVisibility(db: Firestore, shareId: string) {
     }
   }
   return { dnaLive, releaseLive };
+}
+
+/** When an older DNA URL was superseded by a newer live snapshot, return the canonical id. */
+export async function resolveSupersededDnaShareRedirect(
+  db: Firestore,
+  shareId: string,
+  data: Record<string, unknown>
+): Promise<string | undefined> {
+  if (!isDnaShareLineage(data)) return undefined;
+  const ownerId = typeof data.ownerId === 'string' ? data.ownerId.trim() : '';
+  if (!ownerId) return undefined;
+
+  const ownerSnaps = await db.collection('shares').where('ownerId', '==', ownerId).get();
+  const records = ownerSnaps.docs.map((doc) => ({
+    id: doc.id,
+    data: doc.data() as Record<string, unknown>,
+  }));
+  const identity = dnaShareIdentity(data);
+  const canonicalIds = canonicalDnaShareIds(records);
+  const canonicalId = [...canonicalIds].find((id) => {
+    const record = records.find((entry) => entry.id === id);
+    return record ? dnaShareIdentity(record.data) === identity : false;
+  });
+  if (!canonicalId || canonicalId.toUpperCase() === shareId.toUpperCase()) return undefined;
+
+  const canonicalRecord = records.find((entry) => entry.id === canonicalId);
+  if (!canonicalRecord) return undefined;
+  if (!shareDocumentVisibility(canonicalRecord.data).dnaLive) return undefined;
+  return canonicalId;
 }

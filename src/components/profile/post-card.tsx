@@ -64,11 +64,11 @@ import {
   parseActivityPostHash,
   scheduleScrollActivityPostTarget,
 } from '@/lib/activity/post-deep-link';
+import { useActivityFromPath } from '@/hooks/use-activity-from-path';
 import {
   activityOpenLinkHref,
   appendActivityFromHref,
   artistHomePostHref,
-  currentActivityFromPath,
   publicScenePostHref,
 } from '@/lib/activity/href';
 import { rememberFeedScroll, shouldSaveFeedScrollBeforeNav } from '@/lib/feed-scroll-restore';
@@ -93,6 +93,8 @@ type PostCardProps = {
   post: ProfilePost;
   /** Show the author name/avatar header (feed, wall, and reverbs). Hidden in immersive swipe — the slide already names them. */
   showAuthor?: boolean;
+  /** Stable wall context path for post permalinks (optional override). */
+  activityFromPath?: string;
   viewerSlug?: string;
   onDeleted?: (postId: string) => void;
   onReverbed?: (post: ProfilePost) => void;
@@ -365,7 +367,9 @@ export function PostCard({
   immersive = false,
   mediaActive,
   showExactTimestamp = false,
+  activityFromPath,
 }: PostCardProps) {
+  const activityFrom = useActivityFromPath(activityFromPath);
   const showInlineAuthor = showAuthor && !immersive;
   const resolvedImageUrl = usePostImageUrl(post.imageUrl, post.imageStoragePath);
   const { user, loading: authLoading } = useAuth();
@@ -859,13 +863,13 @@ export function PostCard({
             </span>
           )}
           <Link
-            href={appendActivityFromHref(publicScenePostHref(post.id), currentActivityFromPath())}
+            href={appendActivityFromHref(publicScenePostHref(post.id), activityFrom)}
             prefetch={false}
             className="mt-1 inline-flex whitespace-nowrap text-[10px] uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)] hover:underline"
             aria-label="Open public Scene post"
             onClick={() => {
               if (typeof window === 'undefined') return;
-              const href = appendActivityFromHref(publicScenePostHref(post.id), currentActivityFromPath());
+              const href = appendActivityFromHref(publicScenePostHref(post.id), activityFrom);
               if (
                 shouldSaveFeedScrollBeforeNav(
                   href,

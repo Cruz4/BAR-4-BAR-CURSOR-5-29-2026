@@ -4,7 +4,7 @@ import React, { useEffect, useState, useContext, useMemo, useCallback, Suspense 
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { db } from '@/lib/firebase/client/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { DataContext } from '@/context/data-context';
 import type { ProjectShare, Album, Track } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,6 @@ import {
     Compass,
     Target,
     Import,
-    Eye,
     LogIn,
     EyeOff,
     ExternalLink,
@@ -89,6 +88,7 @@ import { openFirstDropLathe } from '@/lib/first-drop-lathe';
 import { releaseShareIdFromShareDocument, shareDocumentVisibility, releaseShareIdOf, releaseStatusOf } from '@/lib/release-management';
 import { canManageReleaseShare } from '@/lib/house-artist-link';
 import { navigateBackToReleaseCatalog } from '@/lib/release-catalog-navigation';
+import { ShareReachStrip } from '@/components/reach/share-reach-strip';
 import { AlbumVaultReleasePanel } from '@/components/album-vault-release-panel';
 import { isProOrTrial } from '@/lib/subscription';
 import { useOptionalDropPlayer } from '@/context/drop-player-context';
@@ -154,7 +154,20 @@ function SharedProjectPageInner() {
                             ...(payload.artist.userId?.trim() ? { userId: payload.artist.userId.trim() } : {}),
                         };
                     }
-                } else if (user) {
+                } else {
+                    let redirectShareId: string | undefined;
+                    try {
+                        const errPayload = (await publicRes.json()) as { canonicalShareId?: string };
+                        redirectShareId = errPayload.canonicalShareId?.trim();
+                    } catch {
+                        /* ignore */
+                    }
+                    if (redirectShareId) {
+                        keepLoading = true;
+                        router.replace(`/share/${encodeURIComponent(redirectShareId)}`);
+                        return;
+                    }
+
                     try {
                         const docRef = doc(db, 'shares', normalizedShareId);
                         const snap = await getDoc(docRef);
@@ -288,8 +301,6 @@ function SharedProjectPageInner() {
                 setHubVisibility(visibility);
                 setShareAlbumHubId(albumHubShareId);
                 setShare(data);
-                const docRef = doc(db, 'shares', normalizedShareId);
-                updateDoc(docRef, { views: increment(1) }).catch(() => undefined);
             } catch {
                 setShare(null);
                 keepLoading = true;
@@ -826,14 +837,17 @@ function SharedProjectPageInner() {
                     </div>
                 </Link>
                 <div className="relative z-10 flex shrink-0 items-center gap-1.5 sm:gap-3 ml-auto">
-                    <div className="hidden md:flex items-center gap-4 mr-2 text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                            <Eye className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-bold">{share.views.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center justify-end gap-2 mr-1 sm:mr-2 text-muted-foreground">
+                        <ShareReachStrip
+                          shareId={share.id}
+                          ownerId={share.ownerId}
+                          landingCount={share.landingCount}
+                          legacyViews={share.views}
+                        />
+                        <div className="flex items-center gap-1.5 text-[10px]">
                             <Import className="h-3.5 w-3.5" />
-                            <span className="text-[10px] font-bold">{share.imports.toLocaleString()}</span>
+                            <span className="font-bold tabular-nums">{share.imports.toLocaleString()}</span>
+                            <span className="hidden sm:inline font-bold uppercase tracking-wider">imports</span>
                         </div>
                     </div>
                     {showOwnerReleaseDesk ? (
@@ -1137,7 +1151,7 @@ function SharedProjectPageInner() {
                                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-headline font-bold text-white uppercase tracking-tighter leading-none break-words">
                                   {(snapshotTrack || project).title}
                                 </h2>
-                                <div className="pointer-events-auto mt-2">
+                                <div className="pointer-events-auto mt-2 flex flex-wrap items-center gap-3">
                                   <ShareArtistLink
                                     name={artistCredit.name}
                                     slug={artistCredit.slug}
@@ -1488,6 +1502,7 @@ function SharedProjectPageInner() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
         </div>
     );
 }

@@ -93,6 +93,8 @@ export type ModuleContext = {
   profileUserId: string;
   profileName: string;
   profileSlug?: string;
+  /** SSR-stable path for public post back-links on this page. */
+  activityFromPath?: string;
   isOwner: boolean;
   previewMode?: boolean;
   viewerSlug?: string;
@@ -1326,6 +1328,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
               post={post}
               showAuthor
               viewerSlug={ctx.viewerSlug}
+              activityFromPath={ctx.activityFromPath}
               onDeleted={
                 playground
                   ? undefined

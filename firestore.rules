@@ -258,6 +258,10 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      match /landingTicks/{tickId} {
+        allow read, write: if false;
+      }
+
       // Qualified playback evidence is accepted and aggregated by server APIs only.
       match /listenTicks/{tickId} {
         allow read, write: if false;

@@ -4,6 +4,7 @@
  * cloning Track 1's themes, end-rhymes, or topic beats.
  */
 
+import { openAlbumMotifDebts, computeAlbumMotifDebts } from '@/lib/album-motif-debts';
 import { findRepeatedWords, lineEndWord, tokenizeLine } from '@/lib/lyrics-analysis';
 import type { Album, Track } from '@/lib/types';
 
@@ -118,13 +119,16 @@ export function buildAlbumAlreadyUsed(
   );
 
   const dnaAnchors = dnaFieldSnippets(album);
+  const motifDebts = computeAlbumMotifDebts(album, currentTrackId);
+  const openDebts = openAlbumMotifDebts(motifDebts);
 
   const hasSignal =
     endWords.length > 0 ||
     motifs.length > 0 ||
     intents.length > 0 ||
     sampleLines.length > 0 ||
-    dnaAnchors.length > 0;
+    dnaAnchors.length > 0 ||
+    openDebts.length > 0;
 
   if (!hasSignal) return null;
 
@@ -137,6 +141,13 @@ export function buildAlbumAlreadyUsed(
     parts.push(
       `Album DNA anchors (keep the vibe; never restate these phrases verbatim): ${dnaAnchors
         .map((a) => `"${a}"`)
+        .join('; ')}.`
+    );
+  }
+  if (openDebts.length) {
+    parts.push(
+      `Album motif ledger — still open (not in any track lyrics yet; explore with a fresh angle on this song, do not copy sibling lines): ${openDebts
+        .map((m) => `"${m}"`)
         .join('; ')}.`
     );
   }

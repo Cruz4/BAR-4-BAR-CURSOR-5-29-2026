@@ -71,7 +71,7 @@ import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
-import { compactReachCount } from '@/lib/profile-view-client';
+import { ProfileReachStrip } from '@/components/reach/profile-reach-strip';
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -407,20 +407,22 @@ export function ArtistHome({
                 </Link>
               </Button>
             )}
-            <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] sm:inline">
+            <span className="font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)]">
               {tokens.plateSerial}
               {tokens.autoDrift ? ' · restless' : ''}
-              {isOwner && !previewMode && typeof profile.ownerProfileViewCount === 'number' ? (
-                <>
-                  {' · '}
-                  {profile.ownerProfileViewCount === 1
-                    ? '1 profile visit'
-                    : `${compactReachCount(profile.ownerProfileViewCount)} profile visits`}
-                </>
-              ) : null}
             </span>
           </div>
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2 [&_button]:shrink-0">
+            {profile.slug && !previewMode ? (
+              <ProfileReachStrip
+                slug={profile.slug}
+                ownerId={profile.userId}
+                profileViewCount={profile.profileViewCount ?? profile.ownerProfileViewCount}
+                profileViewCountUnique={profile.profileViewCountUnique}
+                legacyProfilePageLoads={profile.legacyProfilePageLoads}
+                className="mr-0.5 text-[var(--ph-muted)]"
+              />
+            ) : null}
             {previewMode && onExitPreview ? (
               <Button
                 size="sm"
@@ -649,7 +651,7 @@ export function ArtistHome({
             )}
 
             <div className="w-full max-w-md min-w-0 space-y-3">
-              <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:gap-2">
+              <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
                 {[
                   { label: 'Total XP', value: totalXp.toLocaleString(), icon: Zap },
                   { label: 'Live streak', value: `${liveStreak}d`, icon: Flame },
@@ -786,6 +788,9 @@ export function ArtistHome({
               profileUserId: profile.userId || '',
               profileName: profile.displayName,
               profileSlug: profile.slug,
+              activityFromPath: profile.slug
+                ? profileHref(profile.slug) ?? `/${profile.slug}`
+                : undefined,
               isOwner,
               previewMode,
               viewerSlug,
