@@ -838,12 +838,14 @@ function SharedProjectPageInner() {
                 </Link>
                 <div className="relative z-10 flex shrink-0 items-center gap-1.5 sm:gap-3 ml-auto">
                     <div className="flex flex-wrap items-center justify-end gap-2 mr-1 sm:mr-2 text-muted-foreground">
-                        <ShareReachStrip
-                          shareId={share.id}
-                          ownerId={share.ownerId}
-                          landingCount={share.landingCount}
-                          legacyViews={share.views}
-                        />
+                        {isOwnShare ? (
+                          <ShareReachStrip
+                            shareId={share.id}
+                            ownerId={share.ownerId}
+                            landingCount={share.landingCount}
+                            legacyViews={share.views}
+                          />
+                        ) : null}
                         <div className="flex items-center gap-1.5 text-[10px]">
                             <Import className="h-3.5 w-3.5" />
                             <span className="font-bold tabular-nums">{share.imports.toLocaleString()}</span>

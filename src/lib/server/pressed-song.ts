@@ -150,7 +150,8 @@ export async function getPressedSongSummary(
       ? share.data.title
       : publicMusicMetadataFromTrack(selectedTrack || share.data).albumTitle ||
         (typeof share.data?.albumTitle === 'string' ? share.data.albumTitle : undefined);
-  const reach = await resolveShareReachDisplay(db, shareId, shareRaw);
+  const isOwner = Boolean(viewerId && viewerId === share.ownerId);
+  const reach = isOwner ? await resolveShareReachDisplay(db, shareId, shareRaw) : null;
   const base: PressedSongSummary = {
     shareId,
     ...(trackId ? { trackId } : {}),
@@ -185,9 +186,13 @@ export async function getPressedSongSummary(
       plays: nonnegative(shareRaw.playCount) + nonnegative(shareRaw.previewCount),
       buyers: nonnegative(shareRaw.purchaseCount),
     },
-    landingCount: reach.unique,
-    legacyShareViews: reach.legacy,
-    reachDisplayCount: reach.display,
+    ...(reach
+      ? {
+          landingCount: reach.unique,
+          legacyShareViews: reach.legacy,
+          reachDisplayCount: reach.display,
+        }
+      : {}),
   };
   if (albumLevel && share.type === 'album' && share.data) {
     const albumPayload = share.data as unknown as DnaDropAlbumPayload;

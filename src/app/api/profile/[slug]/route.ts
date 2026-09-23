@@ -41,24 +41,27 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const liveSlug = (profile as { slug?: string }).slug || slug;
     const db = await getDb();
     const reach = await resolveProfileReachDisplay(db, liveSlug, ownerId, profileData);
-    const profileViewCountUnique = reach.unique;
-    const legacyProfilePageLoads = reach.legacy;
-    /** Header: unique people plus total public wall opens when higher. */
-    const profileViewCount = reach.display;
-    const ownerProfileViewCount =
-      viewerId && ownerId && viewerId === ownerId ? profileViewCount : undefined;
+    const isOwner = Boolean(viewerId && ownerId && viewerId === ownerId);
 
-    return NextResponse.json({
+    const payload: Record<string, unknown> = {
       ...profile,
       slug: (profile as { slug?: string }).slug || slug,
       rankId: rank.id,
       rankLabel: rank.label,
       badges,
-      profileViewCount,
-      profileViewCountUnique,
-      legacyProfilePageLoads,
-      ...(ownerProfileViewCount !== undefined ? { ownerProfileViewCount } : {}),
-    });
+    };
+
+    if (isOwner) {
+      const profileViewCountUnique = reach.unique;
+      const legacyProfilePageLoads = reach.legacy;
+      const profileViewCount = reach.display;
+      payload.profileViewCount = profileViewCount;
+      payload.profileViewCountUnique = profileViewCountUnique;
+      payload.legacyProfilePageLoads = legacyProfilePageLoads;
+      payload.ownerProfileViewCount = profileViewCount;
+    }
+
+    return NextResponse.json(payload);
   } catch (err) {
     console.error('[profile/slug]', err);
     return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });

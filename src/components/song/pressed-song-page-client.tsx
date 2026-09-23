@@ -219,13 +219,15 @@ export function PressedSongPageClient({ initial }: { initial: PressedSongSummary
             ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <ShareReachStrip
-              shareId={summary.shareId}
-              ownerId={summary.ownerId}
-              landingCount={summary.landingCount}
-              legacyViews={summary.legacyShareViews}
-              reachDisplayCount={summary.reachDisplayCount}
-            />
+            {user?.id === summary.ownerId ? (
+              <ShareReachStrip
+                shareId={summary.shareId}
+                ownerId={summary.ownerId}
+                landingCount={summary.landingCount}
+                legacyViews={summary.legacyShareViews}
+                reachDisplayCount={summary.reachDisplayCount}
+              />
+            ) : null}
             <Button variant="outline" asChild className="font-bold uppercase"><Link href="/vault">The Vault</Link></Button>
           </div>
         </div>

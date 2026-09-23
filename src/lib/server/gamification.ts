@@ -1445,8 +1445,19 @@ export async function getPublicProfile(slug: string) {
       .catch(() => undefined);
   }
 
+  const {
+    profileViewCount: _profileViewCount,
+    profileViewCountUpdatedAt: _profileViewCountUpdatedAt,
+    views: _views,
+    pageViews: _pageViews,
+    profilePageViews: _profilePageViews,
+    legacyPageLoads: _legacyPageLoads,
+    legacyProfileViews: _legacyProfileViews,
+    ...publicProfileFields
+  } = data as Record<string, unknown>;
+
   return {
-    ...data,
+    ...publicProfileFields,
     slug: liveSlug,
     requestedSlug: slug,
     artistHome,

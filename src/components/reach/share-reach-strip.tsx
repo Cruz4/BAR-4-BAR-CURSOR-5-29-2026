@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/client/firebase';
 import { displayReachCount, fetchShareReachAnalytics, recordShareLandingClient } from '@/lib/reach-analytics-client';
 import { ReachAnalyticsDialog } from '@/components/reach/reach-analytics-dialog';
 import { ReachUniqueCount } from '@/components/reach/reach-unique-count';
@@ -44,14 +45,28 @@ export function ShareReachStrip({
     recordShareLandingClient(id);
   }, [shareId]);
 
+  const isOwner = Boolean(user?.id && user.id === ownerId);
+
   useEffect(() => {
+    if (!isOwner) return;
     const id = shareId.trim().toUpperCase();
     if (!id) return;
     let cancelled = false;
-    void fetch(`/api/shares/${encodeURIComponent(id)}`, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { share?: { landingCount?: number; views?: number }; landingCount?: number; views?: number } | null) => {
-        if (cancelled || !data) return;
+    void (async () => {
+      try {
+        const headers: HeadersInit = { cache: 'no-store' };
+        const token = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => null) : null;
+        if (token) {
+          (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+        }
+        const res = await fetch(`/api/shares/${encodeURIComponent(id)}`, { headers });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          share?: { landingCount?: number; views?: number };
+          landingCount?: number;
+          views?: number;
+        };
+        if (cancelled) return;
         const unique =
           typeof data.share?.landingCount === 'number'
             ? data.share.landingCount
@@ -69,15 +84,14 @@ export function ShareReachStrip({
         if (typeof unique === 'number' || typeof legacy === 'number') {
           setLocalDisplay(displayReachCount(unique, legacy));
         }
-      })
-      .catch(() => undefined);
+      } catch {
+        /* ignore */
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [shareId]);
-
-  const isOwner = Boolean(user?.id && user.id === ownerId);
-  const canManage = isOwner; // share doc shape not needed for strip
+  }, [shareId, isOwner]);
 
   const loadShareReach = useCallback(
     (days: number) => fetchShareReachAnalytics(shareId, days),
@@ -89,18 +103,20 @@ export function ShareReachStrip({
       ? localDisplay
       : displayReachCount(localUnique, localLegacy);
 
+  if (!isOwner) return null;
+
   return (
     <>
       <ReachUniqueCount
         count={display}
         label="Views"
-        interactive={canManage}
-        onPress={canManage ? () => setOpen(true) : undefined}
+        interactive={isOwner}
+        onPress={isOwner ? () => setOpen(true) : undefined}
         className={className}
         size={size}
         compact
       />
-      {canManage ? (
+      {isOwner ? (
         <ReachAnalyticsDialog
           open={open}
           onOpenChange={setOpen}

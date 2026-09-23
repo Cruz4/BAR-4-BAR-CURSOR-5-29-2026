@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/firebase/server';
+import { getAuth, getDb } from '@/lib/firebase/server';
 import { canonicalShareVisibility, resolveSupersededDnaShareRedirect } from '@/lib/server/dna-visibility';
 import { resolveAlbumHubShareId } from '@/lib/pressed-song';
 import {
@@ -13,6 +13,18 @@ import { resolveShareReachDisplay } from '@/lib/server/reach-display';
 
 export const runtime = 'nodejs';
 
+async function optionalUid(req: Request): Promise<string | null> {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const auth = await getAuth();
+    const decoded = await auth.verifyIdToken(header.slice('Bearer '.length));
+    return decoded.uid;
+  } catch {
+    return null;
+  }
+}
+
 function safeShareId(value: string | undefined): string | null {
   const id = value?.trim().toUpperCase() || '';
   if (!id || id.length > 200 || id.includes('/')) return null;
@@ -20,7 +32,7 @@ function safeShareId(value: string | undefined): string | null {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ shareId: string }> }
 ) {
   try {
@@ -119,9 +131,16 @@ export async function GET(
           })();
 
     const artist = await resolveShareArtistCredit(db, raw);
-    const reach = await resolveShareReachDisplay(db, shareId, raw);
-    share.landingCount = reach.unique;
-    share.views = reach.legacy;
+    const viewerId = await optionalUid(req);
+    const isOwner = Boolean(viewerId && share.ownerId && viewerId === share.ownerId);
+    if (isOwner) {
+      const reach = await resolveShareReachDisplay(db, shareId, raw);
+      share.landingCount = reach.unique;
+      share.views = reach.legacy;
+    } else {
+      share.landingCount = 0;
+      share.views = 0;
+    }
 
     return NextResponse.json({
       share,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/client/firebase';
 import { fetchProfileReachAnalytics } from '@/lib/reach-analytics-client';
 import { ReachAnalyticsDialog } from '@/components/reach/reach-analytics-dialog';
 import { ReachUniqueCount } from '@/components/reach/reach-unique-count';
@@ -45,33 +46,47 @@ export function ProfileReachStrip({
     setDisplay(next);
   }, [profileViewCount, profileViewCountUnique]);
 
-  useEffect(() => {
-    const clean = slug.trim();
-    if (!clean) return;
-    let cancelled = false;
-    void fetch(`/api/profile/${encodeURIComponent(clean)}`, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: Record<string, unknown> | null) => {
-        if (cancelled || !data) return;
-        const count =
-          typeof data.profileViewCount === 'number'
-            ? data.profileViewCount
-            : typeof data.profileViewCountUnique === 'number'
-              ? data.profileViewCountUnique
-              : 0;
-        setDisplay(count);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
   const isOwner = Boolean(user?.id && ownerId && user.id === ownerId);
   const loadProfileReach = useCallback(
     (days: number) => fetchProfileReachAnalytics(slug, days),
     [slug]
   );
+
+  useEffect(() => {
+    if (!isOwner) return;
+    const clean = slug.trim();
+    if (!clean) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const headers: HeadersInit = { cache: 'no-store' };
+        const token = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => null) : null;
+        if (token) {
+          (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+        }
+        const res = await fetch(`/api/profile/${encodeURIComponent(clean)}`, { headers });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as Record<string, unknown>;
+        if (cancelled) return;
+        const count =
+          typeof data.profileViewCount === 'number'
+            ? data.profileViewCount
+            : typeof data.ownerProfileViewCount === 'number'
+              ? data.ownerProfileViewCount
+              : typeof data.profileViewCountUnique === 'number'
+                ? data.profileViewCountUnique
+                : 0;
+        setDisplay(count);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, isOwner]);
+
+  if (!isOwner) return null;
 
   return (
     <>
