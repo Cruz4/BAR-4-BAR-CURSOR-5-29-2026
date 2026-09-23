@@ -68,7 +68,7 @@ export function SheetMsgsDock({
   const { user } = useAuth();
   const { enabled: foldsOn } = useFoldsFeature();
   const { folds, unread, waiting } = useFoldInbox();
-  const { summary } = useGamification();
+  const { summary, loading: profileLoading } = useGamification();
   const { toast } = useToast();
   const collabSession = useCollabSheetSession();
 
@@ -250,6 +250,9 @@ export function SheetMsgsDock({
   }, [inboxTab, openFolds, waitingFolds, search, me]);
 
   if (!user || !foldsOn) return null;
+
+  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
+  if (profileLoading || !profileLive) return null;
 
   const panelHeight = isMinimized
     ? 'h-[min(calc(100dvh-5rem),32rem)]'

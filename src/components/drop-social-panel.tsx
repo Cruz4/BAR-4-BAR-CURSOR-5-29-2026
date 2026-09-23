@@ -7,6 +7,7 @@ import { PostCommentThread } from '@/components/profile/post-comment-thread';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import {
   createPost,
   fetchDropReverbWallPostId,
@@ -83,6 +84,7 @@ export function DropSocialPanel({
 }: DropSocialPanelProps) {
   const { user } = useAuth();
   const { summary } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const router = useRouter();
   const isPro = isProOrTrial(user);
@@ -169,10 +171,8 @@ export function DropSocialPanel({
   };
 
   const toggleLike = async () => {
-    if (!user) {
-      needAuth();
-      return;
-    }
+    if (!ensureEngagement({ intent: 'love', next: dropPath })) return;
+    if (!user) return;
     if (user.id === ownerId) {
       toast({ title: 'That\'s your drop', description: 'Fans love it — you already made it.' });
       return;
@@ -197,6 +197,7 @@ export function DropSocialPanel({
   };
 
   const openComments = async () => {
+    if (!commentsOpen && !ensureEngagement({ intent: 'reply', next: dropPath })) return;
     setCommentsOpen((v) => !v);
     if (commentsLoaded) return;
     const list = await fetchDropComments(shareId);

@@ -129,6 +129,39 @@ export function activityOpenHref(event: ActivityEvent, _viewerSlug?: string): st
  * Open target for an activity row. Post and comment events use their canonical
  * public post route; profile-only events still honor live vanity rules.
  */
+async function resolveLiveProfileNavigate(
+  userId?: string,
+  slug?: string | null,
+  fallback = '/activity'
+): Promise<string> {
+  if (userId) {
+    try {
+      const { fetchLivePublicProfileByUserId } = await import('@/lib/profile/social-client');
+      const live = await fetchLivePublicProfileByUserId(userId);
+      if (live?.slug && (await isLivePublicProfileSlug(live.slug))) {
+        return profileHref(live.slug) || fallback;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  const baked = typeof slug === 'string' ? slug.trim() : '';
+  if (baked && (await isLivePublicProfileSlug(baked))) {
+    return profileHref(baked) || fallback;
+  }
+  return fallback;
+}
+
+function profileSubjectForEvent(event: ActivityEvent): { userId?: string; slug?: string } {
+  if (event.direction === 'received') {
+    return { userId: event.actorId, slug: event.actorSlug };
+  }
+  return {
+    userId: event.targetUserId || event.actorId,
+    slug: event.targetSlug || event.actorSlug,
+  };
+}
+
 export async function resolveActivityOpenHref(
   event: ActivityEvent,
   opts?: { viewerUserId?: string; viewerSlug?: string }
@@ -157,6 +190,20 @@ export async function resolveActivityOpenHref(
       return profileHref(event.actorSlug) || (event.type === 'contact_accepted' ? '/activity' : '/friends');
     }
     return event.type === 'contact_accepted' ? '/activity' : '/friends';
+  }
+
+  if (event.type === 'profile_followed' || event.type === 'profile_imprint_saved') {
+    const { userId, slug } = profileSubjectForEvent(event);
+    return resolveLiveProfileNavigate(userId, slug);
+  }
+
+  if (event.href) {
+    const slugFromHref = slugFromProfileHref(event.href);
+    if (slugFromHref) {
+      const { userId, slug } = profileSubjectForEvent(event);
+      return resolveLiveProfileNavigate(userId, slug || slugFromHref);
+    }
+    return event.href;
   }
 
   return activityOpenHref(event, opts?.viewerSlug);

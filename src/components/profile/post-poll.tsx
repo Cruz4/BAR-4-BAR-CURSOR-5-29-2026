@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { PostPoll, PostPollViewerState } from '@/lib/profile/post-polls';
@@ -28,6 +29,7 @@ export function PostPollCard({
   commentId?: string;
 }) {
   const { user, loading: authLoading } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const rootRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
@@ -87,10 +89,8 @@ export function PostPollCard({
 
   const vote = async () => {
     if (!pendingOptionId || voting) return;
-    if (!user || !auth.currentUser) {
-      toast({ title: 'Sign in to vote' });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'poll' })) return;
+    if (!auth.currentUser) return;
     setVoting(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -136,7 +136,10 @@ export function PostPollCard({
                 (state?.hasVoted || voting || !user) && 'cursor-default'
               )}
               disabled={Boolean(state?.hasVoted || voting || !user)}
-              onClick={() => setPendingOptionId(option.id)}
+              onClick={() => {
+                if (!ensureEngagement({ intent: 'poll' })) return;
+                setPendingOptionId(option.id);
+              }}
             >
               {state?.resultsVisible ? (
                 <span className="absolute inset-y-0 left-0 -z-10 bg-cyan-400/15 transition-[width] duration-500" style={{ width: `${percent}%` }} />

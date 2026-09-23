@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
 import { cn } from '@/lib/utils';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
-import { profileHref } from '@/lib/profile/profile-slug';
+import { useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import {
   acceptFoldClient,
   deleteFoldFromInboxClient,
@@ -230,6 +230,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const me = user?.id || '';
   const peerId = fold ? peerIdOf(fold.memberIds, me) : '';
   const peer = fold && peerId ? fold.members[peerId] : undefined;
+  const { href: peerArtistHomeHref, isLive: peerArtistHomeLive } = useLiveArtistHomeSlug(
+    peerId || undefined,
+    peer?.slug
+  );
   const waitingOnThem = fold?.status === 'pending' && fold.initiatedBy === me;
   const sealedForMe = fold?.status === 'pending' && fold.initiatedBy !== me;
   const inkMoving =
@@ -411,7 +415,6 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     return <StudioLoader size="lg" fullscreen message="Opening…" />;
   }
 
-  const profileUrl = profileHref(peer?.slug);
   const peerName = peer?.name || 'Artist';
 
   return (
@@ -449,8 +452,8 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-none">
-            {profileUrl ? (
-              <DropdownMenuItem onClick={() => router.push(profileUrl)}>Artist Home</DropdownMenuItem>
+            {peerArtistHomeLive && peerArtistHomeHref ? (
+              <DropdownMenuItem onClick={() => router.push(peerArtistHomeHref)}>Artist Home</DropdownMenuItem>
             ) : null}
             <DropdownMenuItem
               onClick={() =>

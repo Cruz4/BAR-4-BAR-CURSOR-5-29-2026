@@ -10,9 +10,10 @@ const MAX_AGE_MS = 30 * 60 * 1000;
 export type ReleaseCatalogReturnState = {
   scrollTop: number;
   sectionId?: string;
-  reopenAfterBack?: boolean;
   /** Set when the user followed a catalog outbound link; cleared after catalog reopens. */
   pendingFromCatalog?: boolean;
+  /** Set only when returning via browser/device Back — triggers scroll restore when the dialog opens. */
+  scrollRestoreOnReopen?: boolean;
   savedAt: number;
 };
 
@@ -34,6 +35,16 @@ function readState(): ReleaseCatalogReturnState | null {
 
 function writeState(state: ReleaseCatalogReturnState) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/** Cleared on sign-out and when a different user signs in (sessionStorage is per-tab, not per-user). */
+export function clearReleaseCatalogNavigationState(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Call right before leaving the catalog for a release / share / vault screen. */
@@ -67,39 +78,55 @@ export function isReleaseCatalogReferrer(searchParams: URLSearchParams | null | 
   return searchParams?.get('from') === RELEASE_CATALOG_FROM_QUERY;
 }
 
+function isBackForwardNavigation(): boolean {
+  if (typeof window === 'undefined') return false;
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  return nav?.type === 'back_forward';
+}
+
+function markScrollRestorePending() {
+  const existing = readState();
+  if (!existing?.pendingFromCatalog) return;
+  writeState({
+    scrollTop: existing.scrollTop,
+    sectionId: existing.sectionId,
+    pendingFromCatalog: true,
+    scrollRestoreOnReopen: true,
+    savedAt: Date.now(),
+  });
+}
+
 /** Browser / header Back from a catalog destination — reopens catalog on the prior screen. */
 export function navigateBackToReleaseCatalog(router: { back: () => void }): boolean {
   if (typeof window === 'undefined') return false;
   const fromCatalog =
     new URLSearchParams(window.location.search).get('from') === RELEASE_CATALOG_FROM_QUERY;
   const existing = readState();
-  if (!fromCatalog && !existing) return false;
+  if (!fromCatalog && !existing?.pendingFromCatalog) return false;
 
-  writeState({
-    scrollTop: existing?.scrollTop ?? 0,
-    sectionId: existing?.sectionId,
-    reopenAfterBack: true,
-    pendingFromCatalog: true,
-    savedAt: Date.now(),
-  });
+  if (fromCatalog && !existing?.pendingFromCatalog) {
+    writeState({
+      scrollTop: 0,
+      pendingFromCatalog: true,
+      scrollRestoreOnReopen: true,
+      savedAt: Date.now(),
+    });
+  } else {
+    markScrollRestorePending();
+  }
   router.back();
   return true;
 }
 
-export function peekReleaseCatalogReopen(): ReleaseCatalogReturnState | null {
-  const data = readState();
-  if (!data?.reopenAfterBack) return null;
-  return data;
-}
-
 /** After the catalog dialog opens again — restore scroll + section, clear reopen flag. */
 export function consumeReleaseCatalogReopen(): ReleaseCatalogReturnState | null {
-  const data = peekReleaseCatalogReopen();
-  if (!data) return null;
+  const data = readState();
+  if (!data?.scrollRestoreOnReopen) return null;
   writeState({
     scrollTop: data.scrollTop,
     sectionId: data.sectionId,
     pendingFromCatalog: false,
+    scrollRestoreOnReopen: false,
     savedAt: data.savedAt,
   });
   return data;
@@ -116,35 +143,32 @@ export function applyReleaseCatalogScrollRestore(state: ReleaseCatalogReturnStat
   });
 }
 
-function isBackForwardNavigation(): boolean {
-  if (typeof window === 'undefined') return false;
-  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-  return nav?.type === 'back_forward';
-}
-
 /** Mount on any page that hosts ReleaseCatalogDialog (Scene, Vault dock, etc.). */
 export function useReleaseCatalogReopenListener(onReopen: () => void) {
   useEffect(() => {
-    const tryReopen = () => {
-      if (peekReleaseCatalogReopen()) {
-        onReopen();
-        return;
-      }
+    const tryReopenAfterBack = () => {
+      if (!isBackForwardNavigation()) return;
       const data = readState();
-      if (data?.pendingFromCatalog && isBackForwardNavigation()) {
-        writeState({
-          scrollTop: data.scrollTop,
-          sectionId: data.sectionId,
-          reopenAfterBack: true,
-          pendingFromCatalog: true,
-          savedAt: Date.now(),
-        });
-        onReopen();
+      if (!data?.pendingFromCatalog) return;
+      markScrollRestorePending();
+      onReopen();
+    };
+
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted || isBackForwardNavigation()) {
+        tryReopenAfterBack();
       }
     };
-    tryReopen();
-    const onPageShow = () => tryReopen();
+
+    const onPopState = () => {
+      queueMicrotask(() => tryReopenAfterBack());
+    };
+
     window.addEventListener('pageshow', onPageShow);
-    return () => window.removeEventListener('pageshow', onPageShow);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('popstate', onPopState);
+    };
   }, [onReopen]);
 }

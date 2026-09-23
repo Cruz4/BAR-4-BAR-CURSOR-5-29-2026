@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
+import { buildLoginUrl } from '@/lib/login-links';
 import { useToast } from '@/hooks/use-toast';
 import {
   fetchSupportRelationship,
@@ -34,6 +36,7 @@ export function SupportButton({
   targetName: string;
 }) {
   const { user } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const [state, setState] = useState<SupportRelationshipState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,7 +55,7 @@ export function SupportButton({
     return (
       <Hint content={FOLLOW_HELP} side="bottom" actionSafe>
         <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
-          <a href="/login" aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Follow</span></a>
+          <a href={buildLoginUrl({ mode: 'signup', intent: 'follow' })} aria-label="Follow" title="Follow"><HeartHandshake className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Follow</span></a>
         </Button>
       </Hint>
     );
@@ -61,6 +64,9 @@ export function SupportButton({
   const run = async (
     action: 'follow' | 'unfollow' | 'inner_circle_on' | 'inner_circle_off'
   ) => {
+    if (action === 'follow' || action === 'inner_circle_on') {
+      if (!ensureEngagement({ intent: 'follow' })) return;
+    }
     setBusy(true);
     try {
       const next = await updateSupportRelationship({

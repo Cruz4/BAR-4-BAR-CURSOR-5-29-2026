@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/context/theme-provider';
 import { UIStateProvider } from '@/context/ui-state-context';
 import { UsageProvider } from '@/context/usage-context';
 import { GamificationProvider } from '@/context/gamification-context';
+import { ArtistHomeEngagementProvider } from '@/context/artist-home-engagement-context';
 import { AchievementUnlockCelebration } from '@/components/gamification/achievement-unlock-celebration';
 import { ProgressCelebration } from '@/components/gamification/progress-celebration';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
@@ -136,6 +137,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <DataProvider>
         <UsageProvider>
           <GamificationProvider>
+          <ArtistHomeEngagementProvider>
             <UIStateProvider>
               <ActivityAlertsProvider>
               <FoldInboxProvider>
@@ -201,6 +203,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </FoldInboxProvider>
               </ActivityAlertsProvider>
             </UIStateProvider>
+          </ArtistHomeEngagementProvider>
           </GamificationProvider>
         </UsageProvider>
       </DataProvider>

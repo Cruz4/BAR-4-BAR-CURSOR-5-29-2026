@@ -22,7 +22,7 @@ import {
   type PostComment,
 } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
-import { SCENE_BOOTH_ID } from '@/lib/scene-home';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import {
   addDropComment,
   deleteDropComment,
@@ -89,6 +89,7 @@ export function PostCommentThread({
   const { toast } = useToast();
   const { user: authUser } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const isPro = isProOrTrial(authUser);
   const [likeStates, setLikeStates] = useState<Record<string, { count: number; liked: boolean }>>({});
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
@@ -114,8 +115,6 @@ export function PostCommentThread({
     persistImprintSlots,
     imprintPayload,
   } = useImprintComposer(draft, isPro, summary.quotePressSlots);
-  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
-  const canWritePublic = Boolean(user && !profileLoading && profileLive);
   const pollReady = !pollOpen || (Boolean(draft.trim()) && pollOptions.every((option) => option.trim()));
   const composerReady =
     pollReady && Boolean(draft.trim() || voice || image || clip || (pollOpen && draft.trim()));
@@ -144,14 +143,7 @@ export function PostCommentThread({
 
   const submitComment = async () => {
     if (!user || !composerReady) return;
-    if (!canWritePublic) {
-      toast({
-        variant: 'destructive',
-        title: 'Artist Home offline',
-        description: 'Turn your Artist Home live in Your Booth before posting or replying.',
-      });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'reply' })) return;
     if (!postId && !shareId) return;
     setBusy(true);
     try {
@@ -211,10 +203,8 @@ export function PostCommentThread({
   };
 
   const toggleCommentLike = async (commentId: string) => {
-    if (!user) {
-      toast({ title: 'Sign in to show love' });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'love' })) return;
+    if (!user) return;
     if (!postId && !shareId) return;
     const prev = likeStates[commentId] || { count: 0, liked: false };
     const nextLiked = !prev.liked;
@@ -336,16 +326,15 @@ export function PostCommentThread({
               {user ? (
                 <button
                   type="button"
-                  disabled={!canWritePublic}
-                  onClick={() =>
+                  onClick={() => {
+                    if (!ensureEngagement({ intent: 'reply' })) return;
                     setReplyTo({
                       commentId: node.id,
                       authorId: node.authorId,
                       authorName: node.authorName,
-                    })
-                  }
-                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:text-[var(--ph-text,#fff)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[var(--ph-muted,rgba(255,255,255,0.45))]"
-                  title={!canWritePublic ? 'Turn your Artist Home live to reply' : undefined}
+                    });
+                  }}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.45))] hover:text-[var(--ph-text,#fff)]"
                 >
                   <MessageCircle className="h-3 w-3" />
                   Reply
@@ -394,7 +383,7 @@ export function PostCommentThread({
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
           Checking your Artist Home…
         </p>
-      ) : canWritePublic ? (
+      ) : user && !profileLoading ? (
         <div className="space-y-2 pt-1">
           {replyTo ? (
             <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--ph-muted,rgba(255,255,255,0.55))]">
@@ -563,20 +552,9 @@ export function PostCommentThread({
           </div>
           <ComposerLinkPreview text={draft} className="max-w-md" />
         </div>
-      ) : user ? (
-        <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          Your Artist Home is offline.{' '}
-          <Link
-            href={`/#${SCENE_BOOTH_ID}`}
-            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
-          >
-            Turn it live in Your Booth
-          </Link>{' '}
-          to post or reply. Existing comments stay visible.
-        </p>
       ) : (
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-          <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+          <Link href="/login?mode=signup" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
             Sign in
           </Link>{' '}
           to reply.

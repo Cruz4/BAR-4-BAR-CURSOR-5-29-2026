@@ -32,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { cn } from '@/lib/utils';
 import { profileFriendsHref, profileHref } from '@/lib/profile/profile-slug';
 import { parseStudioBadge, studioNameClass } from '@/lib/studio-tier-chrome';
@@ -835,6 +836,7 @@ function WallPager({
 export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
   const { summary, loading: profileLoading } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const isPro = isProOrTrial(user);
   const playground = ctx.playgroundWall;
@@ -995,10 +997,8 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     setPosts(playground.posts);
   }, [playground, playground?.posts]);
 
-  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
   const signedInOwner = Boolean(ctx.isOwner && user);
-  const canCompose = Boolean(playground) || Boolean(signedInOwner && profileLive);
-  const ownerNeedsLive = Boolean(!playground && signedInOwner && !profileLoading && !profileLive);
+  const canCompose = Boolean(playground) || Boolean(signedInOwner);
   const pollReady = !pollOpen || (Boolean(text.trim()) && pollOptions.every((option) => option.trim()));
 
   const pageCount = playground
@@ -1086,6 +1086,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       return;
     }
     if (!user) return;
+    if (!ensureEngagement({ intent: 'wall_post' })) return;
     if (!pollReady || (!text.trim() && !voice && !image && !clip)) return;
     setBusy(true);
     try {
@@ -1126,22 +1127,10 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     }
   };
 
-  if (!canCompose && !ownerNeedsLive && loaded && posts.length === 0 && !focusPostId) return null;
+  if (!canCompose && loaded && posts.length === 0 && !focusPostId) return null;
 
   return (
     <ModuleShell icon={PenLine} title={"The Wall"} ctx={ctx}>
-      {ownerNeedsLive ? (
-        <p className={cn(inkWellClass, 'mb-5 p-4 text-sm text-[var(--ph-muted,rgba(255,255,255,0.6))]')}>
-          Your Artist Home is offline.{' '}
-          <Link
-            href={`/#${SCENE_BOOTH_ID}`}
-            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
-          >
-            Turn it live in Your Booth
-          </Link>{' '}
-          to add a wall post. Existing posts stay visible.
-        </p>
-      ) : null}
       {canCompose && (
         <div className={cn(inkWellClass, 'relative mb-5 space-y-2 p-4')}>
           <MentionField value={text} onChange={setText} excludeUserId={user?.id}>
@@ -1558,7 +1547,8 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
 
 export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
   const { user } = useAuth();
-  const { summary, loading: profileLoading } = useGamification();
+  const { loading: profileLoading } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const playground = ctx.playgroundGuestbook;
   const [entries, setEntries] = useState<GuestbookEntry[]>(playground || []);
@@ -1582,9 +1572,8 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
     };
   }, [ctx.profileUserId, playground]);
 
-  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
   const canSignIdentity = !playground && Boolean(user && user.id !== ctx.profileUserId);
-  const canSign = canSignIdentity && !profileLoading && profileLive;
+  const canSign = canSignIdentity && !profileLoading;
   const isAdmin = Boolean(
     user && (user.role === 'admin' || isMasterAdminEmail(user.email))
   );
@@ -1592,6 +1581,7 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
 
   const sign = async () => {
     if (!user || playground) return;
+    if (!ensureEngagement({ intent: 'guestbook' })) return;
     setBusy(true);
     try {
       const entry = await setGuestbookEntry(ctx.profileUserId, draft, {
@@ -1639,21 +1629,9 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
           </Button>
         </div>
       )}
-      {canSignIdentity && !profileLoading && !profileLive ? (
-        <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          Your Artist Home is offline.{' '}
-          <Link
-            href={`/#${SCENE_BOOTH_ID}`}
-            className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
-          >
-            Turn it live in Your Booth
-          </Link>{' '}
-          to leave a new line. Existing entries stay visible.
-        </p>
-      ) : null}
       {!user && !playground && (
         <p className="mb-4 text-xs text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-          <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+          <Link href="/login?mode=signup" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
             Sign in
           </Link>{' '}
           to leave one line in the book.

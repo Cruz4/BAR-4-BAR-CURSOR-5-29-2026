@@ -22,6 +22,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { trackStudioEvent } from '@/lib/analytics-client';
 import { ANALYTICS_EVENTS } from '@/lib/analytics-events';
 import { clearWhatsNewLoginSession } from '@/lib/whats-new-session';
+import { clearReleaseCatalogNavigationState } from '@/lib/release-catalog-navigation';
 import { isBrowserOffline, onNetworkChange } from '@/lib/offline/network';
 import {
   loadCachedUserProfile,
@@ -144,6 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const authEpochRef = useRef(0);
+  const lastAuthUidRef = useRef<string | null>(null);
   const signingOutRef = useRef(false);
   const profileUnsubRef = useRef<(() => void) | null>(null);
   const router = useRouter();
@@ -160,6 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await endCurrentDeviceSession().catch(() => undefined);
       clearCurrentDeviceSessionIdentity();
       await prepareFirestoreForSignOut();
+      clearReleaseCatalogNavigationState();
       await signOut(auth);
       saveLastAuthUserId(null);
       if (uid) clearCachedUserProfile(uid);
@@ -226,6 +229,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!firebaseUser) {
         clearWhatsNewLoginSession();
+        clearReleaseCatalogNavigationState();
+        lastAuthUidRef.current = null;
         saveLastAuthUserId(null);
         setUser(null);
         setAuthReady(false);
@@ -238,6 +243,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         finishLoading();
         return;
       }
+
+      const prevUid = lastAuthUidRef.current;
+      if (prevUid && prevUid !== firebaseUser.uid) {
+        clearReleaseCatalogNavigationState();
+      }
+      lastAuthUidRef.current = firebaseUser.uid;
 
       await restoreFirestoreNetwork();
 

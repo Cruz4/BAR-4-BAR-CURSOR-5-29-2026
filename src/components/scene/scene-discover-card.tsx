@@ -15,6 +15,7 @@ import { PostCard } from '@/components/profile/post-card';
 import { ArtistStarAvatar, LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { DropListenPanel } from '@/components/drop-listen-panel';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
@@ -82,6 +83,7 @@ export function SceneDiscoverCard({
   compactSalePlayer?: boolean;
 }) {
   const { user } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [busy, setBusy] = useState(false);
@@ -189,10 +191,11 @@ export function SceneDiscoverCard({
           if (target.closest('button,a,input,textarea,select,audio,video,[role="button"]')) return;
           if (Math.hypot(event.clientX - dropTapRef.current.x, event.clientY - dropTapRef.current.y) > 12) { dropTapRef.current.lastAt = 0; return; }
           const now = Date.now();
-          if (now - dropTapRef.current.lastAt < 330) {
-            dropTapRef.current.lastAt = 0;
-            if (!user) toast({ title: 'Sign in to show love' });
-            else if (!dropLoveBusyRef.current) {
+            if (now - dropTapRef.current.lastAt < 330) {
+              dropTapRef.current.lastAt = 0;
+              if (!ensureEngagement({ intent: 'love' })) return;
+              if (!user) return;
+              if (!dropLoveBusyRef.current) {
               const next = !dropLoved;
               dropLoveBusyRef.current = true;
               setDropLoved(next);

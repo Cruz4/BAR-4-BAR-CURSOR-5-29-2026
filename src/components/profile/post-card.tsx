@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { usePostImageUrl } from '@/hooks/use-post-image-url';
 import { cn } from '@/lib/utils';
 import { formatDropShareCaption } from '@/lib/profile/drop-share-caption';
@@ -373,6 +374,7 @@ export function PostCard({
   const showInlineAuthor = showAuthor && !immersive;
   const resolvedImageUrl = usePostImageUrl(post.imageUrl, post.imageStoragePath);
   const { user, loading: authLoading } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { summary } = useGamification();
   const isPro = isProOrTrial(user);
   const { toast } = useToast();
@@ -564,6 +566,7 @@ export function PostCard({
   };
 
   const openReverbComposer = () => {
+    if (!ensureEngagement({ intent: 'reverb' })) return;
     setReverbQuote(viewerReverbQuote);
     setReverbVoice(null);
     revokePostImagePreview(reverbImage);
@@ -655,10 +658,8 @@ export function PostCard({
 
   const toggleLike = async (showBurst = false) => {
     if (loveBusyRef.current) return;
-    if (!user) {
-      toast({ title: 'Sign in to show love' });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'love' })) return;
+    if (!user) return;
     const next = !liked;
     loveBusyRef.current = true;
     setLiked(next);
@@ -687,10 +688,8 @@ export function PostCard({
   };
 
   const handleReverb = async (composer?: ReverbComposerOptions) => {
-    if (!user) {
-      toast({ title: 'Sign in to Reverb' });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'reverb' })) return;
+    if (!user) return;
     setBusy(true);
     try {
       const result = await toggleReverb(
@@ -763,6 +762,7 @@ export function PostCard({
   };
 
   const openComments = async () => {
+    if (!commentsOpen && !ensureEngagement({ intent: 'reply' })) return;
     setCommentsOpen((open) => !open);
     if (!commentsLoaded) {
       try {

@@ -18,6 +18,7 @@ import {
   liveLyricDnaCatalogRows,
   releaseShareIdOf,
   releaseStatusOf,
+  hasLiveDnaDrop,
   type VaultReleaseGroups,
 } from '@/lib/release-management';
 import { deleteDropAudioFiles } from '@/lib/drop-audio-upload';
@@ -45,6 +46,7 @@ type DraftActionTarget = {
   track?: Track;
   action: 'removeRecording' | 'scrapDraft';
 };
+type DnaOfflineTarget = { kind: 'album' | 'track'; album: Album; track?: Track; shareId: string };
 type GroupKey = keyof VaultReleaseGroups;
 type CatalogSectionId = GroupKey | 'liveMusic' | 'house';
 
@@ -498,7 +500,8 @@ function ReleaseCatalogBody({
   className?: string;
   catalogOpen?: boolean;
 }) {
-  const { albums, updateAlbum, updateTrack, deleteTrack, moveTrack, flushCloudNow } = useContext(DataContext);
+  const { albums, updateAlbum, updateTrack, deleteTrack, moveTrack, flushCloudNow, revokeDNA } =
+    useContext(DataContext);
   const { user } = useAuth();
   const { toast } = useToast();
   const groups = useMemo(() => groupVaultReleases(albums), [albums]);
@@ -510,6 +513,7 @@ function ReleaseCatalogBody({
   const [unpress, setUnpress] = useState<UnpressTarget | null>(null);
   const [remove, setRemove] = useState<RemoveTarget | null>(null);
   const [draftDraft, setDraftDraft] = useState<DraftActionTarget | null>(null);
+  const [dnaOffline, setDnaOffline] = useState<DnaOfflineTarget | null>(null);
   const [attach, setAttach] = useState<Row | null>(null);
   const { linkedHouse, loadingHouse, refreshLinkedHouse } = useLinkedHouseReleases(user?.id, catalogOpen);
   const [hiddenHouseIds, setHiddenHouseIds] = useState<string[]>([]);
@@ -687,6 +691,31 @@ function ReleaseCatalogBody({
       setRemove(null);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Could not remove release record', description: error instanceof Error ? error.message : undefined });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const takeLyricDnaOffline = async () => {
+    if (!dnaOffline) return;
+    const { kind, album, track, shareId } = dnaOffline;
+    const projectId = track?.id || album.id;
+    const key = `dna-offline:${kind}:${projectId}`;
+    setBusy(key);
+    try {
+      await flushCloudNow();
+      await revokeDNA(kind, projectId, shareId, track ? { albumId: album.id } : undefined);
+      toast({
+        title: 'Lyrics DNA Drop offline',
+        description: 'The public lyric page is hidden. Your Vault sheet and any live music release are unchanged.',
+      });
+      setDnaOffline(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not take lyric page offline',
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setBusy('');
     }
@@ -971,6 +1000,12 @@ function ReleaseCatalogBody({
         const musicReleaseId = releaseShareIdOf(track || { ...album, tracks: album.tracks });
         const releaseId = musicReleaseId;
         const status = releaseStatusOf(track || { ...album, tracks: album.tracks });
+        const dnaShareId = (track?.shareId || album.shareId)?.trim();
+        const dnaLive = Boolean(dnaShareId && hasLiveDnaDrop(track || album));
+        const showMusicTakeOffline =
+          !opts?.houseLyricStrand && status === 'live' && Boolean(releaseId || musicReleaseId);
+        const showMusicRemove =
+          !opts?.houseLyricStrand && status === 'unlisted' && Boolean(releaseId || musicReleaseId);
         const rowKey = `${listKey}:${opts?.houseLyricStrand ? 'house' : 'main'}:${album.id}:${track?.id || 'album'}`;
         return (
           <li
@@ -1046,21 +1081,53 @@ function ReleaseCatalogBody({
                 </Button>
               ) : null}
               {dnaGroup ? (
-                <Button asChild size="sm" variant="outline" className="h-9 text-xs font-bold uppercase">
-                  <Link
-                    href={catalogLinkHref(
-                      track ? `/albums/${album.id}/tracks/${track.id}` : `/albums/${album.id}`,
-                      sectionId
-                    )}
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-xs font-bold uppercase"
+                    onClick={() =>
+                      openFirstDropLathe({
+                        albumId: album.id,
+                        ...(track ? { trackId: track.id } : { mode: 'album' as const }),
+                      })
+                    }
                   >
-                    <Settings2 className="mr-1 h-3 w-3" /> Manage in Vault
-                  </Link>
-                </Button>
+                    <Settings2 className="mr-1 h-3 w-3" /> Update lyric drop
+                  </Button>
+                  <Button asChild size="sm" variant="outline" className="h-9 text-xs font-bold uppercase">
+                    <Link
+                      href={catalogLinkHref(
+                        track ? `/albums/${album.id}/tracks/${track.id}` : `/albums/${album.id}`,
+                        sectionId
+                      )}
+                    >
+                      <Settings2 className="mr-1 h-3 w-3" /> Manage in Vault
+                    </Link>
+                  </Button>
+                </>
               ) : (
                 <Button size="sm" variant="outline" className="h-9 text-xs font-bold uppercase" onClick={() => openFirstDropLathe({ albumId: album.id, ...(track ? { trackId: track.id } : { mode: 'album' as const }) })}>
                   <Settings2 className="mr-1 h-3 w-3" /> {status === 'live' ? 'Update' : 'Open release desk'}
                 </Button>
               )}
+              {dnaLive && dnaShareId ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 border-violet-400/35 text-xs font-bold uppercase text-violet-200"
+                  onClick={() =>
+                    setDnaOffline({
+                      kind: track ? 'track' : 'album',
+                      album,
+                      track,
+                      shareId: dnaShareId,
+                    })
+                  }
+                >
+                  <Unlink className="mr-1 h-3 w-3" /> Take lyric offline
+                </Button>
+              ) : null}
               {track && !hasLyrics(track) && normalizeDropAudio(track.dropAudio) ? (
                 <>
                   <Button asChild size="sm" variant="outline" className="h-9 text-xs font-bold uppercase">
@@ -1075,12 +1142,12 @@ function ReleaseCatalogBody({
                   ) : null}
                 </>
               ) : null}
-              {!dnaGroup && status === 'live' ? (
+              {showMusicTakeOffline ? (
                 <Button size="sm" variant="outline" className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300" onClick={() => setUnpress({ kind: track ? 'track' : 'album', album, track })}>
-                  <Unlink className="mr-1 h-3 w-3" /> Take offline
+                  <Unlink className="mr-1 h-3 w-3" /> Take music offline
                 </Button>
               ) : null}
-              {!dnaGroup && status === 'unlisted' && releaseId ? (
+              {showMusicRemove ? (
                 <Button size="sm" variant="outline" className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300" onClick={() => setRemove({ kind: track ? 'track' : 'album', album, track })}>
                   <Trash2 className="mr-1 h-3 w-3" /> Remove release
                 </Button>
@@ -1229,6 +1296,9 @@ function ReleaseCatalogBody({
           const onHome = isHouseReleaseVisibleOnHome(row.shareId, hiddenHouseIds);
           const href = row.type === 'album' ? `/share/${row.shareId}` : pressedSongHref(row.shareId);
           const linkedStrands = houseRowLinkedDna(row, houseLinkedDnaByShare);
+          const houseDnaLive =
+            Boolean(dnaAlbum && dnaShareId && hasLiveDnaDrop(dnaTrack || dnaAlbum)) &&
+            linkedStrands.length === 0;
           return (
             <div key={row.shareId} className="space-y-2">
             <div className="rounded-lg border border-cyan-400/20 bg-slate-950/75 p-2.5">
@@ -1302,7 +1372,24 @@ function ReleaseCatalogBody({
                       shareId: row.shareId,
                     })}
                   >
-                    <Unlink className="mr-1 h-3 w-3" /> Take offline
+                    <Unlink className="mr-1 h-3 w-3" /> Take music offline
+                  </Button>
+                ) : null}
+                {houseDnaLive && dnaAlbum && dnaShareId ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 border-violet-400/35 text-xs font-bold uppercase text-violet-200"
+                    onClick={() =>
+                      setDnaOffline({
+                        kind: dnaTrack ? 'track' : 'album',
+                        album: dnaAlbum,
+                        track: dnaTrack,
+                        shareId: dnaShareId,
+                      })
+                    }
+                  >
+                    <Unlink className="mr-1 h-3 w-3" /> Take lyric offline
                   </Button>
                 ) : null}
                 <label className="ml-auto inline-flex h-9 items-center gap-2 rounded-md border border-cyan-400/25 bg-cyan-500/10 px-2.5 text-[10px] font-bold uppercase tracking-wide text-cyan-100">
@@ -1467,6 +1554,29 @@ function ReleaseCatalogBody({
           ) : null}
         </>
       )}
+
+      <Dialog open={Boolean(dnaOffline)} onOpenChange={(open) => !open && setDnaOffline(null)}>
+        <DialogContent className="max-w-md border-violet-400/30">
+          <DialogHeader>
+            <DialogTitle className="font-headline uppercase">Take this Lyrics DNA Drop offline?</DialogTitle>
+            <DialogDescription>
+              The public lyric page closes immediately. Imports and discovery stop. Your Vault sheet stays private, and any live music release is unchanged unless you take that offline separately.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" disabled={Boolean(busy)} onClick={() => setDnaOffline(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-violet-600 text-white hover:bg-violet-500"
+              disabled={Boolean(busy)}
+              onClick={() => void takeLyricDnaOffline()}
+            >
+              Take lyric offline
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(unpress)} onOpenChange={(open) => !open && setUnpress(null)}>
         <DialogContent className="max-w-md">

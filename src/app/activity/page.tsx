@@ -54,6 +54,7 @@ import {
 } from '@/lib/activity/types';
 import { scrollPageToTop } from '@/lib/feed-scroll-restore';
 import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
+import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import {
   acceptFriendRequest,
   fetchFriendships,
@@ -66,7 +67,6 @@ import {
   respondArtistContact,
 } from '@/lib/profile/contact-client';
 import { looksLikeNeomaiyaSol } from '@/lib/profile/neomaiya-sol';
-import { profileHref } from '@/lib/profile/profile-slug';
 import { refreshActivityAlerts, useActivityAlerts } from '@/hooks/use-activity-alerts';
 import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
 import { InboxPageAtmosphere } from '@/components/inbox/inbox-page-atmosphere';
@@ -190,16 +190,18 @@ function ActivityRow({
     onRespondRequest &&
     !requestResolved;
 
-  const nameLink = (label: string, slug?: string) => {
-    const profileUrl = profileHref(slug);
-    return profileUrl ? (
-      <Link href={profileUrl} className="font-bold text-foreground hover:underline">
-        {label}
-      </Link>
-    ) : (
-      <span className="font-bold text-foreground">{label}</span>
-    );
-  };
+  const primaryUserId =
+    event.direction === 'received' ? event.actorId : event.targetUserId || event.actorId;
+
+  const nameLink = (label: string, slug?: string) => (
+    <ArtistHomeLink
+      userId={primaryUserId}
+      slug={slug}
+      className="font-bold text-foreground hover:underline"
+    >
+      {label}
+    </ArtistHomeLink>
+  );
 
   return (
     <div

@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Hint } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
+import { buildLoginUrl } from '@/lib/login-links';
 import {
   acceptFriendRequest,
   blockUser,
@@ -45,6 +47,7 @@ const ACCEPT_HELP =
  */
 export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug }: FriendButtonProps) {
   const { user } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const [friendship, setFriendship] = useState<Friendship | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -97,7 +100,7 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
     return (
       <Hint content={ADD_FRIEND_HELP} side="bottom" actionSafe>
         <Button size="sm" variant="outline" className={baseClass} asChild>
-          <a href="/login" aria-label={`Add ${targetName} as a friend`}>
+          <a href={buildLoginUrl({ mode: 'signup', intent: 'friend' })} aria-label={`Add ${targetName} as a friend`}>
             <UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add friend</span>
           </a>
         </Button>
@@ -196,7 +199,8 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
             className={baseClass}
             disabled={busy}
             aria-label={`Add ${targetName} as a friend`}
-            onClick={() =>
+            onClick={() => {
+              if (!ensureEngagement({ intent: 'friend' })) return;
               run(async () => {
                 const created = await sendFriendRequest(
                   { name: user.displayName || 'Artist', slug: viewerSlug },
@@ -209,8 +213,8 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
                       ? `You and ${targetName} are friends now`
                       : 'Friend request sent',
                 });
-              }, 'Could not send request')
-            }
+              }, 'Could not send request');
+            }}
           >
             <UserPlus className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Add friend</span>
           </Button>
@@ -288,13 +292,14 @@ export function FriendButton({ targetUserId, targetName, targetSlug, viewerSlug 
           className={baseClass}
           disabled={busy}
           aria-label={`Accept ${targetName}'s friend request`}
-          onClick={() =>
+          onClick={() => {
+            if (!ensureEngagement({ intent: 'friend' })) return;
             run(async () => {
               await acceptFriendRequest(friendship.id);
               setFriendship({ ...friendship, status: 'accepted' });
               toast({ title: `You and ${targetName} are friends now` });
-            }, 'Could not accept request')
-          }
+            }, 'Could not accept request');
+          }}
         >
           <Check className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Accept</span>
         </Button>

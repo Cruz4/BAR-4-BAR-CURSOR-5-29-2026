@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
+import { buildLoginUrl } from '@/lib/login-links';
 import { BOARD_REPLY_MAX, type BarBoard, type BarBoardPin } from '@/lib/profile/bar-board';
 import {
   deleteBoardPinReply,
@@ -21,7 +23,6 @@ import {
 } from '@/lib/profile/social-client';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { cn } from '@/lib/utils';
-import { SCENE_BOOTH_ID } from '@/lib/scene-home';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 
 export function BarBoardView({
@@ -62,7 +63,8 @@ function BoardPinCard({
   compact?: boolean;
 }) {
   const { user } = useAuth();
-  const { summary, loading: profileLoading } = useGamification();
+  const { loading: profileLoading } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const [replies, setReplies] = useState<BoardPinReply[]>([]);
   const [draft, setDraft] = useState('');
@@ -76,9 +78,8 @@ function BoardPinCard({
       .catch(() => undefined);
   }, [profileUserId, pin.id, showReplies]);
 
-  const profileLive = Boolean(summary.publicProfile && summary.profileSlug);
   const canReplyIdentity = Boolean(user && user.id !== profileUserId);
-  const canReply = canReplyIdentity && !profileLoading && profileLive;
+  const showReplyComposer = canReplyIdentity && !profileLoading;
   const isAdmin = Boolean(
     user && (user.role === 'admin' || isMasterAdminEmail(user.email))
   );
@@ -94,6 +95,7 @@ function BoardPinCard({
   };
 
   const postReply = async () => {
+    if (!ensureEngagement({ intent: 'reply' })) return;
     if (!user) return;
     setBusy(true);
     try {
@@ -169,7 +171,7 @@ function BoardPinCard({
 
       {showReplies ? (
         <div className="pt-2 border-t border-white/10 space-y-2">
-          {canReply ? (
+          {showReplyComposer ? (
             <div className="flex gap-2">
               <Input
                 value={draft}
@@ -194,20 +196,9 @@ function BoardPinCard({
                 Reply
               </Button>
             </div>
-          ) : canReplyIdentity && !profileLoading && !profileLive ? (
-            <p className="text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.55))]">
-              Your Artist Home is offline.{' '}
-              <Link
-                href={`/#${SCENE_BOOTH_ID}`}
-                className="font-semibold text-[var(--ph-accent,#7dd3fc)] hover:underline"
-              >
-                Turn it live in Your Booth
-              </Link>{' '}
-              to reply. Existing replies stay visible.
-            </p>
           ) : !user ? (
             <p className="text-[11px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
-              <Link href="/login" className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
+              <Link href={buildLoginUrl({ mode: 'signup', intent: 'reply' })} className="text-[var(--ph-accent,#7dd3fc)] hover:underline">
                 Sign in
               </Link>{' '}
               to reply under this bar.

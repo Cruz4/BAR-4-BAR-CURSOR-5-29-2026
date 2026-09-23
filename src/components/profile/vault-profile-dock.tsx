@@ -5,35 +5,16 @@
  * Artist Home visibility + The Block (feed) with social alert badge.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Disc3, Globe, Link2, Settings2, Trophy, UserRound } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import {
-  NEOMAIYA_CANONICAL_SLUG,
-  normalizeProfileSlugInput,
-  profileHref,
-  profileSlugError,
-} from '@/lib/profile/profile-slug';
-import { isNeomaiyaSolViewer } from '@/lib/profile/neomaiya-sol';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Bell, Disc3, Settings2, UserRound } from 'lucide-react';
 import { useGamification } from '@/context/gamification-context';
 import { useAuth } from '@/hooks/use-auth';
 import { useSocialAlerts } from '@/hooks/use-social-alerts';
-import { patchGamificationSettings } from '@/lib/gamification-client';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ReleaseCatalogDialog } from '@/components/vault/release-catalog';
 import { useReleaseCatalogReopenListener } from '@/lib/release-catalog-navigation';
+import { ArtistHomeVisibilityDialog } from '@/components/profile/artist-home-visibility-dialog';
 
 type VaultProfileDockProps = {
   /** Horizontal strip under vault progress on < xl. */
@@ -62,74 +43,14 @@ function AlertBadge({ count, compact }: { count: number; compact?: boolean }) {
 export function VaultProfileDock({ compact = false, className }: VaultProfileDockProps) {
   const { summary, loading } = useGamification();
   const { user } = useAuth();
-  const { toast } = useToast();
   const { total: alertCount } = useSocialAlerts();
   const [open, setOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   useReleaseCatalogReopenListener(useCallback(() => setCatalogOpen(true), []));
-  const [publicProfile, setPublicProfile] = useState(summary.publicProfile);
-  const [showOnLeaderboard, setShowOnLeaderboard] = useState(!summary.leaderboardHidden);
-  const [saving, setSaving] = useState(false);
-  const [slugDraft, setSlugDraft] = useState(summary.profileSlug || '');
-  const [slugSaving, setSlugSaving] = useState(false);
-  const isNeo = isNeomaiyaSolViewer({ email: user?.email, displayName: user?.displayName });
-
-  useEffect(() => {
-    setPublicProfile(summary.publicProfile);
-    setShowOnLeaderboard(!summary.leaderboardHidden);
-    setSlugDraft(summary.profileSlug || '');
-  }, [summary.publicProfile, summary.leaderboardHidden, summary.profileSlug]);
 
   if (!user || loading) return null;
 
-  const isLive = Boolean(publicProfile && summary.profileSlug);
-  const homeHref = summary.profileSlug ? profileHref(summary.profileSlug) : null;
-
-  const saveSettings = async (next: {
-    publicProfile?: boolean;
-    leaderboardHidden?: boolean;
-    profileSlug?: string;
-  }): Promise<boolean> => {
-    setSaving(true);
-    try {
-      await patchGamificationSettings({
-        ...next,
-        displayName: user.displayName,
-      });
-      toast({ title: next.profileSlug ? 'Profile link saved' : 'Visibility updated' });
-      return true;
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: err instanceof Error ? err.message : 'Could not save visibility settings',
-      });
-      return false;
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveSlug = async () => {
-    const clean = normalizeProfileSlugInput(slugDraft);
-    const err = profileSlugError(clean, {
-      allowReserved: isNeo ? [NEOMAIYA_CANONICAL_SLUG] : [],
-    });
-    if (err) {
-      toast({ variant: 'destructive', title: err });
-      return;
-    }
-    if (clean === (summary.profileSlug || '')) {
-      toast({ title: 'Link unchanged' });
-      return;
-    }
-    setSlugSaving(true);
-    try {
-      const ok = await saveSettings({ profileSlug: clean, publicProfile: true });
-      if (ok) setPublicProfile(true);
-    } finally {
-      setSlugSaving(false);
-    }
-  };
+  const isLive = Boolean(summary.publicProfile && summary.profileSlug);
 
   const shellClass = compact
     ? cn('flex w-full flex-col gap-2', className)
@@ -358,131 +279,7 @@ export function VaultProfileDock({ compact = false, className }: VaultProfileDoc
 
       <ReleaseCatalogDialog open={catalogOpen} onOpenChange={setCatalogOpen} />
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md border-2 bg-card sm:rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-headline text-2xl uppercase tracking-tight">
-              Artist Home visibility
-            </DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
-              Both switches off = fully private. Lyrics are never published — only the surfaces you
-              choose.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 pt-1">
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/80 bg-muted/20 px-3.5 py-3">
-              <div className="min-w-0 space-y-1">
-                <Label className="flex items-center gap-1.5 text-sm font-bold uppercase">
-                  <Globe className="h-3.5 w-3.5 text-sky-400" /> Public profile
-                </Label>
-                <p className="text-xs text-muted-foreground leading-snug">
-                  Share your Artist Home page — rank, streak, modules you set live.
-                </p>
-              </div>
-              <Switch
-                checked={publicProfile}
-                disabled={saving}
-                onCheckedChange={(c) => {
-                  setPublicProfile(c);
-                  void saveSettings({ publicProfile: c });
-                }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/80 bg-muted/20 px-3.5 py-3">
-              <div className="min-w-0 space-y-1">
-                <Label className="flex items-center gap-1.5 text-sm font-bold uppercase">
-                  <Trophy className="h-3.5 w-3.5 text-amber-400" /> Show on leaderboard
-                </Label>
-                <p className="text-xs text-muted-foreground leading-snug">
-                  Appear on weekly public rankings (display name + studio stats).
-                </p>
-                <Button
-                  variant="link"
-                  className="h-auto px-0 py-0 text-[11px] font-bold uppercase tracking-wide text-amber-400/90"
-                  asChild
-                >
-                  <Link href="/leaderboard" onClick={() => setOpen(false)}>
-                    Open leaderboard →
-                  </Link>
-                </Button>
-              </div>
-              <Switch
-                checked={showOnLeaderboard}
-                disabled={saving}
-                onCheckedChange={(c) => {
-                  setShowOnLeaderboard(c);
-                  void saveSettings({ leaderboardHidden: !c });
-                }}
-              />
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-sky-500/25 bg-sky-500/5 px-3.5 py-3">
-              <Label className="flex items-center gap-1.5 text-sm font-bold uppercase">
-                <Link2 className="h-3.5 w-3.5 text-sky-400" /> Profile link
-              </Label>
-              <p className="text-xs text-muted-foreground leading-snug">
-              Choose a clean name link — no random codes.
-            </p>
-            <div className="flex flex-col gap-2">
-              <div className="flex min-w-0 items-center gap-1 rounded-lg border border-border/70 bg-background/60 px-2.5 py-1.5 font-code text-xs">
-                <span className="shrink-0 text-muted-foreground">akasheet.com/</span>
-                <Input
-                  value={slugDraft}
-                  disabled={saving || slugSaving}
-                  onChange={(e) => setSlugDraft(normalizeProfileSlugInput(e.target.value))}
-                  className="h-8 border-0 bg-transparent px-0 font-code text-sm shadow-none focus-visible:ring-0"
-                  placeholder="your_artist_name"
-                    maxLength={32}
-                    aria-label="Profile link slug"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="h-9 font-bold uppercase"
-                  disabled={saving || slugSaving}
-                  onClick={() => void saveSlug()}
-                >
-                  {slugSaving ? 'Saving…' : 'Save link'}
-                </Button>
-              </div>
-              {summary.profileSlug && (
-                <p className="font-code text-[10px] text-sky-300/90">
-                  akasheet.com/{summary.profileSlug}
-                </p>
-              )}
-            </div>
-
-            <div
-              className={cn(
-                'rounded-xl border px-3.5 py-3 font-code text-[10px] font-bold uppercase tracking-[0.2em]',
-                isLive
-                  ? 'border-sky-500/30 bg-sky-500/10 text-sky-300'
-                  : 'border-border/70 bg-muted/15 text-muted-foreground/70'
-              )}
-            >
-              {isLive ? 'Profile is live on the web' : 'Profile is private — not on the web'}
-            </div>
-
-            {isLive && homeHref && (
-              <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
-                <Button className="h-10 gap-2 font-bold uppercase" asChild>
-                  <Link href={homeHref} onClick={() => setOpen(false)}>
-                    <UserRound className="h-4 w-4" /> View profile
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-10 gap-2 font-bold uppercase" asChild>
-                  <Link href="/profile/customize" onClick={() => setOpen(false)}>
-                    <Settings2 className="h-4 w-4" /> Edit Public Page
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ArtistHomeVisibilityDialog open={open} onOpenChange={setOpen} variant="settings" />
     </>
   );
 }

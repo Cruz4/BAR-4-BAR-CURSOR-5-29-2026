@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Mic } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { useToast } from '@/hooks/use-toast';
 import { auth } from '@/lib/firebase/client/firebase';
 import { LOCK_HOUSE_ID } from '@/lib/lock-feature';
@@ -20,6 +21,7 @@ export function HouseBarMicLike({
   lockId?: string;
 }) {
   const { user } = useAuth();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const [liked, setLiked] = useState(Boolean(echo.likedByMe));
   const [count, setCount] = useState(echo.likeCount ?? 0);
@@ -31,10 +33,7 @@ export function HouseBarMicLike({
   }, [echo.id, echo.likedByMe, echo.likeCount]);
 
   const toggle = async () => {
-    if (!user) {
-      toast({ title: 'Sign in to mic this bar' });
-      return;
-    }
+    if (!ensureEngagement({ intent: 'love' })) return;
     if (busy) return;
     const next = !liked;
     const nextCount = Math.max(0, count + (next ? 1 : -1));
