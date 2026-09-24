@@ -325,7 +325,7 @@ assert.match(libraryDeck, /item\.albumHref/, 'Library album names must open the 
 const pressedSong = readFileSync(new URL('../src/lib/server/pressed-song.ts', import.meta.url), 'utf8');
 const embedPlayer = readFileSync(new URL('../src/components/profile/embed-player.tsx', import.meta.url), 'utf8');
 const dropSocial = readFileSync(new URL('../src/components/drop-social-panel.tsx', import.meta.url), 'utf8');
-assert.match(pressedSong, /audioForPlay\(share, trackId\)/, 'album share posts must resolve playable album audio');
+assert.match(pressedSong, /loadAudioForPlay\(db, share, trackId\)/, 'feed players must only mount when vault audio resolves');
 assert.match(pressedSong, /albumLevel \? \{ scope: 'album'/, 'album posts must keep album scope for the feed player');
 assert.match(embedPlayer, /song\.scope === 'album'/, 'feed album posts must open the album page');
 assert.match(dropSocial, /dropPromotePath\(\{ shareId, isAlbum, hasAudio, trackId \}\)/, 'album Reverbs must attach the album page');

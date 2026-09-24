@@ -206,6 +206,27 @@ export async function grantDropLibrary(
   });
 }
 
+function vaultDropAudioFromTrackData(
+  data: Record<string, unknown> | undefined,
+  ownerId: string
+): DropAudioMeta | undefined {
+  const privateAudio = normalizeDropAudio(data?.dropAudio);
+  if (!privateAudio || !isOwnedDropStoragePath(privateAudio.storagePath, ownerId)) return undefined;
+  if (privateAudio.previewPath && !isOwnedDropStoragePath(privateAudio.previewPath, ownerId)) return undefined;
+  return privateAudio;
+}
+
+async function loadVaultTrackDropAudio(
+  db: Firestore,
+  ownerId: string,
+  albumId: string,
+  trackId: string
+): Promise<DropAudioMeta | undefined> {
+  if (!ownerId || trackId.includes('/') || albumId.includes('/')) return undefined;
+  const snap = await db.doc(`users/${ownerId}/albums/${albumId}/tracks/${trackId}`).get();
+  return vaultDropAudioFromTrackData(snap.data() as Record<string, unknown> | undefined, ownerId);
+}
+
 /**
  * Resolve playback from the owner's private Vault document. Public share
  * snapshots intentionally contain no usable Storage path. Legacy snapshots are
@@ -221,18 +242,21 @@ export async function loadAudioForPlay(
   const resolvedTrackId = share.type === 'track'
     ? share.projectId
     : trackId || publicTracks.find((track) => normalizeDropAudio(track.dropAudio))?.id;
-  const albumId = share.type === 'album'
-    ? share.projectId
-    : typeof payload.albumId === 'string' && payload.albumId.trim()
-      ? payload.albumId.trim()
-      : 'unassigned';
-  if (resolvedTrackId && albumId && !resolvedTrackId.includes('/') && !albumId.includes('/')) {
-    const snap = await db.doc(`users/${share.ownerId}/albums/${albumId}/tracks/${resolvedTrackId}`).get();
-    const privateAudio = normalizeDropAudio(snap.data()?.dropAudio);
-    if (privateAudio && isOwnedDropStoragePath(privateAudio.storagePath, share.ownerId)) {
-      if (!privateAudio.previewPath || isOwnedDropStoragePath(privateAudio.previewPath, share.ownerId)) {
-        return privateAudio;
-      }
+  if (resolvedTrackId && !resolvedTrackId.includes('/')) {
+    const albumCandidates: string[] = [];
+    if (share.type === 'album') {
+      if (share.projectId && !share.projectId.includes('/')) albumCandidates.push(share.projectId);
+    } else {
+      const albumId =
+        typeof payload.albumId === 'string' && payload.albumId.trim()
+          ? payload.albumId.trim()
+          : 'unassigned';
+      if (!albumId.includes('/')) albumCandidates.push(albumId);
+    }
+    if (!albumCandidates.includes('unassigned')) albumCandidates.push('unassigned');
+    for (const albumId of albumCandidates) {
+      const audio = await loadVaultTrackDropAudio(db, share.ownerId, albumId, resolvedTrackId);
+      if (audio) return audio;
     }
   }
   const legacy = audioForPlay(share, trackId);

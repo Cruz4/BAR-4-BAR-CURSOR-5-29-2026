@@ -2,7 +2,13 @@ import 'server-only';
 
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { normalizeDropPrice } from '@/lib/drop-commerce';
-import { audioForPlay, isReleaseShareLive, loadShare, priceFromShare } from '@/lib/server/drop-entitlements';
+import {
+  audioForPlay,
+  isReleaseShareLive,
+  loadAudioForPlay,
+  loadShare,
+  priceFromShare,
+} from '@/lib/server/drop-entitlements';
 import { needsVanitySlugUpgrade } from '@/lib/profile/profile-slug';
 import { resolveAlbumHubShareId, type PressedSongSummary, type PressedSongSupporter } from '@/lib/pressed-song';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
@@ -88,8 +94,10 @@ export async function getPressedSongSummary(
   if (!share) return null;
   const albumLevel = share.type === 'album' && !trackId;
   const priced = priceFromShare(share, trackId);
-  const audio = priced.audio || audioForPlay(share, trackId);
-  if (!audio) return null;
+  const snapshotAudio = priced.audio || audioForPlay(share, trackId);
+  if (!snapshotAudio) return null;
+  const playableAudio = await loadAudioForPlay(db, share, trackId);
+  if (!playableAudio?.storagePath) return null;
   const shareSnap = await db.collection('shares').doc(shareId).get();
   const shareRaw = shareSnap.data() || {};
   const houseArtistId =
@@ -106,7 +114,7 @@ export async function getPressedSongSummary(
     (typeof creditedData.displayName === 'string' && creditedData.displayName.trim()) ||
     share.ownerName ||
     'Artist';
-  const releasedAt = timestamp(audio.uploadedAt || shareRaw.createdAt);
+  const releasedAt = timestamp(playableAudio.uploadedAt || snapshotAudio.uploadedAt || shareRaw.createdAt);
 
   const albumTracks = share.type === 'album' && Array.isArray(share.data?.tracks)
     ? share.data.tracks as Array<Record<string, unknown>>
@@ -196,7 +204,7 @@ export async function getPressedSongSummary(
   };
   if (albumLevel && share.type === 'album' && share.data) {
     const albumPayload = share.data as unknown as DnaDropAlbumPayload;
-    const playlist = buildAlbumReleasePlayables({
+    const playlistCandidates = buildAlbumReleasePlayables({
       album: albumPayload,
       shareId,
       ownerId: share.ownerId,
@@ -204,6 +212,11 @@ export async function getPressedSongSummary(
       houseRelease: share.houseRelease === true,
       listenSource: 'artist_home',
     });
+    const playlist: typeof playlistCandidates = [];
+    for (const row of playlistCandidates) {
+      const rowAudio = await loadAudioForPlay(db, share, row.trackId);
+      if (rowAudio?.storagePath) playlist.push(row);
+    }
     if (playlist.length > 0) {
       base.albumPlaylist = playlist;
       const hubTitle =

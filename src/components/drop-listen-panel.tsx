@@ -235,7 +235,10 @@ export function DropListenPanel({
       const raw = e instanceof Error ? e.message : undefined;
       setSrc(null);
       const quietStreamMiss = Boolean(
-        raw && /no longer featured|no longer public|not public|offline|music releases is off/i.test(raw)
+        raw &&
+          /no longer featured|no longer public|not public|offline|music releases is off|no audio on this drop/i.test(
+            raw
+          )
       );
       if (!quietStreamMiss) {
         toast({
