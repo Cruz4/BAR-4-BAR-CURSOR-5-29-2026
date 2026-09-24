@@ -500,7 +500,7 @@ function ReleaseCatalogBody({
   className?: string;
   catalogOpen?: boolean;
 }) {
-  const { albums, updateAlbum, updateTrack, deleteTrack, moveTrack, flushCloudNow, revokeDNA } =
+  const { albums, updateAlbum, updateTrack, deleteTrack, deleteAlbum, moveTrack, flushCloudNow, revokeDNA } =
     useContext(DataContext);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -644,6 +644,16 @@ function ReleaseCatalogBody({
         toast({
           title: 'Draft removed from Vault',
           description: `"${track.title || 'This song'}" was deleted from your catalog.`,
+        });
+      } else {
+        for (const row of album.tracks || []) {
+          const audio = normalizeDropAudio(row.dropAudio);
+          if (audio) await deleteDropAudioFiles(audio);
+        }
+        deleteAlbum(album.id);
+        toast({
+          title: 'Draft removed from Vault',
+          description: `"${album.title || 'This album'}" was deleted from your catalog.`,
         });
       }
       setDraftDraft(null);
@@ -1169,14 +1179,14 @@ function ReleaseCatalogBody({
                   <Trash2 className="mr-1 h-3 w-3" /> {track ? 'Remove recording' : 'Remove all recordings'}
                 </Button>
               ) : null}
-              {!dnaGroup && isEditablePrivateDraft(album, track, status) && track ? (
+              {!dnaGroup && isEditablePrivateDraft(album, track, status) ? (
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-9 border-red-400/30 text-xs font-bold uppercase text-red-300"
                   onClick={() =>
                     setDraftDraft({
-                      kind: 'track',
+                      kind: track ? 'track' : 'album',
                       album,
                       track,
                       action: 'scrapDraft',
@@ -1606,7 +1616,9 @@ function ReleaseCatalogBody({
             </DialogTitle>
             <DialogDescription>
               {draftDraft?.action === 'scrapDraft'
-                ? 'This permanently deletes the Vault song and any private master on file. It has not been published, so there are no buyer copies to preserve.'
+                ? draftDraft.track
+                  ? 'This permanently deletes the Vault song and any private master on file. It has not been published, so there are no buyer copies to preserve.'
+                  : 'This permanently deletes the album blueprint from your Vault, including any catalog tracks and private masters on file. It has not been published, so there are no buyer copies to preserve.'
                 : draftDraft?.track
                   ? 'The master file is deleted from storage. The lyric sheet and release prep stay in your Vault.'
                   : 'Every private master on this album draft is deleted. Track sheets and album prep stay in your Vault.'}

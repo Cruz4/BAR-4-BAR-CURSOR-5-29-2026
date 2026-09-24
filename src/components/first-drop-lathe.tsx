@@ -76,6 +76,12 @@ function canDeletePrivateDraft(row: Picked): boolean {
   return !releaseShareIdOf(row.track) && !releaseShareIdOf({ ...row.album, tracks: row.album.tracks });
 }
 
+function canDeleteAlbumPrivateDraft(album: Album): boolean {
+  if (album.id === 'unassigned') return false;
+  if (releaseStatusOf({ ...album, tracks: album.tracks }) !== 'draft') return false;
+  return !releaseShareIdOf({ ...album, tracks: album.tracks });
+}
+
 function ReleaseTitleEditor({
   title,
   titleInputRef,
@@ -175,7 +181,7 @@ export function FirstDropLatheHost() {
   const guided = releaseComposer === 'guided';
   const { user } = useAuth();
   const { toast } = useToast();
-  const { albums: vaultAlbums, addTrack: vaultAddTrack, updateAlbum: vaultUpdateAlbum, updateTrack: vaultUpdateTrack, deleteTrack: vaultDeleteTrack, flushCloudNow } = useContext(DataContext);
+  const { albums: vaultAlbums, addTrack: vaultAddTrack, updateAlbum: vaultUpdateAlbum, updateTrack: vaultUpdateTrack, deleteTrack: vaultDeleteTrack, deleteAlbum: vaultDeleteAlbum, flushCloudNow } = useContext(DataContext);
   const isAdmin = user?.role === 'admin';
   const fileRef = useRef<HTMLInputElement>(null);
   const albumFileRef = useRef<HTMLInputElement>(null);
@@ -403,6 +409,54 @@ export function FirstDropLatheHost() {
       toast({
         title: 'Private draft deleted',
         description: 'The song was removed from your Vault and release catalog.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not delete draft',
+        description: error instanceof Error ? error.message : 'Try again.',
+      });
+    } finally {
+      setRemovingAudioId('');
+    }
+  };
+
+  const scrapAlbumPrivateDraft = async (targetAlbum: Album) => {
+    if (!canDeleteAlbumPrivateDraft(targetAlbum)) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot delete this album yet',
+        description: 'Take the release offline or remove the old release record before deleting the draft.',
+      });
+      return;
+    }
+    const trackCount = targetAlbum.tracks?.length ?? 0;
+    if (
+      !window.confirm(
+        `Delete "${targetAlbum.title || 'this album'}" from your Vault?\n\n${
+          trackCount
+            ? `This removes ${trackCount} catalog track${trackCount === 1 ? '' : 's'} and any private masters on file.`
+            : 'This removes the empty album release draft.'
+        }\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setRemovingAudioId(targetAlbum.id);
+    try {
+      await flushCloudNow();
+      for (const row of targetAlbum.tracks || []) {
+        const audio = normalizeDropAudio(row.dropAudio);
+        if (audio) await deleteDropAudioFiles(audio);
+      }
+      vaultDeleteAlbum(targetAlbum.id);
+      if (albumScope === targetAlbum.id) {
+        setAlbumScope(undefined);
+        setRightsChecked(false);
+      }
+      toast({
+        title: 'Private draft deleted',
+        description: 'The album was removed from your Vault and release catalog.',
       });
     } catch (error) {
       toast({
@@ -1427,6 +1481,22 @@ export function FirstDropLatheHost() {
                   onClick={() => void removeReleaseRecord('album', selectedAlbum)}
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove old album release record
+                </Button>
+              ) : null}
+              {canDeleteAlbumPrivateDraft(selectedAlbum) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-9 w-full text-[10px] font-bold uppercase text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                  disabled={pressing || uploading || removingAudioId === selectedAlbum.id}
+                  onClick={() => void scrapAlbumPrivateDraft(selectedAlbum)}
+                >
+                  {removingAudioId === selectedAlbum.id ? (
+                    <Loader className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Delete private album draft
                 </Button>
               ) : null}
               <p className="text-center text-[10px] leading-relaxed text-muted-foreground">
