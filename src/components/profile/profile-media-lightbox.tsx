@@ -20,10 +20,14 @@ type ProfileMediaLightboxProps = {
   title: string;
   /** Single image URL (custom photo or room/cover art). */
   src?: string | null;
+  /** When set, shows a video player instead of `src`. */
+  videoSrc?: string | null;
   /** Custom body when there is no single `src` (e.g. album collage). */
   children?: React.ReactNode;
   /** object-fit for `src` images. */
   fit?: 'contain' | 'cover';
+  /** Raise above full-screen Scene feed and other z-50 chrome. */
+  elevated?: boolean;
   className?: string;
 };
 
@@ -32,10 +36,13 @@ export function ProfileMediaLightbox({
   onOpenChange,
   title,
   src,
+  videoSrc,
   children,
   fit = 'contain',
+  elevated = false,
   className,
 }: ProfileMediaLightboxProps) {
+  const hasVideo = Boolean(videoSrc?.trim());
   const hasSrc = Boolean(src?.trim());
 
   return (
@@ -43,9 +50,13 @@ export function ProfileMediaLightbox({
       <DialogContent
         className={cn(
           'max-h-[92vh] w-[min(96vw,42rem)] max-w-none gap-0 overflow-hidden border-white/15 bg-black/95 p-0 shadow-[0_32px_100px_rgba(0,0,0,0.75)] sm:rounded-2xl',
+          elevated && '!z-[200]',
           className
         )}
-        overlayClassName="bg-black/85 backdrop-blur-[2px]"
+        overlayClassName={cn(
+          'bg-black/85 backdrop-blur-[2px]',
+          elevated && '!z-[200]'
+        )}
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">
@@ -58,7 +69,15 @@ export function ProfileMediaLightbox({
             </p>
           </div>
           <div className="flex min-h-0 flex-1 items-center justify-center bg-black p-3 sm:p-5">
-            {hasSrc ? (
+            {hasVideo ? (
+              <video
+                src={videoSrc!}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[min(78vh,52rem)] w-full rounded-lg bg-black object-contain"
+              />
+            ) : hasSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={src!}

@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 
 type ExpandableImageProps = {
   src: string;
@@ -25,12 +24,16 @@ export function ExpandableMedia({
   kind = 'image',
 }: ExpandableMediaProps) {
   const [open, setOpen] = useState(false);
+  const title = alt?.trim() || (kind === 'video' ? 'Video preview' : 'Photo preview');
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
         className={cn('block max-w-full cursor-zoom-in text-left', className)}
         aria-label={`Review ${alt}`}
       >
@@ -47,41 +50,15 @@ export function ExpandableMedia({
           <img src={src} alt={alt} className={cn('object-contain', thumbClassName)} />
         )}
       </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          hideClose
-          overlayClassName="bg-black/92"
-          className="max-h-[96vh] max-w-[min(96vw,920px)] border-none bg-transparent p-2 shadow-none sm:rounded-xl"
-        >
-          <DialogTitle className="sr-only">{alt || 'Media preview'}</DialogTitle>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90"
-            aria-label="Close preview"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <div className="flex max-h-[88vh] items-center justify-center overflow-hidden">
-            {kind === 'video' ? (
-              <video
-                src={src}
-                controls
-                playsInline
-                preload="metadata"
-                className="max-h-[88vh] w-auto max-w-full rounded-lg bg-black object-contain"
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={src}
-                alt={alt}
-                className="max-h-[88vh] w-auto max-w-full rounded-lg object-contain"
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ProfileMediaLightbox
+        open={open}
+        onOpenChange={setOpen}
+        title={title}
+        src={kind === 'image' ? src : undefined}
+        videoSrc={kind === 'video' ? src : undefined}
+        elevated
+        className="w-[min(96vw,56rem)]"
+      />
     </>
   );
 }
