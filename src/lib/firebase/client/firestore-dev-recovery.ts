@@ -33,9 +33,9 @@ async function purgeFirestoreIndexedDb(): Promise<void> {
   );
 }
 
-/** Auto-recover if Firestore watch stream desyncs during local dev (ca9 / b815). */
+/** Auto-recover when Firestore watch stream desyncs (ca9 / b815) — common on cold open with IndexedDB cache. */
 export function registerFirestoreDevRecovery(_db: Firestore) {
-  if (process.env.NODE_ENV !== 'development' || typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return;
 
   window.setTimeout(() => {
     sessionStorage.removeItem(RELOAD_KEY);
@@ -64,7 +64,7 @@ export function registerFirestoreDevRecovery(_db: Firestore) {
     }
 
     sessionStorage.setItem(RELOAD_KEY, '1');
-    console.warn('[AKAsheet] Firestore dev desync detected — reloading once to recover.');
+    console.warn('[AKAsheet] Firestore cache desync — reloading once to recover.');
     window.location.reload();
   };
 

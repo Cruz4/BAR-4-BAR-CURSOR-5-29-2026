@@ -1972,6 +1972,11 @@
     align-items: stretch;
   }
 
+  [data-tour='bar-workstation'][data-side-panels-open='true'] .bar-workstation-editor-row textarea {
+    min-height: 3.25rem;
+    max-height: 6rem;
+  }
+
   [data-tour='bar-workstation'][data-side-panels-open='true'] .bar-workstation-actions {
     width: 100%;
     max-width: none;

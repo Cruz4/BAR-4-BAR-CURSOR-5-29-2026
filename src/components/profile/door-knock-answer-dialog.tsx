@@ -23,6 +23,7 @@ import {
   dismissDoorKnockLiveClient,
   type DoorKnockLiveEvent,
 } from '@/lib/door-knock-client';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 
 export function DoorKnockAnswerDialog({
   knock,
@@ -38,6 +39,7 @@ export function DoorKnockAnswerDialog({
   const router = useRouter();
   const { folds } = useFoldInbox();
   const { enabled: foldsOn } = useFoldsFeature();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const [messageOpen, setMessageOpen] = useState(false);
   const [open, setOpen] = useState(true);
   const playedSoundRef = useRef(false);
@@ -59,6 +61,7 @@ export function DoorKnockAnswerDialog({
       close();
       return;
     }
+    if (!ensureEngagement({ intent: 'message' })) return;
     const foldId = foldIdFor(ownerUserId, knock.knockerId);
     const existing = folds.find((f) => f.id === foldId && f.status !== 'declined');
     if (existing) {

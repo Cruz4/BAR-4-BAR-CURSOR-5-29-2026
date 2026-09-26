@@ -19,7 +19,7 @@ export function ProfileSectionTabs({ slug, className }: { slug?: string; classNa
     { label: 'Overview', href: profileHref(slug) || '/', suffix: '', icon: LayoutGrid },
     { label: 'Images', href: profileImagesHref(slug) || '/', suffix: '/images', icon: Images },
     { label: 'Releases', href: profileSongsHref(slug) || '/', suffix: '/songs', icon: Music2 },
-    { label: 'DNA Drops', href: profileDnaHref(slug) || '/', suffix: '/dna', icon: Dna },
+    { label: 'Lyric DNA Drops', href: profileDnaHref(slug) || '/', suffix: '/dna', icon: Dna },
     { label: 'Reverbs', href: profileReverbsHref(slug) || '/', suffix: '/reverbs', icon: Repeat2 },
   ];
   return (

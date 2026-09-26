@@ -382,53 +382,6 @@ type HouseCatalogRow = LinkedHouseRelease & {
   vault?: Row;
 };
 
-function vaultHouseRows(albums: Album[]): HouseCatalogRow[] {
-  const rows: HouseCatalogRow[] = [];
-  const seen = new Set<string>();
-  const push = (shareId: string | undefined, row: HouseCatalogRow) => {
-    const id = shareId?.trim();
-    if (!id || seen.has(id)) return;
-    seen.add(id);
-    rows.push({ ...row, shareId: id });
-  };
-  for (const album of albums) {
-    const albumRecord = { ...album, tracks: album.tracks };
-    const albumShareId = releaseShareIdOf(albumRecord);
-    const albumStatus = releaseStatusOf(albumRecord);
-    if (
-      albumShareId &&
-      (albumStatus === 'live' || albumStatus === 'unlisted') &&
-      (album.houseRelease || album.houseLibraryNotice)
-    ) {
-      push(albumShareId, {
-        shareId: '',
-        title: album.title || 'Untitled album',
-        type: 'album',
-        trackCount: album.tracks.length,
-        releaseLive: albumStatus === 'live',
-        vault: { album },
-      });
-    }
-    for (const track of album.tracks || []) {
-      const trackStatus = releaseStatusOf(track);
-      if (trackStatus !== 'live' && trackStatus !== 'unlisted') continue;
-      if (!track.houseRelease && !track.houseLibraryNotice) continue;
-      const trackShareId = releaseShareIdOf(track);
-      if (trackShareId && trackShareId === albumShareId) continue;
-      push(trackShareId, {
-        shareId: '',
-        title: track.title || 'Untitled',
-        type: 'track',
-        albumTitle: album.title,
-        ...(albumShareId ? { albumShareId } : {}),
-        releaseLive: trackStatus === 'live',
-        vault: { album, track },
-      });
-    }
-  }
-  return rows;
-}
-
 function collapseHouseCatalogRows(rows: HouseCatalogRow[]): HouseCatalogRow[] {
   const albumIds = new Set(rows.filter((row) => row.type === 'album').map((row) => row.shareId));
   return rows.filter((row) => {
@@ -515,7 +468,10 @@ function ReleaseCatalogBody({
   const [draftDraft, setDraftDraft] = useState<DraftActionTarget | null>(null);
   const [dnaOffline, setDnaOffline] = useState<DnaOfflineTarget | null>(null);
   const [attach, setAttach] = useState<Row | null>(null);
-  const { linkedHouse, loadingHouse, refreshLinkedHouse } = useLinkedHouseReleases(user?.id, catalogOpen);
+  const { linkedHouse, houseFetchReady, refreshLinkedHouse } = useLinkedHouseReleases(
+    user?.id,
+    Boolean(user?.id)
+  );
   const [hiddenHouseIds, setHiddenHouseIds] = useState<string[]>([]);
   const [houseHomeBusy, setHouseHomeBusy] = useState('');
 
@@ -550,21 +506,13 @@ function ReleaseCatalogBody({
   }, [catalogOpen]);
 
   const houseRows = useMemo(() => {
-    const byId = new Map<string, HouseCatalogRow>();
-    for (const row of vaultHouseRows(albums)) byId.set(row.shareId, row);
-    for (const item of linkedHouse) {
-      const existing = byId.get(item.shareId);
-      if (existing) {
-        byId.set(item.shareId, { ...existing, ...item, vault: existing.vault });
-        continue;
-      }
-      byId.set(item.shareId, {
-        ...item,
-        vault: findVaultReleaseByShareId(albums, item.shareId),
-      });
-    }
-    return collapseHouseCatalogRows([...byId.values()]);
-  }, [albums, linkedHouse]);
+    if (!houseFetchReady) return [];
+    const rows: HouseCatalogRow[] = linkedHouse.map((item) => ({
+      ...item,
+      vault: findVaultReleaseByShareId(albums, item.shareId),
+    }));
+    return collapseHouseCatalogRows(rows);
+  }, [albums, houseFetchReady, linkedHouse]);
 
   const houseShareIds = useMemo(() => new Set(houseRows.map((row) => row.shareId)), [houseRows]);
 
@@ -1477,11 +1425,6 @@ function ReleaseCatalogBody({
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
-            {loadingHouse ? (
-              <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-cyan-100/80 sm:text-xs">
-                House · loading…
-              </span>
-            ) : null}
             {houseRows.length ? (
               <button
                 type="button"
@@ -1507,11 +1450,6 @@ function ReleaseCatalogBody({
           </div>
 
           <div className="flex w-full min-w-0 flex-col gap-4 sm:gap-5">
-            {loadingHouse && !houseRows.length ? (
-              <div className="rounded-xl border border-cyan-400/25 bg-cyan-500/5 px-4 py-6 text-center text-sm text-muted-foreground">
-                Loading House releases linked to your page…
-              </div>
-            ) : null}
             {houseRows.length || activeSections.some((s) => s.zone === 'public') ? (
               <CatalogZone zone="public" itemCount={publicZoneItemCount}>
                 {houseRows.length ? renderHouseCard() : null}

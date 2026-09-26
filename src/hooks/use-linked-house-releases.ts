@@ -20,6 +20,7 @@ export async function fetchLinkedHouseReleases(userId: string): Promise<LinkedHo
   if (!token) return [];
   const houseRes = await fetch(`/api/profile/house-releases?userId=${encodeURIComponent(userId)}`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
   });
   const data = (await houseRes.json().catch(() => ({}))) as { releases?: LinkedHouseRelease[] };
   if (!houseRes.ok || !Array.isArray(data.releases)) return [];
@@ -28,7 +29,8 @@ export async function fetchLinkedHouseReleases(userId: string): Promise<LinkedHo
 
 export function useLinkedHouseReleases(userId: string | undefined, enabled = true) {
   const [linkedHouse, setLinkedHouse] = useState<LinkedHouseRelease[]>([]);
-  const [loadingHouse, setLoadingHouse] = useState(false);
+  /** False until the first successful fetch cycle completes for the current user. */
+  const [houseFetchReady, setHouseFetchReady] = useState(() => !enabled || !userId);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refreshLinkedHouse = useCallback(() => {
@@ -38,20 +40,21 @@ export function useLinkedHouseReleases(userId: string | undefined, enabled = tru
   useEffect(() => {
     if (!enabled || !userId) {
       setLinkedHouse([]);
-      setLoadingHouse(false);
+      setHouseFetchReady(true);
       return;
     }
     let cancelled = false;
-    setLoadingHouse(true);
+    const isInitialLoad = refreshKey === 0;
+    if (isInitialLoad) setHouseFetchReady(false);
     void fetchLinkedHouseReleases(userId).then((releases) => {
       if (cancelled) return;
       setLinkedHouse(releases);
-      setLoadingHouse(false);
+      setHouseFetchReady(true);
     });
     return () => {
       cancelled = true;
     };
   }, [userId, enabled, refreshKey]);
 
-  return { linkedHouse, loadingHouse, refreshLinkedHouse };
+  return { linkedHouse, houseFetchReady, refreshLinkedHouse };
 }

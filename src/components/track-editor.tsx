@@ -2371,7 +2371,8 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                             </Hint>
                         </div>
                     ) : (
-                        <div className="bar-workstation-editor-row flex max-md:flex-col md:flex-row md:items-center gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
+                        <div className="bar-workstation-editor-row flex max-md:flex-col md:flex-row md:items-stretch gap-2 min-w-0 w-full flex-1 max-md:overflow-visible">
+                            <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <textarea 
                                 placeholder={
                                   trackLocked
@@ -2388,14 +2389,19 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                                     setActiveBarText(e.target.value); 
                                     if (activeGeneratorBar) onUpdateTrack({ sections: track.sections.map((s: any) => s.id === activeGeneratorBar.sectionId ? { ...s, bars: s.bars.map((b: any) => b.idx === activeGeneratorBar.idx ? { ...b, text: e.target.value } : b) } : s) }); 
                                 }} 
-                                className={cn("bg-background/40 border border-white/10 w-full md:flex-1 md:min-w-[5rem] px-3 py-2 font-code font-bold text-sm shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none h-14 max-h-14 shrink-0 min-w-0", trackLocked && "opacity-70 cursor-not-allowed")}
+                                rows={2}
+                                className={cn(
+                                  "bg-background/40 border border-white/10 w-full min-w-0 flex-1 px-3 py-2 font-code font-bold text-sm md:text-base shadow-inner rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 tracking-tight resize-none min-h-[3.25rem] max-h-24 overflow-y-auto leading-snug",
+                                  trackLocked && "opacity-70 cursor-not-allowed"
+                                )}
                             />
                             {activeBarMetrics && !generationOptions ? (
-                              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground max-md:w-full md:order-last md:basis-full md:pl-1">
+                              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground truncate px-0.5">
                                 {activeBarMetrics.syllables} syll
                                 {activeBarMetrics.rhymeHint ? ` · ${activeBarMetrics.rhymeHint}` : ''}
                               </p>
                             ) : null}
+                            </div>
                             {sheetEmpty && typeof onNewStarter === 'function' && !trackLocked ? (
                               <Hint
                                 actionSafe
@@ -2420,7 +2426,7 @@ function CenterPanel({ track, onUpdateTrack, handleSharedLineGeneration, activeG
                         <div
                           data-tour="generate-next"
                           className={cn(
-                              "bar-workstation-actions flex flex-row flex-nowrap items-end gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1",
+                              "bar-workstation-actions flex flex-row flex-nowrap items-stretch gap-1.5 shrink-0 min-w-0 max-md:w-full max-md:overflow-x-auto studio-scrollbar md:overflow-visible md:max-w-[min(100%,22rem)] lg:max-w-none py-0.5 max-md:py-1 md:self-center",
                               !activeGeneratorBar && "max-md:hidden"
                             )}
                         >
@@ -3307,7 +3313,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                   />
                                 );
                                 const intentTextClass = cn(
-                                  'text-xs font-code min-w-0 whitespace-normal break-words leading-snug',
+                                  'block text-xs font-code min-w-0 whitespace-normal break-words [overflow-wrap:anywhere] leading-snug',
                                   isLocked
                                     ? 'text-sky-800 font-bold dark:text-sky-300'
                                     : isChecked
@@ -3361,15 +3367,22 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
                                 return (
                                     <div
                                       key={intent}
-                                      className={coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked)}
-                                    >
-                                      {intentCheckbox}
-                                      <span className={cn(intentTextClass, 'flex-1')}>{intent}</span>
-                                      {isLocked && (
-                                        <span className="self-start pt-1 text-[9px] font-bold uppercase tracking-[0.2em] text-sky-700 dark:text-sky-400 whitespace-nowrap">
-                                          End in
-                                        </span>
+                                      className={cn(
+                                        coWriterIntentRowClass(intentsMasterOn, isLocked, isChecked),
+                                        'justify-between gap-x-2 gap-y-1.5'
                                       )}
+                                    >
+                                      <div className="flex min-w-0 flex-1 items-start gap-2">
+                                        {intentCheckbox}
+                                        <div className="min-w-0 flex-1 space-y-1">
+                                          {isLocked ? (
+                                            <span className="inline-flex w-fit rounded border border-sky-500/35 bg-sky-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                                              End in
+                                            </span>
+                                          ) : null}
+                                          <span className={intentTextClass}>{intent}</span>
+                                        </div>
+                                      </div>
                                       {intentActions}
                                     </div>
                                 );
@@ -5208,7 +5221,7 @@ function TrackEditorImplementation({ trackId, albumId }: { trackId: string, albu
       {tierLocked && (
         <div className="shrink-0 border-b border-pink-500/25 bg-pink-500/10 px-4 py-2 flex items-center gap-2 z-30">
           <Lock className={cn('h-4 w-4 shrink-0', proLockIcon())} />
-          <p className={cn('text-[10px] font-code leading-snug', proLockText())}>{tierLimitBanner}</p>
+          <p className={cn('text-xs font-code leading-relaxed sm:text-sm', proLockText())}>{tierLimitBanner}</p>
         </div>
       )}
       {!tierLocked && completeLocked && (

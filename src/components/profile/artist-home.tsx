@@ -596,10 +596,8 @@ export function ArtistHome({
                   </Link>
                 </Button>
               ) : null}
-              {showLiveDnaDrops && (() => {
+              {showLiveDnaDrops && dnaDrops.length > 0 && (() => {
                 const dnaTabHref = profileDnaHref(profile.slug) || `/${profile.slug}/dna`;
-                const albumCount = dnaDrops.filter((d) => d.type === 'album').length;
-                const trackCount = dnaDrops.filter((d) => d.type === 'track').length;
                 if (dnaDrops.length === 1) {
                   return (
                     <Button
@@ -613,21 +611,12 @@ export function ArtistHome({
                     >
                       <Link href={resolveLiveDnaDropItemHref(dnaDrops[0], Boolean(user))} className="inline-flex max-w-full items-center gap-1.5">
                         <Dna className="h-3.5 w-3.5 shrink-0" />
-                        <span className="min-w-0 truncate">
-                          {dnaDrops[0].type === 'album' ? '1 album DNA live' : '1 lyric drop live'}
-                        </span>
+                        <span className="min-w-0 truncate">Lyric DNA Drop</span>
                       </Link>
                     </Button>
                   );
                 }
-                const label =
-                  dnaDrops.length === 0
-                    ? 'DNA Drops'
-                    : albumCount > 0 && trackCount > 0
-                      ? `${albumCount} album DNA · ${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`
-                    : albumCount > 0
-                      ? `${albumCount} album DNA live`
-                      : `${trackCount} lyric drop${trackCount === 1 ? '' : 's'}`;
+                const label = `${dnaDrops.length} Lyric DNA Drops`;
                 return (
                   <Button
                     asChild

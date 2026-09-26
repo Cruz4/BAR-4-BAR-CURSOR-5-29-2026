@@ -41,6 +41,7 @@ import { FoldDateSeparator } from '@/components/folds/fold-date-separator';
 import { FoldReadReceipt } from '@/components/folds/fold-read-receipt';
 import { friendProfilesOf, type Friendship } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { useToast } from '@/hooks/use-toast';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
@@ -69,6 +70,7 @@ export function SheetMsgsDock({
   const { enabled: foldsOn } = useFoldsFeature();
   const { folds, unread, waiting } = useFoldInbox();
   const { summary, loading: profileLoading } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const collabSession = useCollabSheetSession();
 
@@ -123,12 +125,13 @@ export function SheetMsgsDock({
   );
 
   const openWithPeer = useCallback((id: string, name: string) => {
+    if (!ensureEngagement({ intent: 'message' })) return;
     setPeerId(id);
     setPeerName(name);
     setView('thread');
     setSearch('');
     setOpen(true);
-  }, []);
+  }, [ensureEngagement]);
 
   useEffect(() => {
     collabSession?.registerMsgsOpen(openWithPeer);
@@ -201,6 +204,7 @@ export function SheetMsgsDock({
   const submit = async () => {
     const trimmed = text.trim();
     if (!trimmed || busy || !me || !peerId) return;
+    if (!ensureEngagement({ intent: 'message' })) return;
     setBusy(true);
     try {
       await passBarClient({
@@ -217,6 +221,7 @@ export function SheetMsgsDock({
   };
 
   const respond = async (foldId: string, accept: boolean) => {
+    if (accept && !ensureEngagement({ intent: 'message' })) return;
     setBusy(true);
     try {
       if (accept) await acceptFoldClient(foldId);
@@ -333,6 +338,7 @@ export function SheetMsgsDock({
                     size="sm"
                     className="h-7 flex-1 gap-1 rounded-md bg-amber-600/90 text-[9px] font-bold uppercase tracking-wider hover:bg-amber-600"
                     onClick={() => {
+                      if (!ensureEngagement({ intent: 'message' })) return;
                       setView('compose');
                       setSearch('');
                     }}

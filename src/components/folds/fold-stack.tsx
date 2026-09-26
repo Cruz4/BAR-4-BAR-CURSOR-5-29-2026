@@ -23,6 +23,7 @@ import { peerReadLastOutgoing } from '@/lib/folds/read-receipts';
 import { cn } from '@/lib/utils';
 import { fetchFriendships, friendProfilesOf } from '@/lib/profile/social-client';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 
 function timeLabel(iso: string): string {
   try {
@@ -148,6 +149,7 @@ function FoldCard({
 export function FoldStack() {
   const { user } = useAuth();
   const { summary } = useGamification();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const { toast } = useToast();
   const { folds, unread, ready, waiting, markAllFoldsRead, markAllFoldsUnread } = useFoldInbox();
   const [tab, setTab] = useState<'open' | 'waiting'>('open');
@@ -175,6 +177,7 @@ export function FoldStack() {
 
   const openPicker = async () => {
     if (!user) return;
+    if (!ensureEngagement({ intent: 'message', next: '/msgs' })) return;
     try {
       const list = await fetchFriendships(user.id, 'accepted');
       setFriends(
@@ -190,6 +193,7 @@ export function FoldStack() {
   };
 
   const respond = async (id: string, accept: boolean) => {
+    if (accept && !ensureEngagement({ intent: 'message', next: '/msgs' })) return;
     setBusyId(id);
     try {
       if (accept) await acceptFoldClient(id);

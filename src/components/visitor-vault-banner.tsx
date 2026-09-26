@@ -25,12 +25,14 @@ export function VisitorVaultBanner({
 
   return (
     <ProLockBanner>
-      <p className={cn('text-xs', proLockText())}>{getVisitorVaultBannerTitle(isDowngraded)}</p>
-      <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+      <p className={cn('text-sm font-bold leading-snug sm:text-base', proLockText())}>
+        {getVisitorVaultBannerTitle(isDowngraded)}
+      </p>
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
         {getVisitorVaultBannerBody(user, albums, { openTrackSlots, hasExtraAlbums })}
       </p>
       {!isDowngraded && (
-        <p className="text-[10px] text-muted-foreground/90 mt-1.5">{getVisitorInkGrantSummary()}</p>
+        <p className="mt-2 text-xs text-muted-foreground/90 sm:text-sm">{getVisitorInkGrantSummary()}</p>
       )}
     </ProLockBanner>
   );

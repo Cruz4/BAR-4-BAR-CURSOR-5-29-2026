@@ -42,18 +42,18 @@ export function ReleaseDnaDropPanel({
         )}
       >
         {!compact ? (
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-200/90">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-200/90 sm:text-sm">
             Lyrics DNA Drop · separate from this release
           </p>
         ) : null}
-        <p className={cn('leading-relaxed text-muted-foreground', compact ? 'text-[9px]' : 'text-[10px]')}>
+        <p className={cn('leading-relaxed text-muted-foreground', compact ? 'text-xs' : 'text-xs sm:text-sm')}>
           {live
             ? 'Public lyric page is live. Update the snapshot after sheet edits.'
             : 'Publish a Pro lyric page from your Vault sheet — optional for audio-only releases.'}
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
           {live && dnaShareId ? (
-            <Button asChild size="sm" variant="secondary" className="h-8 gap-1 text-[9px] font-bold uppercase">
+            <Button asChild size="sm" variant="secondary" className="h-9 gap-1.5 text-xs font-bold uppercase">
               <Link href={`/share/${dnaShareId}`}>
                 <ExternalLink className="h-3 w-3" /> Lyric page
               </Link>
@@ -65,7 +65,7 @@ export function ReleaseDnaDropPanel({
               size="sm"
               variant={live ? 'outline' : 'default'}
               className={cn(
-                'h-8 gap-1 text-[9px] font-bold uppercase',
+                'h-9 gap-1.5 text-xs font-bold uppercase',
                 !live && 'bg-violet-600 hover:bg-violet-500'
               )}
               onClick={() => setOpen(true)}
@@ -74,14 +74,14 @@ export function ReleaseDnaDropPanel({
               {live ? 'Update DNA Drop' : 'Publish DNA Drop'}
             </Button>
           ) : (
-            <Button asChild size="sm" variant="outline" className="h-8 gap-1 text-[9px] font-bold uppercase">
+            <Button asChild size="sm" variant="outline" className="h-9 gap-1.5 text-xs font-bold uppercase">
               <Link href={DNA_DROP_UPGRADE_PATH}>
                 <Dna className="h-3 w-3" /> Pro · DNA Drop
               </Link>
             </Button>
           )}
           {!compact ? (
-            <Button asChild size="sm" variant="ghost" className="h-8 text-[9px] font-bold uppercase">
+            <Button asChild size="sm" variant="ghost" className="h-9 text-xs font-bold uppercase">
               <Link href={vaultHref}>Edit sheet in Vault</Link>
             </Button>
           ) : null}

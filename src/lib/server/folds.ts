@@ -30,6 +30,7 @@ import {
 import { buildPostPoll } from '@/lib/profile/post-polls';
 import { parseVoiceNote, voiceNoteToFirestore } from '@/lib/profile/voice-notes';
 import { normalizeQuotePressConfig } from '@/lib/profile/quote-press';
+import { assertArtistHomeLiveForMessaging } from '@/lib/server/artist-home-live';
 
 function chronoId(): string {
   return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -216,6 +217,7 @@ export async function acceptFold(opts: { foldId: string; userId: string }): Prom
   if (fold.status === 'open') return fold;
   if (fold.initiatedBy === opts.userId) throw new Error('Wait for them to open it.');
   const db = await getDb();
+  await assertArtistHomeLiveForMessaging(db, opts.userId);
   await db.doc(`folds/${opts.foldId}`).set(
     {
       status: 'open',
@@ -304,6 +306,7 @@ export async function passBar(opts: {
   }
 
   const db = await getDb();
+  await assertArtistHomeLiveForMessaging(db, opts.senderId);
   const peerSnap = await db.doc(`users/${opts.peerId}`).get();
   if (!peerSnap.exists) throw new Error('Artist not found.');
 
@@ -440,6 +443,7 @@ export async function voteFoldPoll(opts: {
   if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   const db = await getDb();
+  await assertArtistHomeLiveForMessaging(db, opts.userId);
   const ref = db.doc(`folds/${opts.foldId}/bars/${opts.barId}`);
   const snap = await ref.get();
   if (!snap.exists) throw new Error('Message not found.');
@@ -470,6 +474,7 @@ export async function reactToFoldBar(opts: {
   if (!fold) throw new Error('Conversation not found.');
   assertMember(fold, opts.userId);
   const db = await getDb();
+  await assertArtistHomeLiveForMessaging(db, opts.userId);
   const ref = db.doc(`folds/${opts.foldId}/bars/${opts.barId}`);
   const snap = await ref.get();
   if (!snap.exists) throw new Error('Message not found.');

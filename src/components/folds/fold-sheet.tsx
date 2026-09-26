@@ -15,6 +15,7 @@ import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { cn } from '@/lib/utils';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
@@ -180,6 +181,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const { user } = useAuth();
   const { summary } = useGamification();
   const { toast } = useToast();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const router = useRouter();
   const [fold, setFold] = useState<FoldDoc | null>(null);
   const [bars, setBars] = useState<FoldBar[]>([]);
@@ -328,6 +330,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
 
   const send = async () => {
     if (!user || !peerId || busy || !canSend) return;
+    if (!ensureEngagement({ intent: 'message', next: `/msgs/${foldId}` })) return;
     if (fold?.status === 'declined') return;
     const clientId = `local_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     const outgoing = text;
@@ -490,7 +493,14 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               Delete from inbox
             </DropdownMenuItem>
             {sealedForMe ? (
-              <DropdownMenuItem onClick={() => void acceptFoldClient(foldId)}>Accept</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (!ensureEngagement({ intent: 'message', next: `/msgs/${foldId}` })) return;
+                  void acceptFoldClient(foldId);
+                }}
+              >
+                Accept
+              </DropdownMenuItem>
             ) : null}
             {fold.status !== 'declined' ? (
               <DropdownMenuItem
@@ -534,7 +544,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
               <Button
                 size="sm"
                 className="h-8 rounded-none bg-amber-700 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600"
-                onClick={() => void acceptFoldClient(foldId)}
+                onClick={() => {
+                  if (!ensureEngagement({ intent: 'message', next: `/msgs/${foldId}` })) return;
+                  void acceptFoldClient(foldId);
+                }}
               >
                 Accept
               </Button>

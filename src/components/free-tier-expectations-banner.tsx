@@ -35,12 +35,19 @@ export function FreeTierExpectationsBanner({ user }: { user: User | null }) {
   };
 
   return (
-    <div className="shrink-0 border-b border-orange-500/20 bg-orange-500/[0.06] px-4 py-2.5 flex items-start gap-3 z-50">
-      <Sparkles className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-      <div className="flex-grow min-w-0 space-y-1">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-orange-600">{FREE_TIER_EXPECTATIONS.headline}</p>
-        <p className="text-[11px] text-muted-foreground leading-snug">{FREE_TIER_EXPECTATIONS.body}</p>
-        <Link href="/usage?tab=cloud" className="text-[9px] font-bold uppercase text-orange-600 hover:underline">
+    <div
+      data-app-chrome
+      className="z-50 flex shrink-0 items-start gap-3 border-b border-orange-500/20 bg-orange-500/[0.06] px-4 py-2.5 sm:max-xl:pr-[calc(3%+20rem)] min-[1760px]:pr-[calc(3%+20rem)]"
+    >
+      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+      <div className="min-w-0 flex-grow space-y-1">
+        <p className="text-xs font-bold uppercase tracking-widest text-orange-600 sm:text-sm">
+          {FREE_TIER_EXPECTATIONS.headline}
+        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm [overflow-wrap:anywhere]">
+          {FREE_TIER_EXPECTATIONS.body}
+        </p>
+        <Link href="/usage?tab=cloud" className="text-[11px] font-bold uppercase text-orange-600 hover:underline sm:text-xs">
           Compare tiers →
         </Link>
       </div>

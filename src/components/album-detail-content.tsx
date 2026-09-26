@@ -833,15 +833,15 @@ function LooseTrackCard({
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
           <TrackLiveIndicators track={track} variant="compact" linkLivePages />
           {tierLocked ? (
-            <Badge variant="outline" className={cn('h-5 px-1.5 text-[7px]', proLockText())}>View only</Badge>
+            <Badge variant="outline" className={cn('h-6 px-2 text-[11px] sm:text-xs', proLockText())}>View only</Badge>
           ) : null}
-          <Badge variant="outline" className="h-auto min-h-5 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[8px] leading-tight text-muted-foreground dark:border-white/10">
+          <Badge variant="outline" className="h-auto min-h-6 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[11px] leading-snug text-muted-foreground sm:text-xs dark:border-white/10">
             {track.vibe?.genre || 'No genre'}
           </Badge>
-          <span className="whitespace-nowrap font-code text-[9px] uppercase text-muted-foreground/70">
+          <span className="whitespace-nowrap font-code text-xs uppercase text-muted-foreground/80">
             {track.vibe?.tempoBPM ?? '—'} BPM
           </span>
-          <span className="font-code text-[9px] uppercase text-muted-foreground/70">
+          <span className="font-code text-xs uppercase text-muted-foreground/80">
             {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
           </span>
         </div>
@@ -1290,7 +1290,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
             {albumTierLocked && (
               <div className="mb-6 rounded-xl border border-pink-500/25 bg-pink-500/10 px-4 py-3 flex items-center gap-2">
                 <Lock className="h-4 w-4 text-pink-400 shrink-0" />
-                <p className={cn('text-[10px] font-code leading-snug', proLockText())}>
+                <p className={cn('text-xs font-code leading-relaxed sm:text-sm', proLockText())}>
                   {getAlbumLimitBanner(user, albums)}
                 </p>
               </div>
@@ -1390,7 +1390,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </div>
                                 <div className="min-w-0">
                                     <CardTitle className="break-words font-headline text-lg uppercase tracking-tighter sm:text-xl md:text-2xl lg:text-3xl">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
-                                    <p className="mt-0.5 break-words text-[8px] font-bold uppercase tracking-widest text-muted-foreground sm:text-[9px]">Asset Reordering &amp; Management</p>
+                                    <p className="mt-0.5 break-words text-xs font-bold uppercase tracking-widest text-muted-foreground">Asset Reordering &amp; Management</p>
                                 </div>
                             </div>
                             <div className="grid w-full min-w-0 grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:flex md:flex-1 md:flex-wrap md:items-center md:justify-end">
@@ -1494,7 +1494,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                        className="h-9 gap-2 border-border bg-muted/40 text-xs font-bold uppercase tracking-wider dark:border-white/10"
                                       >
                                         <ArrowUpDown className="h-3.5 w-3.5" />
                                         Sort · {ALBUM_SORT_LABELS[albumSort]}
@@ -1522,7 +1522,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                      className="h-9 gap-2 border-border bg-muted/40 text-xs font-bold uppercase tracking-wider dark:border-white/10"
                                       onClick={() => setAlbumSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))}
                                     >
                                       {albumSortDir === 'asc' ? <SortAsc className="h-3.5 w-3.5" /> : <SortDesc className="h-3.5 w-3.5" />}
@@ -1532,7 +1532,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </>
                               ) : null}
                               <div className="flex min-w-0 items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-1.5">
-                                <Label htmlFor="album-press-tracking" className="text-[9px] font-bold uppercase tracking-wider text-sky-200">
+                                <Label htmlFor="album-press-tracking" className="text-xs font-bold uppercase tracking-wider text-sky-200">
                                   Press / Release tracking
                                 </Label>
                                 <Switch
@@ -1728,18 +1728,18 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                                   releaseHref={includedInLiveAlbum ? `/share/${albumReleaseId}` : undefined}
                                                 />
                                                 {trackTierLocked && (
-                                                  <Badge variant="outline" className={cn('h-5 px-1.5 text-[8px]', proLockText())}>View only</Badge>
+                                                  <Badge variant="outline" className={cn('h-6 px-2 text-[11px] sm:text-xs', proLockText())}>View only</Badge>
                                                 )}
-                                                <Badge variant="outline" className="h-auto min-h-5 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[8px] leading-tight text-muted-foreground dark:border-white/10">{track.vibe?.genre || 'No genre'}</Badge>
-                                                <span className="whitespace-nowrap font-code text-[9px] uppercase text-muted-foreground/70">{track.vibe?.tempoBPM ?? '—'} BPM</span>
-                                                <span className="font-code text-[9px] uppercase text-muted-foreground/70">
+                                                <Badge variant="outline" className="h-auto min-h-6 max-w-full whitespace-normal break-words px-2 py-0.5 text-left font-code text-[11px] leading-snug text-muted-foreground sm:text-xs dark:border-white/10">{track.vibe?.genre || 'No genre'}</Badge>
+                                                <span className="whitespace-nowrap font-code text-xs uppercase text-muted-foreground/80">{track.vibe?.tempoBPM ?? '—'} BPM</span>
+                                                <span className="font-code text-xs uppercase text-muted-foreground/80">
                                                   {barCount} bar{barCount === 1 ? '' : 's'} · {sectionCount} section{sectionCount === 1 ? '' : 's'}
                                                 </span>
                                                 {createdLabel ? (
-                                                  <span className="font-code text-[9px] uppercase text-muted-foreground/70">Created {createdLabel}</span>
+                                                  <span className="font-code text-xs uppercase text-muted-foreground/80">Created {createdLabel}</span>
                                                 ) : null}
                                                 {editedLabel && editedLabel !== createdLabel ? (
-                                                  <span className="font-code text-[9px] uppercase text-muted-foreground/70">Edited {editedLabel}</span>
+                                                  <span className="font-code text-xs uppercase text-muted-foreground/80">Edited {editedLabel}</span>
                                                 ) : null}
                                             </div>
                                         </div>

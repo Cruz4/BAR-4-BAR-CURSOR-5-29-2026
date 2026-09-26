@@ -80,10 +80,12 @@ export function EmojiPickerButton({
   className,
   align,
   side,
-  avoidCollisions = false,
+  avoidCollisions,
 }: EmojiPickerButtonProps) {
-  const resolvedSide = side ?? (compact ? 'left' : 'top');
+  /** Compact = inline composers (DMs, folds, comments). Open upward so the field stays visible on phone. */
+  const resolvedSide = side ?? 'top';
   const resolvedAlign = align ?? (compact ? 'start' : 'end');
+  const resolvedAvoidCollisions = avoidCollisions ?? compact;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState<string[]>([]);
@@ -139,10 +141,19 @@ export function EmojiPickerButton({
         align={resolvedAlign}
         side={resolvedSide}
         sideOffset={8}
-        avoidCollisions={avoidCollisions}
+        avoidCollisions={resolvedAvoidCollisions}
+        collisionPadding={
+          compact
+            ? { top: 16, right: 12, left: 12, bottom: 16 }
+            : { top: 12, right: 12, left: 12, bottom: 12 }
+        }
+        sticky="partial"
         onOpenAutoFocus={(e) => e.preventDefault()}
         onFocusOutside={(e) => e.preventDefault()}
-        className="w-[min(18rem,calc(100vw-1.5rem))] max-h-[min(16rem,42vh)] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl"
+        className={cn(
+          'z-[120] w-[min(18rem,calc(100vw-1.5rem))] border-white/10 bg-[#0c1018] p-2 text-zinc-100 shadow-xl',
+          compact ? 'max-h-[min(14rem,38dvh)]' : 'max-h-[min(16rem,42vh)]'
+        )}
       >
         <Input
           value={query}
@@ -152,7 +163,10 @@ export function EmojiPickerButton({
           aria-label="Search emoji"
         />
         <div
-          className="max-h-[min(14rem,36vh)] overflow-y-auto overscroll-contain pr-1"
+          className={cn(
+            'overflow-y-auto overscroll-contain pr-1',
+            compact ? 'max-h-[min(12rem,32dvh)]' : 'max-h-[min(14rem,36vh)]'
+          )}
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="space-y-2.5 pr-1">

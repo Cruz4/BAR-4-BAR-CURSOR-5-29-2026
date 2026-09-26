@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Share2, Sparkles, Trash2, Users } from 'lucide-react';
+import { BarChart3, Eye, Flag, Heart, MessageCircle, Repeat2, Share2, Sparkles, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { formatUserDateTime } from '@/lib/user-date';
 import { Button } from '@/components/ui/button';
@@ -456,6 +456,7 @@ export function PostCard({
     user && (user.role === 'admin' || isMasterAdminEmail(user.email))
   );
   const canDeletePost = isOwner || isAdmin;
+  const canReportPost = Boolean(user && user.id !== post.ownerId);
   const authorChrome =
     authorStudioChrome || (isOwner ? studioChromeFromUser(user) : undefined);
   const rootIdForReverb =
@@ -885,18 +886,35 @@ export function PostCard({
             <span className="sr-only"> · Public Scene post</span>
           </Link>
         </div>
-        {canDeletePost && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-red-400"
-            disabled={busy}
-            onClick={() => void handleDeletePost()}
-            aria-label={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
-            title={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+        {(canReportPost || canDeletePost) && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {canReportPost ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-[var(--ph-muted,rgba(255,255,255,0.42))] hover:text-amber-400/90"
+                disabled={busy}
+                onClick={() => setReportOpen(true)}
+                aria-label="Report post"
+                title="Report post"
+              >
+                <Flag className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+            {canDeletePost ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-red-400"
+                disabled={busy}
+                onClick={() => void handleDeletePost()}
+                aria-label={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
+                title={isAdmin && !isOwner ? 'Admin: delete post' : 'Delete post'}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+          </div>
         )}
       </div>
 
@@ -1032,9 +1050,6 @@ export function PostCard({
           <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
             <DropdownMenuItem onSelect={() => void handleReverb()}>{reverbed ? 'Undo Reverb' : 'Reverb'}</DropdownMenuItem>
             <DropdownMenuItem onSelect={openReverbComposer}>{viewerHasQuoteContent ? 'Edit Quote' : 'Quote'}</DropdownMenuItem>
-            {user && user.id !== post.ownerId ? (
-              <DropdownMenuItem onSelect={() => setReportOpen(true)}>Report post</DropdownMenuItem>
-            ) : null}
           </DropdownMenuContent>
           </DropdownMenu>
         ) : (

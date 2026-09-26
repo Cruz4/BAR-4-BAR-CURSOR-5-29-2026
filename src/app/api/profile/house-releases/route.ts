@@ -28,7 +28,14 @@ export async function GET(req: Request) {
       if (row) byId.set(row.shareId, row);
     }
 
-    return NextResponse.json({ releases: [...byId.values()] });
+    return NextResponse.json(
+      { releases: [...byId.values()].sort((a, b) => a.title.localeCompare(b.title)) },
+      {
+        headers: {
+          'Cache-Control': 'private, no-store',
+        },
+      }
+    );
   } catch (error) {
     if (error instanceof CheckoutAuthError) {
       return NextResponse.json({ error: error.message }, { status: 401 });

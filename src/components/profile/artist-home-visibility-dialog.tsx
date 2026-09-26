@@ -120,7 +120,7 @@ export function ArtistHomeVisibilityDialog({
           <DialogDescription className="text-sm leading-relaxed">
             {engage ? (
               <>
-                Loves, replies, Reverbs, guestbook lines, polls, and other public interactions need a{' '}
+                Loves, replies, Reverbs, guestbook lines, polls, Msgs, and other public interactions need a{' '}
                 <strong className="text-foreground">live Artist Home</strong>. Tune your page on{' '}
                 <strong className="text-foreground">Edit Public Page</strong> first if you want — then flip{' '}
                 <strong className="text-foreground">Public profile</strong> on below.

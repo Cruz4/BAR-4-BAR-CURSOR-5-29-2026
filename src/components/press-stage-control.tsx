@@ -27,11 +27,11 @@ export function PressStageControl({
   return (
     <div className={cn('min-w-0 space-y-1.5', disabled && 'opacity-60')}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
           {meta.label} · {percent}%
         </p>
         {!compact ? (
-          <p className="truncate text-[9px] font-code text-muted-foreground/70">{meta.detail}</p>
+          <p className="truncate text-xs font-code text-muted-foreground/80">{meta.detail}</p>
         ) : null}
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-muted/60">
@@ -44,7 +44,7 @@ export function PressStageControl({
         value={current}
         disabled={disabled}
         onChange={(e) => onChange(parsePressStage(e.target.value))}
-        className="h-8 w-full max-w-full rounded-md border border-border bg-background/70 px-2 font-code text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+        className="h-9 w-full max-w-full rounded-md border border-border bg-background/70 px-2 font-code text-xs font-bold uppercase tracking-wider dark:border-white/10"
       >
         {PRESS_STAGES.map((item, index) => (
           <option key={item.id} value={item.id}>

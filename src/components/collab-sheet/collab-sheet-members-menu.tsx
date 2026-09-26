@@ -16,6 +16,7 @@ import { COLLAB_PRESENCE_STALE_MS } from '@/lib/collab-sheet/types';
 import { sendCollabMessageClient } from '@/lib/collab-sheet/client';
 import { CollabSheetPresenceChip } from '@/components/collab-sheet/collab-sheet-presence-chip';
 import { useToast } from '@/hooks/use-toast';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { studioNameClass } from '@/lib/studio-tier-chrome';
 
 function isLive(p: CollabPresence | undefined, now = Date.now()): boolean {
@@ -46,6 +47,7 @@ export function CollabSheetMembersMenu({
   onRevoke?: (targetUserId: string) => void;
 }) {
   const { toast } = useToast();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const [busyId, setBusyId] = useState<string | null>(null);
   const members = sheet.memberIds.filter((id) => !sheet.revoked[id]);
 
@@ -123,7 +125,10 @@ export function CollabSheetMembersMenu({
                     size="sm"
                     variant="secondary"
                     className="h-7 flex-1 gap-1 px-2 text-[9px] font-bold uppercase"
-                    onClick={() => onMessage(id, name)}
+                    onClick={() => {
+                      if (!ensureEngagement({ intent: 'message' })) return;
+                      onMessage(id, name);
+                    }}
                   >
                     <MessageSquare className="h-3 w-3" />
                     Message

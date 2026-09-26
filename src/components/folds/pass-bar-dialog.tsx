@@ -20,6 +20,7 @@ import { passBarClient } from '@/lib/folds/client';
 import { cn } from '@/lib/utils';
 import { useFoldInbox } from '@/components/folds/fold-inbox-provider';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
+import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 
 export function PassBarDialog({
@@ -38,6 +39,7 @@ export function PassBarDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const composeRef = useRef<HTMLTextAreaElement>(null);
@@ -45,6 +47,7 @@ export function PassBarDialog({
 
   const submit = async () => {
     if (!user || !text.trim()) return;
+    if (!ensureEngagement({ intent: 'message' })) return;
     setBusy(true);
     try {
       const { fold } = await passBarClient({
@@ -132,6 +135,7 @@ export function PassBarButton({
   const router = useRouter();
   const { folds } = useFoldInbox();
   const { enabled } = useFoldsFeature();
+  const { ensureEngagement } = useArtistHomeEngagementGate();
   const [open, setOpen] = useState(false);
   if (!user || user.id === peerId || !enabled) return null;
 
@@ -149,6 +153,7 @@ export function PassBarButton({
           className
         )}
         onClick={() => {
+          if (!ensureEngagement({ intent: 'message' })) return;
           if (existing) {
             router.push(`/msgs/${existing.id}`);
             return;

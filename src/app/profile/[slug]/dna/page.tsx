@@ -62,17 +62,17 @@ export default function ProfileDnaDropsPage() {
         <ProfileSectionTabs slug={slug} />
         <header>
           <h1 className="flex items-center gap-2 font-headline text-3xl font-bold uppercase">
-            <Dna className="h-7 w-7 text-emerald-400" /> DNA Drops
+            <Dna className="h-7 w-7 text-emerald-400" /> Lyric DNA Drops
           </h1>
           <p className="text-sm text-muted-foreground">
-            Live Lyrics DNA Drops from {displayName} — open a drop to read or play it.
+            Live Lyric DNA Drops from {displayName} — open a drop to read or play it.
           </p>
         </header>
         {dnaDrops.length ? (
           <LiveDnaDropsGroupedList drops={dnaDrops} layout="shelf" hideFirstDropStrip />
         ) : (
           <div className="rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center text-sm text-muted-foreground">
-            No live Lyrics DNA Drops yet.
+            No live Lyric DNA Drops yet.
           </div>
         )}
       </main>

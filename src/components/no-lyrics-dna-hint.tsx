@@ -27,12 +27,12 @@ export function NoLyricsDnaHint({
       <button
         type="button"
         className={cn(
-          'inline-flex cursor-default items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-muted-foreground',
-          variant === 'note' && 'px-2.5 py-1 text-[10px]',
+          'inline-flex cursor-default items-center gap-1 rounded-full border border-white/15 bg-black/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground sm:text-xs',
+          variant === 'note' && 'px-3 py-1.5 text-xs sm:text-sm',
           className
         )}
       >
-        <FileText className="h-2.5 w-2.5" /> No DNA
+        <FileText className="h-3 w-3" /> No DNA
       </button>
     </Hint>
   );
