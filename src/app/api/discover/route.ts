@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuth } from '@/lib/firebase/server';
 import { listRecentOpenLocks } from '@/lib/server/lock';
 import { isLockFeatureEnabled } from '@/lib/server/lock-feature';
+import { isDiscoverHeatEnabled } from '@/lib/server/discover-heat-feature';
 import {
   listLeaderboardRisers,
   listRecentPublicPosts,
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
     const viewerIdentity = viewerUserId
       ? (await getArtistHomeConfig(viewerUserId)).featured.soundIdentity
       : undefined;
+    const heatMix = await isDiscoverHeatEnabled();
 
     const [artists, posts, drops, risers, locks] = await Promise.all([
       listRecentPublicProfiles({
@@ -53,6 +55,7 @@ export async function GET(req: Request) {
       listRecentPublicPosts({
         limit: viewAll ? 48 : 40,
         excludeOwnerId: excludeUserId,
+        heatMix,
       }),
       listRecentShareSummaries({
         limit: viewAll ? 28 : 24,
@@ -106,9 +109,19 @@ export async function GET(req: Request) {
       tasteMatch: buildDiscoveryMatch(viewerIdentity, drop.soundIdentity, 'taste'),
       creationMatch: buildDiscoveryMatch(viewerIdentity, drop.soundIdentity, 'creation'),
     }));
+    const matchedPosts = posts.map(({ soundIdentity, ...post }) =>
+      heatMix
+        ? {
+            ...post,
+            tasteMatch: buildDiscoveryMatch(viewerIdentity, soundIdentity, 'taste'),
+            creationMatch: buildDiscoveryMatch(viewerIdentity, soundIdentity, 'creation'),
+          }
+        : post
+    );
     const response = NextResponse.json({
       artists: matchedArtists,
-      posts,
+      posts: matchedPosts,
+      heatMix,
       drops: matchedDrops,
       risers,
       locks: lockCards,

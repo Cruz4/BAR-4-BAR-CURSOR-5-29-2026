@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { organicMomentumScore } from '../src/lib/drop-listen-analytics';
 import { buildDiscoveryMatch } from '../src/lib/discovery-graph';
+import { discoverMixScore } from '../src/lib/discover-heat';
 
 const baseline = organicMomentumScore({
   qualifiedListeners: 10,
@@ -84,5 +85,20 @@ assert.match(searchSource, /drop\.metadata\.genreStyles/, 'release results must 
 assert.match(identityStripSource, /resultKinds:\s*\['person'\]/, 'profile identity tags must open People discovery');
 assert.match(songPageSource, /<MusicDiscoveryTags metadata=\{summary\.metadata\}/, 'song pages must show discoverable music metadata');
 assert.match(songPageSource, /<MusicDiscoveryTags[^>]*soundAsText/, 'song-page Sound details must remain informational instead of becoming a search link');
+
+const now = Date.parse('2026-09-27T12:00:00.000Z');
+const fresh = discoverMixScore({ at: '2026-09-27T12:00:00.000Z', heat: 0, now });
+const loved = discoverMixScore({ at: '2026-09-27T10:00:00.000Z', heat: 5, now });
+const burst = discoverMixScore({ at: '2026-09-24T12:00:00.000Z', heat: 50, now });
+const stale = discoverMixScore({ at: '2026-09-01T12:00:00.000Z', heat: 5, now });
+assert.ok(loved > fresh, 'one Love should lift a young post above a brand-new post with no response');
+assert.ok(burst > fresh, 'a real burst should bring an older post back into the mix');
+assert.ok(fresh > stale, 'a single old Love should not sit above a new post');
+assert.equal(
+  discoverMixScore({ at: '2026-09-27T12:00:00.000Z', heat: 0, matchScore: 10, now }) >
+    discoverMixScore({ at: '2026-09-27T12:00:00.000Z', heat: 0, matchScore: 0, now }),
+  true,
+  'taste match should change order for the viewer'
+);
 
 console.log('Discovery integrity verification passed.');

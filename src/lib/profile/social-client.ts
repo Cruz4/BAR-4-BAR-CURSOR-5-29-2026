@@ -74,6 +74,7 @@ import {
   type WallClip,
 } from '@/lib/profile/wall-clips';
 import { notifyLoveReward } from '@/lib/profile/love-reward-client';
+import { syncDiscoverHeat } from '@/lib/profile/discover-heat-client';
 import type { PressingConfig } from '@/lib/profile/pressing';
 import { normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import {
@@ -838,6 +839,7 @@ export async function toggleReverb(
     }
     await deleteDoc(pointerRef);
     await deleteDoc(doc(db, 'posts', rootPostId, 'reverbs', user.uid)).catch(() => undefined);
+    syncDiscoverHeat({ postId: rootPostId, kind: 'reverb', direction: 'revoke' });
     return { status: 'removed' };
   }
 
@@ -915,6 +917,7 @@ export async function toggleReverb(
     preview: (rootText || rootOwnerName || 'a post').slice(0, 120),
     href: profileHref(post.ownerSlug, `post-${id}`),
   });
+  syncDiscoverHeat({ postId: rootPostId, kind: 'reverb', direction: 'grant' });
 
   emitWallPostFeed({ kind: 'upsert', post });
   return { status: 'created', post };
@@ -1045,6 +1048,7 @@ export async function likePost(
 
   await setDoc(likeRef, { createdAt: now });
   notifyLoveReward({ postId });
+  syncDiscoverHeat({ postId, kind: 'love', direction: 'grant' });
 
   const { emitActivity } = await import('@/lib/activity/client');
   emitActivity({
@@ -1061,6 +1065,7 @@ export async function likePost(
       await setDoc(originalLikeRef, { createdAt: now, viaReverbPostId: postId });
     }
     notifyLoveReward({ postId: originalPostId });
+    syncDiscoverHeat({ postId: originalPostId, kind: 'love', direction: 'grant' });
     emitActivity({
       type: 'post_love',
       actorName,
@@ -1081,6 +1086,7 @@ export async function unlikePost(postId: string): Promise<void> {
       : '';
 
   await deleteDoc(doc(db, 'posts', postId, 'likes', user.uid));
+  syncDiscoverHeat({ postId, kind: 'love', direction: 'revoke' });
 
   if (originalPostId && originalPostId !== postId) {
     const originalLikeRef = doc(db, 'posts', originalPostId, 'likes', user.uid);
@@ -1090,6 +1096,7 @@ export async function unlikePost(postId: string): Promise<void> {
       existingOriginal.data()?.viaReverbPostId === postId;
     if (viaReverb) {
       await deleteDoc(originalLikeRef);
+      syncDiscoverHeat({ postId: originalPostId, kind: 'love', direction: 'revoke' });
     }
   }
 }
@@ -1230,6 +1237,7 @@ export async function addComment(
     preview: (clean || voice?.transcript || (video ? 'Clip' : imageUrl ? 'Photo' : 'Voice note')).slice(0, 120),
     commentId,
   });
+  syncDiscoverHeat({ postId, kind: 'reply', direction: 'grant', commentId });
   return comment;
 }
 
@@ -1295,6 +1303,7 @@ export async function deleteComment(postId: string, commentId: string): Promise<
     /* still attempt comment delete */
   }
   await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+  syncDiscoverHeat({ postId, kind: 'reply', direction: 'revoke', commentId });
 }
 
 export async function fetchCommentCount(postId: string): Promise<number> {

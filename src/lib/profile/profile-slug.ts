@@ -30,6 +30,7 @@ export const APP_ROOT_SEGMENTS = new Set([
   'lock',
   'try',
   'welcome',
+  'invite',
   'settings',
   'vault',
   'scene',

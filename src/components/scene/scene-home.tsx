@@ -39,6 +39,7 @@ import { ScenePortalHub } from '@/components/scene/scene-portal-hub';
 import { SceneImmersiveFeedDialog } from '@/components/scene/scene-immersive-feed-dialog';
 import { LockClaimBootstrap } from '@/components/lock/lock-claim-bootstrap';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
+import { ArtistHomeProspectClaimBootstrap } from '@/components/profile/artist-home-prospect-claim-bootstrap';
 import { MentionField } from '@/components/profile/mention-suggestions';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
@@ -1137,6 +1138,7 @@ export function SceneHome() {
     >
       <LockClaimBootstrap />
       <GuestPressingClaimBootstrap />
+      <ArtistHomeProspectClaimBootstrap />
       <SceneBlockAtmosphere energy={sceneEnergy} pulseKey={posts.length} />
       <SceneFeedJumpHints
         blockExpanded={blockExpanded}

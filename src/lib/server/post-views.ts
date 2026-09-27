@@ -2,6 +2,8 @@ import 'server-only';
 
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Firestore } from 'firebase-admin/firestore';
+import { DISCOVER_HEAT_POINTS } from '@/lib/discover-heat';
+import { discoverHeatTickId } from '@/lib/server/discover-heat';
 
 /** Unique people who saw a wall post. Owner views never count. */
 export async function recordPostView(
@@ -43,6 +45,8 @@ export async function recordPostView(
     postRef,
     {
       viewCount: FieldValue.increment(1),
+      discoverHeat: FieldValue.increment(DISCOVER_HEAT_POINTS.view),
+      lastEngagedAt: nowIso,
     },
     { merge: true }
   );
@@ -50,6 +54,12 @@ export async function recordPostView(
     at: nowIso,
     viewerId: uid || null,
     guestId: uid ? null : guest || null,
+  });
+  batch.set(postRef.collection('heatTicks').doc(discoverHeatTickId('view', tickId)), {
+    kind: 'view',
+    points: DISCOVER_HEAT_POINTS.view,
+    actorId: uid || null,
+    at: nowIso,
   });
   await batch.commit();
   if (ownerId) {

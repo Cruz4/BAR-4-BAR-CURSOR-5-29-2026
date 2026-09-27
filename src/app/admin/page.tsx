@@ -56,7 +56,9 @@ import { AdminMetricsTab } from '@/components/admin-metrics-tab';
 import { AdminCeoDashboardV2 } from '@/components/admin-ceo-dashboard-v2';
 import { AdminAchievementsTab } from '@/components/admin-achievements-tab';
 import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
+import { AdminArtistHomeProspectsCard } from '@/components/admin-artist-home-prospects-card';
 import { AdminSceneLayoutCard } from '@/components/admin-scene-layout-card';
+import { AdminDiscoverHeatCard } from '@/components/admin-discover-heat-card';
 import { AdminProductSurfacesCard } from '@/components/admin-product-surfaces-card';
 import { AdminProPreviewAuditCard } from '@/components/admin-pro-preview-audit-card';
 import { AdminProductionGateCard } from '@/components/admin-production-gate-card';
@@ -1359,7 +1361,9 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="config" className="space-y-8">
+            <AdminArtistHomeProspectsCard />
             <AdminSceneLayoutCard />
+            <AdminDiscoverHeatCard />
             <AdminProductSurfacesCard />
             <AdminProPreviewAuditCard />
             <AdminProductionGateCard />

@@ -54,6 +54,14 @@ service cloud.firestore {
         || (key in resource.data && request.resource.data[key] == resource.data[key]);
     }
 
+    // Once the server writes a field, a client update has to keep that exact value.
+    function preservedServerField(key) {
+      return (!(key in resource.data) && !(key in request.resource.data))
+        || (key in resource.data
+          && key in request.resource.data
+          && request.resource.data[key] == resource.data[key]);
+    }
+
     function validVoiceNote(data) {
       return data is map
         && data.keys().hasAll(['url', 'storagePath', 'contentType', 'durationSec', 'byteSize'])
@@ -661,6 +669,8 @@ service cloud.firestore {
             && request.resource.data.text.size() > 0))
         && (!('reverbPoll' in request.resource.data)
           || validPostPoll(request.resource.data.reverbPoll))
+        && !('discoverHeat' in request.resource.data)
+        && !('lastEngagedAt' in request.resource.data)
         && (
           request.resource.data.text.size() > 0
           || ('embedUrl' in request.resource.data && request.resource.data.embedUrl.size() > 0)
@@ -678,13 +688,19 @@ service cloud.firestore {
         && request.resource.data.ownerId == resource.data.ownerId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['poll', 'reverbPoll'])
         && lockedServerNumber('viewCount')
-        && lockedServerNumber('imprintSaveCount');
+        && lockedServerNumber('imprintSaveCount')
+        && preservedServerField('discoverHeat')
+        && preservedServerField('lastEngagedAt');
       allow delete: if request.auth != null
         && (resource.data.ownerId == request.auth.uid || isAdmin());
 
       match /likes/{likerId} {
         allow read: if true;
         allow create, delete: if request.auth != null && request.auth.uid == likerId;
+      }
+
+      match /heatTicks/{tickId} {
+        allow read, write: if false;
       }
 
       match /reverbs/{reverberId} {

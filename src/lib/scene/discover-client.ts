@@ -10,6 +10,7 @@ import { enrichPostsWithLiveSlugs } from '@/lib/profile/social-client';
 import { auth } from '@/lib/firebase/client/firebase';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import type { DiscoveryGraphMode, DiscoveryMatch } from '@/lib/discovery-graph';
+import { discoverMixScore } from '@/lib/discover-heat';
 import type { PressingConfig } from '@/lib/profile/pressing';
 
 /** Lyrics DNA Drop or pressed song — routed to Your Block when the owner is a friend. */
@@ -96,9 +97,17 @@ export type DiscoverLock = {
   pressing?: PressingConfig;
 };
 
+export type DiscoverFeedPost = ProfilePost & {
+  discoverHeat?: number;
+  tasteMatch?: DiscoveryMatch;
+  creationMatch?: DiscoveryMatch;
+};
+
 export type DiscoverData = {
   artists: DiscoverArtist[];
-  posts: ProfilePost[];
+  posts: DiscoverFeedPost[];
+  /** Admin test: blend recency, verified heat, and this viewer's taste into one list. */
+  heatMix?: boolean;
   drops: DiscoverDrop[];
   risers: DiscoverRiser[];
   locks: DiscoverLock[];
@@ -112,7 +121,7 @@ export type DiscoverData = {
 
 export type DiscoverCard = (
   | { kind: 'artist'; key: string; artist: DiscoverArtist }
-  | { kind: 'post'; key: string; post: ProfilePost }
+  | { kind: 'post'; key: string; post: DiscoverFeedPost }
   | { kind: 'drop'; key: string; drop: DiscoverDrop }
   | { kind: 'lock'; key: string; lock: DiscoverLock }
   | { kind: 'risers'; key: string; risers: DiscoverRiser[] }
@@ -163,6 +172,7 @@ export async function fetchDiscover(
     return {
       artists: Array.isArray(data.artists) ? data.artists : [],
       posts,
+      heatMix: data.heatMix === true,
       drops: Array.isArray(data.drops) ? data.drops : [],
       risers: Array.isArray(data.risers) ? data.risers : [],
       locks: Array.isArray((data as { locks?: DiscoverLock[] }).locks)
@@ -246,7 +256,14 @@ export function buildDiscoverCards(
 
   const timed: DiscoverCard[] = [
     ...posts.map(
-      (post): DiscoverCard => ({ kind: 'post', key: `post-${post.id}`, post })
+      (post): DiscoverCard => ({
+        kind: 'post',
+        key: `post-${post.id}`,
+        post,
+        ...(data.heatMix && mode !== 'fresh'
+          ? { match: mode === 'creation' ? post.creationMatch : post.tasteMatch }
+          : {}),
+      })
     ),
     ...artists.map(
       (artist): DiscoverCard => ({
@@ -278,7 +295,18 @@ export function buildDiscoverCards(
   ];
 
   timed.sort((a, b) => {
-    if (mode !== 'fresh') {
+    if (data.heatMix) {
+      const now = Date.now();
+      const scoreOf = (card: DiscoverCard) =>
+        discoverMixScore({
+          at: cardTimestamp(card),
+          heat: card.kind === 'post' ? card.post.discoverHeat : 0,
+          matchScore: card.match?.score,
+          now,
+        });
+      const delta = scoreOf(b) - scoreOf(a);
+      if (delta) return delta;
+    } else if (mode !== 'fresh') {
       const score = (b.match?.score || 0) - (a.match?.score || 0);
       if (score) return score;
     }

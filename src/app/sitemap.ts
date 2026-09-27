@@ -82,7 +82,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       collectOrderedDocs(db, 'posts', 'createdAt', MAX_POST_DOCS),
     ]);
     const profileEntries: MetadataRoute.Sitemap = profiles
-      .filter((doc) => isIndexablePublicProfileSlug(doc.id))
+      .filter((doc) => {
+        if (!isIndexablePublicProfileSlug(doc.id)) return false;
+        const userId = doc.data().userId;
+        if (typeof userId !== 'string' || !userId.trim()) return false;
+        if (doc.data().prospectId) return false;
+        return true;
+      })
       .map((doc) => {
         const updated = toLastModified(doc.data().updatedAt, lastModified);
         return {

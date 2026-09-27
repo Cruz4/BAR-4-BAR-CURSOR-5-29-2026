@@ -64,7 +64,8 @@ export async function allocateUniqueProfileSlug(
 export async function assertProfileSlugAvailable(
   db: Firestore,
   slug: string,
-  userId: string
+  userId: string,
+  opts?: { allowProspectId?: string }
 ): Promise<string> {
   const clean = normalizeProfileSlugInput(slug);
   let isNeo = false;
@@ -86,6 +87,17 @@ export async function assertProfileSlugAvailable(
   const owner = await slugOwnerId(db, clean);
   if (owner && owner !== userId) {
     throw new Error('That profile link is already taken.');
+  }
+  if (!owner) {
+    const holdSnap = await db.doc(`publicProfiles/${clean}`).get();
+    if (holdSnap.exists) {
+      const heldProspect =
+        typeof holdSnap.data()?.prospectId === 'string' ? holdSnap.data()!.prospectId : '';
+      const heldUid = typeof holdSnap.data()?.userId === 'string' ? holdSnap.data()!.userId : '';
+      if (!heldUid && heldProspect && heldProspect !== opts?.allowProspectId) {
+        throw new Error('That profile link is reserved for an invite.');
+      }
+    }
   }
   return clean;
 }
@@ -227,7 +239,8 @@ export async function resolvePublicProfileSlugDoc(
       if (!snap.exists) continue;
       const data = (snap.data() || {}) as Record<string, unknown>;
       const userId = typeof data.userId === 'string' ? data.userId : '';
-      if (!userId) continue;
+      const prospectId = typeof data.prospectId === 'string' ? data.prospectId : '';
+      if (!userId && !prospectId) continue;
       return { slug: snap.id, data, userId };
     } catch {
       /* try next */

@@ -46,6 +46,11 @@ import {
 import { sanitizeQuotePressSlots, type QuotePressSlot } from '@/lib/profile/quote-press';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
+import {
+  DISCOVER_HEAT_WINDOW_DAYS,
+  DISCOVER_WARM_LIMIT,
+  DISCOVER_WARM_PER_OWNER,
+} from '@/lib/discover-heat';
 import type { PressingConfig } from '@/lib/profile/pressing';
 import {
   normalizeDropPrice,
@@ -867,6 +872,8 @@ export async function updateGamificationSettings(
     displayName?: string;
     /** Vanity Artist Home path: /{profileSlug} */
     profileSlug?: string;
+    /** When claiming a marketing prospect, pass its id so the reserved slug can bind. */
+    allowProspectId?: string;
     profilePhotoMode?: 'collage' | 'custom' | 'initials';
     profilePhotoUrl?: string | null;
     /** Ordered album IDs for collage (max 9). Pass `null` or `[]` to clear (auto covers). */
@@ -891,7 +898,9 @@ export async function updateGamificationSettings(
   }
   // Display name no longer rewrites the vanity URL — artists set the link explicitly.
   if (typeof settings.profileSlug === 'string') {
-    const claimed = await assertProfileSlugAvailable(db, settings.profileSlug, userId);
+    const claimed = await assertProfileSlugAvailable(db, settings.profileSlug, userId, {
+      allowProspectId: settings.allowProspectId,
+    });
     summary.profileSlug = claimed;
   }
   if (
@@ -1331,6 +1340,7 @@ export async function getPublicProfile(slug: string) {
   // Best-effort migrate hyphen / uid-suffix vanity links to underscore form.
   let liveSlug = resolved.slug;
   try {
+    if (!resolved.userId) throw new Error('skip migrate for prospect');
     const migrated = await migrateUserProfileSlugToUnderscore(db, resolved.userId, {
       displayName:
         typeof resolved.data.displayName === 'string' ? resolved.data.displayName : undefined,
@@ -1349,7 +1359,17 @@ export async function getPublicProfile(slug: string) {
   if (!snap.exists) return null;
   const data = snap.data()!;
   const userId = String(data.userId || resolved.userId || '');
-  if (!userId) return { ...data, slug: liveSlug, albumCoverUrls: [], liveDnaDrops: [] };
+  const prospectId = typeof data.prospectId === 'string' ? data.prospectId.trim() : '';
+  if (!userId) {
+    return {
+      ...data,
+      slug: liveSlug,
+      albumCoverUrls: [],
+      liveDnaDrops: [],
+      ...(prospectId ? { prospectId, prospectStatus: data.prospectStatus } : {}),
+      ...(Array.isArray(data.prospectWallPosts) ? { prospectWallPosts: data.prospectWallPosts } : {}),
+    };
+  }
 
   const [albumMeta, liveDnaDrops, referralCode, summarySnap, userSnap] = await Promise.all([
     getPublicAlbumMeta(userId),
@@ -2516,55 +2536,90 @@ export type DiscoverPostSummary = {
   reverbImageUrl?: string;
   createdAt: string;
   pressing?: PressingConfig;
+  /** Verified Love / reply / Reverb / view total. Present when the post has heat. */
+  discoverHeat?: number;
+  lastEngagedAt?: string;
+  soundIdentity?: ArtistHomeSoundIdentity;
 };
+
+function discoverPostFromDoc(
+  id: string,
+  data: Record<string, unknown>,
+  warm: boolean
+): (DiscoverPostSummary & { warm: boolean }) | null {
+  const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+  if (!ownerId) return null;
+  const discoverHeat = Math.max(0, Math.floor(Number(data.discoverHeat) || 0));
+  const lastEngagedAt = typeof data.lastEngagedAt === 'string' ? data.lastEngagedAt : '';
+  return {
+    id,
+    ownerId,
+    ownerName: String(data.ownerName || 'Artist'),
+    ownerSlug: typeof data.ownerSlug === 'string' ? data.ownerSlug : undefined,
+    text: String(data.text || ''),
+    embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
+    embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
+    imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
+    ...(data.isReverb === true ? { isReverb: true } : {}),
+    ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
+      ? { sourceKind: data.sourceKind }
+      : {}),
+    ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
+    ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
+    ...(typeof data.reverbOwnerName === 'string' ? { reverbOwnerName: data.reverbOwnerName } : {}),
+    ...(typeof data.reverbOwnerSlug === 'string' ? { reverbOwnerSlug: data.reverbOwnerSlug } : {}),
+    ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
+    ...(typeof data.reverbEmbedUrl === 'string' ? { reverbEmbedUrl: data.reverbEmbedUrl } : {}),
+    ...(typeof data.reverbImageUrl === 'string' ? { reverbImageUrl: data.reverbImageUrl } : {}),
+    createdAt: String(data.createdAt || ''),
+    ...(discoverHeat > 0 ? { discoverHeat } : {}),
+    ...(lastEngagedAt ? { lastEngagedAt } : {}),
+    warm,
+  };
+}
 
 /** Recent public wall posts — only from owners with a live Artist Home. */
 export async function listRecentPublicPosts(
-  opts: { limit?: number; excludeOwnerId?: string } = {}
+  opts: { limit?: number; excludeOwnerId?: string; heatMix?: boolean } = {}
 ): Promise<DiscoverPostSummary[]> {
   const limit = Math.min(Math.max(opts.limit ?? 10, 1), 40);
   const db = await getDb();
   // Post ids are lexicographically newest-first, so document-id order = recency.
   // Pull extra so we can drop posts whose owner no longer has a live profile.
   const snap = await db.collection('posts').limit(Math.max(120, limit * 4)).get();
-  const candidates: DiscoverPostSummary[] = [];
+  const warmSnap = opts.heatMix
+    ? await db
+        .collection('posts')
+        .where(
+          'lastEngagedAt',
+          '>=',
+          new Date(Date.now() - DISCOVER_HEAT_WINDOW_DAYS * 86_400_000).toISOString()
+        )
+        .orderBy('lastEngagedAt', 'desc')
+        .limit(DISCOVER_WARM_LIMIT + limit)
+        .get()
+        .catch((error) => {
+          console.warn('[discover-heat] warm posts', error);
+          return null;
+        })
+    : null;
+  const seen = new Set<string>();
+  const candidates: Array<DiscoverPostSummary & { warm: boolean }> = [];
+  const pushDoc = (id: string, data: Record<string, unknown>, warm: boolean) => {
+    if (seen.has(id)) return;
+    if (opts.excludeOwnerId && data.ownerId === opts.excludeOwnerId) return;
+    if (warm && Math.floor(Number(data.discoverHeat) || 0) <= 0) return;
+    const post = discoverPostFromDoc(id, data, warm);
+    if (!post) return;
+    seen.add(id);
+    candidates.push(post);
+  };
   for (const doc of snap.docs) {
-    const data = doc.data() as Record<string, unknown>;
-    const ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
-    if (!ownerId) continue;
-    if (opts.excludeOwnerId && ownerId === opts.excludeOwnerId) continue;
-    // Keep posts even when baked ownerSlug is stale/missing — live slug resolved below.
-    candidates.push({
-      id: doc.id,
-      ownerId,
-      ownerName: String(data.ownerName || 'Artist'),
-      ownerSlug: typeof data.ownerSlug === 'string' ? data.ownerSlug : undefined,
-      text: String(data.text || ''),
-      embedUrl: typeof data.embedUrl === 'string' ? data.embedUrl : undefined,
-      embedProvider: typeof data.embedProvider === 'string' ? data.embedProvider : undefined,
-      imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
-      ...(data.isReverb === true ? { isReverb: true } : {}),
-      ...(data.sourceKind === 'post' || data.sourceKind === 'song' || data.sourceKind === 'dna'
-        ? { sourceKind: data.sourceKind }
-        : {}),
-      ...(typeof data.reverbPostId === 'string' ? { reverbPostId: data.reverbPostId } : {}),
-      ...(typeof data.reverbOwnerId === 'string' ? { reverbOwnerId: data.reverbOwnerId } : {}),
-      ...(typeof data.reverbOwnerName === 'string'
-        ? { reverbOwnerName: data.reverbOwnerName }
-        : {}),
-      ...(typeof data.reverbOwnerSlug === 'string'
-        ? { reverbOwnerSlug: data.reverbOwnerSlug }
-        : {}),
-      ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
-      ...(typeof data.reverbEmbedUrl === 'string'
-        ? { reverbEmbedUrl: data.reverbEmbedUrl }
-        : {}),
-      ...(typeof data.reverbImageUrl === 'string'
-        ? { reverbImageUrl: data.reverbImageUrl }
-        : {}),
-      createdAt: String(data.createdAt || ''),
-    });
-    if (candidates.length >= limit * 3) break;
+    pushDoc(doc.id, doc.data() as Record<string, unknown>, false);
+    if (!opts.heatMix && candidates.length >= limit * 3) break;
+  }
+  for (const doc of warmSnap?.docs || []) {
+    pushDoc(doc.id, doc.data() as Record<string, unknown>, true);
   }
 
   const dnaSourceIds = candidates
@@ -2581,19 +2636,33 @@ export async function listRecentPublicPosts(
   const live = await resolvePublicAvatarsByUserIds(ownerIds);
 
   const out: DiscoverPostSummary[] = [];
+  const ownerCounts = new Map<string, number>();
+  let recentCount = 0;
+  let warmCount = 0;
   for (const p of publicCandidates) {
     const ownerMeta = live.get(p.ownerId);
     if (!ownerMeta?.slug) continue; // no live Artist Home
+    const ownerCount = ownerCounts.get(p.ownerId) || 0;
+    if (p.warm) {
+      if (ownerCount >= DISCOVER_WARM_PER_OWNER || warmCount >= DISCOVER_WARM_LIMIT) continue;
+    } else if (recentCount >= limit) {
+      continue;
+    }
     const reverbMeta = p.reverbOwnerId ? live.get(p.reverbOwnerId) : undefined;
+    const { warm, ...post } = p;
+    void warm;
     out.push({
-      ...p,
+      ...post,
       ownerSlug: ownerMeta.slug,
       ownerName: ownerMeta.displayName || p.ownerName,
       ...(reverbMeta?.slug ? { reverbOwnerSlug: reverbMeta.slug } : {}),
       ...(reverbMeta?.displayName ? { reverbOwnerName: reverbMeta.displayName } : {}),
       pressing: ownerMeta.pressing,
+      ...(opts.heatMix && ownerMeta.soundIdentity ? { soundIdentity: ownerMeta.soundIdentity } : {}),
     });
-    if (out.length >= limit) break;
+    ownerCounts.set(p.ownerId, ownerCount + 1);
+    if (p.warm) warmCount += 1;
+    else recentCount += 1;
   }
   return out;
 }

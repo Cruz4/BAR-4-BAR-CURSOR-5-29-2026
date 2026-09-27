@@ -23,7 +23,10 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ claim?: string; k?: string }>;
+};
 const getCachedPublicProfile = cache(getPublicProfile);
 
 type ProfileSeoPosts = {
@@ -130,10 +133,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const liveSlug =
       typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : slug;
     const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+    const prospectId = typeof data.prospectId === 'string' ? data.prospectId.trim() : '';
     const seoPosts = userId
       ? await getCachedProfileSeoPosts(userId, data.artistHome)
       : { initialWallPosts: null, initialImprintPosts: [], crawlPosts: [] };
     const postSnippet = postsSeoSnippet(seoPosts.crawlPosts);
+    const isUnclaimedProspect = Boolean(prospectId && !userId);
     const { displayName, title, description } = profileShareCopy(data, liveSlug, postSnippet);
     const canonical = absoluteUrl(`/${liveSlug}`);
     const ogTitle = `${displayName} on AKAsheet`;
@@ -141,6 +146,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title,
       description,
+      ...(isUnclaimedProspect ? { robots: { index: false, follow: false } } : {}),
       alternates: { canonical },
       openGraph: {
         type: 'profile',
@@ -165,8 +171,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function PublicProfilePage({ params }: PageProps) {
+export default async function PublicProfilePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const query = await searchParams;
+  const prospectClaimSecret =
+    (typeof query.claim === 'string' && query.claim.trim()) ||
+    (typeof query.k === 'string' && query.k.trim()) ||
+    undefined;
   const appRedirect = legacyProfileAppRedirect(slug);
   if (appRedirect) redirect(appRedirect);
   const profile = await getCachedPublicProfile(slug);
@@ -182,9 +193,17 @@ export default async function PublicProfilePage({ params }: PageProps) {
       ? data.displayName.trim()
       : liveSlug;
   const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+  const prospectId = typeof data.prospectId === 'string' ? data.prospectId.trim() : '';
   const seoPosts = userId
     ? await getCachedProfileSeoPosts(userId, data.artistHome)
     : { initialWallPosts: null, initialImprintPosts: [], crawlPosts: [] };
+  const prospectWall = !userId && Array.isArray(data.prospectWallPosts)
+    ? (data.prospectWallPosts as ProfilePost[])
+    : [];
+  const initialWallPosts =
+    prospectWall.length > 0
+      ? { posts: prospectWall, page: 0, pageCount: 1, total: prospectWall.length }
+      : seoPosts.initialWallPosts;
 
   return (
     <>
@@ -205,8 +224,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
       <PublicProfilePageClient
         slug={slug}
         initialData={profile}
-        initialWallPosts={seoPosts.initialWallPosts}
+        initialWallPosts={initialWallPosts}
         initialImprintPosts={seoPosts.initialImprintPosts}
+        prospectClaim={
+          prospectId && !userId ? { prospectId, slug: liveSlug } : undefined
+        }
+        prospectClaimSecret={prospectId && !userId ? prospectClaimSecret : undefined}
       />
     </>
   );

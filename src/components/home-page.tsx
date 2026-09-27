@@ -5,6 +5,7 @@ import { AlbumList } from '@/components/album-list';
 import { SceneHome } from '@/components/scene/scene-home';
 import { GuestPressingLanding } from '@/components/marketing/guest-pressing-landing';
 import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
+import { ArtistHomeProspectClaimBootstrap } from '@/components/profile/artist-home-prospect-claim-bootstrap';
 import { useAuth } from '@/hooks/use-auth';
 import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
 
@@ -19,6 +20,7 @@ export function HomePage(_props: HomePageProps = {}) {
     return (
       <>
         {!SCENE_HOME_ENABLED ? <GuestPressingClaimBootstrap /> : null}
+        <ArtistHomeProspectClaimBootstrap />
         {SCENE_HOME_ENABLED ? (
           <Suspense fallback={<div className="min-h-screen bg-background" aria-busy="true" />}>
             <SceneHome />

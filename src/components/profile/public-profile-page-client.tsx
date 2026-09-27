@@ -17,17 +17,24 @@ import { RELEASE_VISIBILITY_CHANGED_EVENT } from '@/lib/release-management-clien
 
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { persistArtistHomeProspectClaim } from '@/lib/artist-home-prospect-session';
+import { ArtistHomeProspectClaimBanner } from '@/components/profile/artist-home-prospect-claim-banner';
+import { ArtistHomeProspectClaimBootstrap } from '@/components/profile/artist-home-prospect-claim-bootstrap';
 
 export function PublicProfilePageClient({
   slug,
   initialData,
   initialWallPosts = null,
   initialImprintPosts = [],
+  prospectClaim,
+  prospectClaimSecret,
 }: {
   slug: string;
   initialData?: unknown;
   initialWallPosts?: PublicWallPostsPage | null;
   initialImprintPosts?: ProfilePost[];
+  prospectClaim?: { prospectId: string; slug: string };
+  prospectClaimSecret?: string;
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -139,6 +146,15 @@ export function PublicProfilePageClient({
   }, [slug, router, initialData]);
 
   useEffect(() => {
+    if (!prospectClaim?.prospectId) return;
+    persistArtistHomeProspectClaim({
+      prospectId: prospectClaim.prospectId,
+      slug: prospectClaim.slug,
+      claimSecret: prospectClaimSecret,
+    });
+  }, [prospectClaim, prospectClaimSecret]);
+
+  useEffect(() => {
     if (!profile?.slug || !profile.userId) return;
     if (user?.id && user.id === profile.userId) return;
     recordProfileViewClient(profile.slug);
@@ -207,14 +223,29 @@ export function PublicProfilePageClient({
   }
 
   const isOwner = Boolean(user?.id && profile.userId && user.id === profile.userId);
+  const isUnclaimedProspect = Boolean(prospectClaim && !profile.userId);
 
   return (
-    <ArtistHome
-      profile={profile}
-      config={config}
-      isOwner={isOwner}
-      initialWallPosts={initialWallPosts}
-      initialImprintPosts={initialImprintPosts}
-    />
+    <>
+      <ArtistHomeProspectClaimBootstrap />
+      {isUnclaimedProspect ? (
+        <div className="container mx-auto max-w-6xl px-4 pt-6">
+          <ArtistHomeProspectClaimBanner
+            displayName={profile.displayName}
+            slug={prospectClaim!.slug}
+            signedIn={Boolean(user)}
+            isOwner={isOwner}
+          />
+        </div>
+      ) : null}
+      <ArtistHome
+        profile={profile}
+        config={config}
+        isOwner={isOwner}
+        previewMode={isUnclaimedProspect}
+        initialWallPosts={initialWallPosts}
+        initialImprintPosts={initialImprintPosts}
+      />
+    </>
   );
 }
