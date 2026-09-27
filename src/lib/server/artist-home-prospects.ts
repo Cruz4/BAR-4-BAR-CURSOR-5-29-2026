@@ -498,7 +498,7 @@ export async function getArtistHomeProspectClaimEligibility(
   const email = userEmail.trim().toLowerCase();
   if (record.inviteEmails.length > 0) {
     if (!email || !record.inviteEmails.includes(email)) {
-      return { ok: false, reason: 'Sign in with the email address we sent this invite to.' };
+      return { ok: false, reason: 'Sign in with the email address on your invite.' };
     }
   }
   const secretOk = await verifyProspectClaimSecret(prospectId, claimSecret);
@@ -589,7 +589,7 @@ export async function claimArtistHomeProspect(input: {
   const email = input.userEmail.trim().toLowerCase();
   if (record.inviteEmails.length > 0) {
     if (!email || !record.inviteEmails.includes(email)) {
-      throw new Error('Sign in with the email address we sent this invite to.');
+      throw new Error('Sign in with the email address on your invite.');
     }
   }
 

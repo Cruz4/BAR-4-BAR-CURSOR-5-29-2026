@@ -87,12 +87,12 @@ export function ArtistHomeProspectClaimBanner({
         <div className="space-y-1.5 text-left">
           <p className="flex items-center gap-2 font-headline text-sm font-black uppercase tracking-wide text-emerald-200">
             <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
-            We started this home for {displayName}
+            Hey {displayName}, AKAsheet&apos;s Dev started this home for you
           </p>
           <p className="text-xs leading-relaxed text-emerald-100/80">
             Claim it with a <strong className="font-semibold text-emerald-100">new</strong> AKAsheet account
-            using the email on your invite. Once you claim, only you control this profile — our team cannot
-            edit your home or posts.
+            using the email on your invite. Once you claim, you&apos;re the only one who can edit this profile,
+            your home, or your posts.
           </p>
           <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-emerald-300/70">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
