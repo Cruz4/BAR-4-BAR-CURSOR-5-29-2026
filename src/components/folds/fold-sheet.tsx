@@ -205,6 +205,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
   const isPro = isProOrTrial(user);
   const {
     imprintOn,
+    showImprintToggle,
     toggleImprint,
     resetImprint,
     imprintFaders,
@@ -708,20 +709,22 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             >
               <BarChart3 className="h-3.5 w-3.5" /> Poll
             </Button>
-            <button
-              type="button"
-              onClick={toggleImprint}
-              disabled={busy}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
-                imprintOn
-                  ? 'border-amber-400/55 bg-amber-500/20 text-amber-100'
-                  : 'border-transparent text-amber-200/60 hover:border-amber-500/35 hover:text-amber-100'
-              )}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Imprint
-            </button>
+            {showImprintToggle ? (
+              <button
+                type="button"
+                onClick={toggleImprint}
+                disabled={busy}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                  imprintOn
+                    ? 'border-amber-400/55 bg-amber-500/20 text-amber-100'
+                    : 'border-transparent text-amber-200/60 hover:border-amber-500/35 hover:text-amber-100'
+                )}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Imprint
+              </button>
+            ) : null}
           </div>
           <div className="flex items-end gap-2" data-composer-field>
             <textarea

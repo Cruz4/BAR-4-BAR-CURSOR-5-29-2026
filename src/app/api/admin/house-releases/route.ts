@@ -5,6 +5,7 @@ import { AdminAuthError, verifyAdminRequest } from '@/lib/server/admin-auth';
 import { isHouseReleaseDocument, shareDocumentVisibility } from '@/lib/release-management';
 import { resolveHouseArtistId } from '@/lib/house-artist-link';
 import { resolvePublicProfileSlugDoc } from '@/lib/server/profile-slug';
+import { houseReleasePingEventId } from '@/lib/house-release-ping';
 import type { HouseReleaseAdminRow } from '@/lib/admin-house-releases';
 
 export const runtime = 'nodejs';
@@ -203,6 +204,7 @@ export async function POST(req: Request) {
 
     if (action === 'revoke') {
       batch.set(shareRef, houseOff, { merge: true });
+      batch.delete(db.doc(`houseReleasePings/${houseReleasePingEventId(shareId)}`));
       if (targetPath) {
         batch.set(db.doc(targetPath), {
           houseRelease: false,
@@ -221,6 +223,7 @@ export async function POST(req: Request) {
       unpressedAt: now,
       'data.releaseStatus': 'unlisted',
     }, { merge: true });
+    batch.delete(db.doc(`houseReleasePings/${houseReleasePingEventId(shareId)}`));
     if (targetPath) {
       batch.set(db.doc(targetPath), {
         releaseStatus: 'draft',

@@ -7,6 +7,7 @@ import {
   regenerateProspectClaimSecret,
   unpublishArtistHomeProspect,
   updateArtistHomeProspect,
+  deleteArtistHomeProspect,
 } from '@/lib/server/artist-home-prospects';
 import { getPublicAppUrl } from '@/lib/app-url';
 
@@ -54,6 +55,11 @@ export async function PATCH(req: Request, { params }: RouteCtx) {
       wallPosts: Array.isArray(body.wallPosts) ? body.wallPosts : undefined,
       profilePhotoUrl: body.profilePhotoUrl,
       profilePhotoMode: body.profilePhotoMode,
+      profileCollageAlbumIds: body.profileCollageAlbumIds,
+      starMarkUseStar: body.starMarkUseStar,
+      starMarkSeed: body.starMarkSeed,
+      starMarkSlots: body.starMarkSlots,
+      starMarkPinnedSlotId: body.starMarkPinnedSlotId,
       internalNotes: typeof body.internalNotes === 'string' ? body.internalNotes : undefined,
       contactLabel: typeof body.contactLabel === 'string' ? body.contactLabel : undefined,
       markSent: Boolean(body.markSent),
@@ -108,6 +114,24 @@ export async function POST(req: Request, { params }: RouteCtx) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
     const message = err instanceof Error ? err.message : 'Action failed';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: Request, { params }: RouteCtx) {
+  try {
+    await verifyAdminRequest(req);
+    if (!hasAdminFirestoreCredentials()) {
+      return NextResponse.json({ error: 'Firebase Admin required' }, { status: 503 });
+    }
+    const { id } = await params;
+    const result = await deleteArtistHomeProspect(id);
+    return NextResponse.json({ ok: true, ...result });
+  } catch (err) {
+    if (err instanceof AdminAuthError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    const message = err instanceof Error ? err.message : 'Delete failed';
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

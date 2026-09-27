@@ -233,6 +233,8 @@ export function PublicProfilePageClient({
           <ArtistHomeProspectClaimBanner
             displayName={profile.displayName}
             slug={prospectClaim!.slug}
+            prospectId={prospectClaim!.prospectId}
+            claimSecret={prospectClaimSecret}
             signedIn={Boolean(user)}
             isOwner={isOwner}
           />

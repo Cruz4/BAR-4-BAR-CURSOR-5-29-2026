@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Copy, Globe, Plus, RefreshCw, Sparkles } from 'lucide-react';
+import { Copy, Globe, Plus, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import { adminApiFetch } from '@/lib/admin-client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import type { ArtistHomeProspectAdminRow } from '@/lib/artist-home-prospect';
+import {
+  artistHomeProspectDeleteConfirmMessage,
+  type ArtistHomeProspectAdminRow,
+} from '@/lib/artist-home-prospect';
 
 function statusBadge(status: string) {
   switch (status) {
@@ -77,6 +80,30 @@ export function AdminArtistHomeProspectsCard() {
   const copy = (label: string, value: string) => {
     void navigator.clipboard.writeText(value);
     toast({ title: `${label} copied` });
+  };
+
+  const deleteProspect = async (row: ArtistHomeProspectAdminRow) => {
+    if (!window.confirm(artistHomeProspectDeleteConfirmMessage(row))) return;
+    try {
+      const res = await adminApiFetch(`/api/admin/artist-home-prospects/${row.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+      toast({
+        title: 'Outreach record removed',
+        description: data.claimedLiveHomeLeftIntact
+          ? 'Their live Artist Home and account were not changed.'
+          : undefined,
+      });
+      await load();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete failed',
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
   };
 
   const createProspect = async () => {
@@ -207,9 +234,22 @@ export function AdminArtistHomeProspectsCard() {
                     <TableCell className="font-mono text-xs">/{row.slug}</TableCell>
                     <TableCell>{statusBadge(row.status)}</TableCell>
                     <TableCell>{row.viewCount ?? 0}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button size="sm" variant="outline" asChild>
-                        <Link href={`/admin/prospects/${row.id}`}>Edit</Link>
+                        <Link href={`/admin/prospects/${row.id}`}>Edit home</Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        type="button"
+                        title={
+                          row.status === 'claimed'
+                            ? 'Remove outreach record (live home stays)'
+                            : 'Delete outreach entry'
+                        }
+                        onClick={() => void deleteProspect(row)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
                   </TableRow>

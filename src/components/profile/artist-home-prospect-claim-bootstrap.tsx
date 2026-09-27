@@ -13,18 +13,34 @@ import { profileHref } from '@/lib/profile/profile-slug';
 export function ArtistHomeProspectClaimBootstrap() {
   const { user, loading } = useAuth();
   const { toast } = useToast();
-  const ran = useRef(false);
+  const claimAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (loading || !user || ran.current) return;
+    if (loading || !user) return;
     const intent = readArtistHomeProspectClaim();
     if (!intent) return;
-    ran.current = true;
+    const attemptKey = `${intent.prospectId}:${intent.claimSecret || ''}`;
+    if (claimAttemptRef.current === attemptKey) return;
 
     void (async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
         if (!token) return;
+        const eligParams = new URLSearchParams({ prospectId: intent.prospectId });
+        if (intent.claimSecret) eligParams.set('claim', intent.claimSecret);
+        const eligRes = await fetch(`/api/artist-home-prospect/eligibility?${eligParams}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const elig = (await eligRes.json()) as { ok?: boolean; reason?: string };
+        if (!elig.ok) {
+          toast({
+            variant: 'destructive',
+            title: 'Cannot claim on this account',
+            description: elig.reason || 'Use a new sign-up with your invited email.',
+          });
+          return;
+        }
+        claimAttemptRef.current = attemptKey;
         const res = await fetch('/api/artist-home-prospect/claim', {
           method: 'POST',
           headers: {
@@ -37,8 +53,8 @@ export function ArtistHomeProspectClaimBootstrap() {
           }),
         });
         const data = (await res.json().catch(() => ({}))) as { error?: string; slug?: string };
-        clearArtistHomeProspectClaim();
         if (!res.ok) {
+          claimAttemptRef.current = null;
           toast({
             variant: 'destructive',
             title: 'Could not claim profile',
@@ -46,6 +62,7 @@ export function ArtistHomeProspectClaimBootstrap() {
           });
           return;
         }
+        clearArtistHomeProspectClaim();
         const slug = data.slug || intent.slug;
         toast({
           title: 'Your Artist Home is live',

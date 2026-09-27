@@ -20,6 +20,8 @@ import {
   hasPersistedArtistHomeConfig,
 } from '@/lib/server/artist-home';
 import { updateGamificationSettings } from '@/lib/server/gamification';
+import { getAuth } from '@/lib/firebase/server';
+import { sanitizeVesperfoldSlots } from '@/lib/profile/vesperfold';
 import type {
   ArtistHomeProspectAdminRow,
   ArtistHomeProspectRecord,
@@ -105,6 +107,14 @@ function docToRecord(id: string, data: Record<string, unknown>): ArtistHomeProsp
       data.profilePhotoMode === 'initials'
         ? data.profilePhotoMode
         : undefined,
+    profileCollageAlbumIds: Array.isArray(data.profileCollageAlbumIds)
+      ? data.profileCollageAlbumIds.filter((id): id is string => typeof id === 'string').slice(0, 9)
+      : undefined,
+    starMarkUseStar: data.starMarkUseStar === true,
+    starMarkSeed: typeof data.starMarkSeed === 'number' ? data.starMarkSeed : undefined,
+    starMarkSlots: sanitizeVesperfoldSlots(data.starMarkSlots),
+    starMarkPinnedSlotId:
+      typeof data.starMarkPinnedSlotId === 'string' ? data.starMarkPinnedSlotId : null,
     internalNotes:
       typeof data.internalNotes === 'string' ? data.internalNotes.trim().slice(0, 4000) : undefined,
     contactLabel:
@@ -135,6 +145,7 @@ function rowFromRecord(r: ArtistHomeProspectRecord): ArtistHomeProspectAdminRow 
     publishedAt: r.publishedAt,
     sentAt: r.sentAt,
     claimedAt: r.claimedAt,
+    claimedByUserId: r.claimedByUserId,
     viewCount: r.viewCount,
     contactLabel: r.contactLabel,
   };
@@ -266,6 +277,11 @@ export async function updateArtistHomeProspect(
     wallPosts?: ArtistHomeProspectWallPost[];
     profilePhotoUrl?: string | null;
     profilePhotoMode?: 'collage' | 'custom' | 'initials';
+    profileCollageAlbumIds?: string[] | null;
+    starMarkUseStar?: boolean;
+    starMarkSeed?: number;
+    starMarkSlots?: import('@/lib/profile/vesperfold').VesperfoldSlot[] | null;
+    starMarkPinnedSlotId?: string | null;
     internalNotes?: string;
     contactLabel?: string;
     markSent?: boolean;
@@ -298,9 +314,7 @@ export async function updateArtistHomeProspect(
   }
   if (patch.inviteEmails) next.inviteEmails = normalizeEmails(patch.inviteEmails);
   if (patch.artistHome) {
-    const normalized = normalizeArtistHomeConfig(patch.artistHome);
-    const { featuredTrack: _drop, ...featured } = normalized.featured;
-    next.artistHome = { ...normalized, featured };
+    next.artistHome = normalizeArtistHomeConfig(patch.artistHome);
   }
   if (patch.wallPosts) next.wallPosts = normalizeWallPosts(patch.wallPosts);
   if (patch.profilePhotoUrl !== undefined) {
@@ -310,6 +324,17 @@ export async function updateArtistHomeProspect(
         : null;
   }
   if (patch.profilePhotoMode) next.profilePhotoMode = patch.profilePhotoMode;
+  if (patch.profileCollageAlbumIds !== undefined) {
+    next.profileCollageAlbumIds = Array.isArray(patch.profileCollageAlbumIds)
+      ? patch.profileCollageAlbumIds.slice(0, 9)
+      : [];
+  }
+  if (typeof patch.starMarkUseStar === 'boolean') next.starMarkUseStar = patch.starMarkUseStar;
+  if (typeof patch.starMarkSeed === 'number') next.starMarkSeed = patch.starMarkSeed;
+  if (patch.starMarkSlots !== undefined) next.starMarkSlots = patch.starMarkSlots;
+  if (patch.starMarkPinnedSlotId !== undefined) {
+    next.starMarkPinnedSlotId = patch.starMarkPinnedSlotId;
+  }
   if (typeof patch.internalNotes === 'string') {
     next.internalNotes = patch.internalNotes.trim().slice(0, 4000);
   }
@@ -351,6 +376,11 @@ async function mirrorProspectToPublicProfile(
       prospectWallPosts: wallPosts,
       profilePhotoMode: record.profilePhotoMode || 'custom',
       ...(record.profilePhotoUrl ? { profilePhotoUrl: record.profilePhotoUrl } : {}),
+      ...(record.profileCollageAlbumIds?.length
+        ? { profileCollageAlbumIds: record.profileCollageAlbumIds }
+        : {}),
+      starMarkUseStar: Boolean(record.starMarkUseStar),
+      ...(typeof record.starMarkSeed === 'number' ? { starMarkSeed: record.starMarkSeed } : {}),
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -448,6 +478,98 @@ async function seedProspectWallPosts(
   await batch.commit();
 }
 
+const NEW_ACCOUNT_CLAIM_WINDOW_MS = 30 * 60 * 1000;
+
+export async function getArtistHomeProspectClaimEligibility(
+  userId: string,
+  userEmail: string,
+  prospectId: string,
+  claimSecret?: string
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const db = await getDb();
+  const ref = db.doc(`${COLLECTION}/${prospectId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, reason: 'This invite is no longer available.' };
+  const record = docToRecord(snap.id, (snap.data() || {}) as Record<string, unknown>);
+  if (record.status === 'claimed') return { ok: false, reason: 'This profile was already claimed.' };
+  if (!['ready', 'sent'].includes(record.status)) {
+    return { ok: false, reason: 'This profile is not ready to claim yet.' };
+  }
+  const email = userEmail.trim().toLowerCase();
+  if (record.inviteEmails.length > 0) {
+    if (!email || !record.inviteEmails.includes(email)) {
+      return { ok: false, reason: 'Sign in with the email address we sent this invite to.' };
+    }
+  }
+  const secretOk = await verifyProspectClaimSecret(prospectId, claimSecret);
+  if (!secretOk) {
+    return { ok: false, reason: 'Use the full claim link from your invite (including the claim code).' };
+  }
+  if (await hasPersistedArtistHomeConfig(userId)) {
+    return {
+      ok: false,
+      reason: 'This AKAsheet account already has an Artist Home. Sign out and use a new account for this invite.',
+    };
+  }
+  const summarySnap = await db.doc(`users/${userId}/gamification/summary`).get();
+  const summary = summarySnap.data() || {};
+  if (summary.publicProfile === true || (typeof summary.profileSlug === 'string' && summary.profileSlug.trim())) {
+    return {
+      ok: false,
+      reason: 'This account already has a public profile link. This invite is for a fresh sign-up.',
+    };
+  }
+  try {
+    const auth = await getAuth();
+    const authUser = await auth.getUser(userId);
+    const created = Date.parse(authUser.metadata.creationTime || '');
+    if (Number.isFinite(created) && Date.now() - created > NEW_ACCOUNT_CLAIM_WINDOW_MS) {
+      return {
+        ok: false,
+        reason:
+          'This invite is for a new sign-up. Sign out, create a new account with your invited email, then open the claim link again.',
+      };
+    }
+  } catch {
+    /* if auth lookup fails, fall through to claim attempt */
+  }
+  const albums = await db.collection(`users/${userId}/albums`).limit(1).get();
+  if (!albums.empty) {
+    return {
+      ok: false,
+      reason: 'This account already has studio work saved. Use a new account to claim this pre-built home.',
+    };
+  }
+  return { ok: true };
+}
+
+/** Drops the outreach record. Unclaimed vanity holds are released; claimed homes stay live. */
+export async function deleteArtistHomeProspect(id: string): Promise<{
+  outreachRemoved: true;
+  claimedLiveHomeLeftIntact: boolean;
+}> {
+  const db = await getDb();
+  const record = await getArtistHomeProspectById(id);
+  if (!record) throw new Error('Prospect not found.');
+  const claimedLive =
+    record.status === 'claimed' && Boolean(record.claimedByUserId?.trim());
+
+  if (record.slug && !claimedLive) {
+    const profileSnap = await db.doc(`publicProfiles/${record.slug}`).get();
+    if (profileSnap.exists) {
+      const data = profileSnap.data() || {};
+      const heldProspect = String(data.prospectId || '');
+      const ownerId = String(data.userId || '');
+      if (!ownerId && heldProspect === id) {
+        await profileSnap.ref.delete();
+      }
+    }
+  }
+
+  await db.doc(`${COLLECTION}/${id}`).delete();
+  return { outreachRemoved: true, claimedLiveHomeLeftIntact: claimedLive };
+}
+
 export async function claimArtistHomeProspect(input: {
   userId: string;
   userEmail: string;
@@ -471,12 +593,13 @@ export async function claimArtistHomeProspect(input: {
     }
   }
 
-  const secretOk = await verifyProspectClaimSecret(input.prospectId, input.claimSecret);
-  if (!secretOk) throw new Error('Invalid or missing claim link. Use the link from your invite.');
-
-  if (await hasPersistedArtistHomeConfig(input.userId)) {
-    throw new Error('You already have an Artist Home on this account.');
-  }
+  const eligible = await getArtistHomeProspectClaimEligibility(
+    input.userId,
+    input.userEmail,
+    input.prospectId,
+    input.claimSecret
+  );
+  if (!eligible.ok) throw new Error(eligible.reason);
 
   const profileSnap = await db.doc(`publicProfiles/${record.slug}`).get();
   const heldProspect = profileSnap.exists ? String(profileSnap.data()?.prospectId || '') : '';
@@ -499,6 +622,11 @@ export async function claimArtistHomeProspect(input: {
     publicProfile: true,
     profilePhotoMode: record.profilePhotoMode || (record.profilePhotoUrl ? 'custom' : 'initials'),
     profilePhotoUrl: record.profilePhotoUrl || null,
+    profileCollageAlbumIds: record.profileCollageAlbumIds || null,
+    starMarkUseStar: record.starMarkUseStar,
+    starMarkSeed: record.starMarkSeed,
+    starMarkSlots: record.starMarkSlots,
+    starMarkPinnedSlotId: record.starMarkPinnedSlotId,
   });
 
   await seedProspectWallPosts(db, input.userId, record.displayName, record.slug, record.wallPosts);

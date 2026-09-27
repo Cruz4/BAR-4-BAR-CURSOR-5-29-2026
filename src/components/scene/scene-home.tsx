@@ -101,15 +101,10 @@ import {
   COOKIE_CONSENT_CHANGED_EVENT,
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
-import {
-  quotePressFadersFromText,
-  quotePressSlotLabel,
-  sanitizeQuotePressSlots,
-  type QuotePressFaders,
-  type QuotePressSlot,
-} from '@/lib/profile/quote-press';
+import { quotePressSlotLabel, type QuotePressSlot } from '@/lib/profile/quote-press';
 import { isProOrTrial } from '@/lib/subscription';
-import { patchGamificationSettings, postGamificationEvent } from '@/lib/gamification-client';
+import { postGamificationEvent } from '@/lib/gamification-client';
+import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import {
   BLOCK_SECTION_ID,
   DISCOVER_SECTION_ID,
@@ -207,41 +202,23 @@ function SceneComposer({
   const [pollOpen, setPollOpen] = useState(false);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollVisibility, setPollVisibility] = useState<PostPollResultsVisibility>('after_vote');
-  const [imprintOn, setImprintOn] = useState(false);
-  const [imprintFaders, setImprintFaders] = useState<QuotePressFaders>(() =>
-    quotePressFadersFromText('')
-  );
-  const [imprintSlots, setImprintSlots] = useState<QuotePressSlot[]>([]);
-  const [slotBusy, setSlotBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
   const insertEmoji = useEmojiInserter(text, setText, textRef);
-
-  useEffect(() => {
-    setImprintSlots(sanitizeQuotePressSlots(summary.quotePressSlots));
-  }, [summary.quotePressSlots]);
-
-  const activeImprintConfig = useMemo(() => {
-    const faders = isPro ? imprintFaders : quotePressFadersFromText(text);
-    return { faders };
-  }, [isPro, imprintFaders, text]);
-
-  const persistImprintSlots = async (nextSlots: QuotePressSlot[]) => {
-    setSlotBusy(true);
-    try {
-      await patchGamificationSettings({ quotePressSlots: nextSlots });
-      setImprintSlots(nextSlots);
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Could not save imprint style',
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setSlotBusy(false);
-    }
-  };
+  const {
+    imprintOn,
+    showImprintToggle,
+    toggleImprint,
+    resetImprint,
+    imprintFaders,
+    setImprintFaders,
+    imprintSlots,
+    slotBusy,
+    activeImprintConfig,
+    persistImprintSlots,
+    imprintPayload,
+  } = useImprintComposer(text, isPro, summary.quotePressSlots);
 
   useEffect(() => {
     const el = textRef.current;
@@ -266,7 +243,7 @@ function SceneComposer({
         ...(image ? { image } : {}),
         ...(clip ? { video: clip } : {}),
         ...(pollOpen ? { poll: { options: pollOptions, resultsVisibility: pollVisibility } } : {}),
-        ...(imprintOn && text.trim() ? { quotePress: activeImprintConfig } : {}),
+        ...imprintPayload,
       });
       if (post.quotePress) {
         void queueAutoImprintSyndication({ post });
@@ -280,7 +257,7 @@ function SceneComposer({
       setPollOpen(false);
       setPollOptions(['', '']);
       setPollVisibility('after_vote');
-      setImprintOn(false);
+      resetImprint();
       onPosted(post);
       toast({ title: 'Posted to your wall' });
     } catch (e) {
@@ -401,30 +378,24 @@ function SceneComposer({
         >
           <BarChart3 className="h-3.5 w-3.5" /> Poll
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setImprintOn((value) => {
-              const next = !value;
-              if (next && isPro) {
-                setImprintFaders(quotePressFadersFromText(text));
-              }
-              return next;
-            });
-          }}
-          disabled={busy}
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
-            imprintOn
-              ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
-              : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
-          )}
-        >
-          <Sparkles
-            className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')}
-          />
-          Imprint
-        </button>
+        {showImprintToggle ? (
+          <button
+            type="button"
+            onClick={toggleImprint}
+            disabled={busy}
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+              imprintOn
+                ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+                : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+            )}
+          >
+            <Sparkles
+              className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')}
+            />
+            Imprint
+          </button>
+        ) : null}
         <Button
           size="sm"
           className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"

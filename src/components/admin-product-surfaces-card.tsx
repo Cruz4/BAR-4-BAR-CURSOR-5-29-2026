@@ -32,7 +32,9 @@ import {
   RELEASE_COMPOSER_MODES,
   RELEASE_ROOM_MODES,
   SUPPORT_CIRCLE_MODES,
+  IMPRINT_COMPOSER_MODES,
   type EmergencyMode,
+  type ImprintComposerMode,
   type ProductSurfaceMode,
   type ProductSurfacesAdminConfig,
   type ProductSurfacesConfig,
@@ -253,6 +255,25 @@ export function AdminProductSurfacesCard() {
                 value={draft.sharing}
                 options={PRODUCT_SURFACE_MODES}
                 onChange={(v) => patchDraft('sharing', v as ProductSurfaceMode)}
+              />
+              <ModeSelect
+                id="imprintComposer"
+                label="Imprint composer"
+                hint="How post, comment, fold, and Scene wall text is styled while users type."
+                modes={[
+                  {
+                    value: 'default',
+                    meaning: 'Plain text by default — artists tap Imprint to turn on generative quote-card styling.',
+                  },
+                  {
+                    value: 'permanent',
+                    meaning:
+                      'Imprint is always on for typed text (same live preview, faders, and posts as today’s Imprint button).',
+                  },
+                ]}
+                value={draft.imprintComposer}
+                options={IMPRINT_COMPOSER_MODES}
+                onChange={(v) => patchDraft('imprintComposer', v as ImprintComposerMode)}
               />
               <ModeSelect
                 id="sceneWeather"

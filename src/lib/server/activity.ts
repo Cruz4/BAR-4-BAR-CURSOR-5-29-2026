@@ -464,11 +464,30 @@ async function listHouseReleaseActivity(userId: string): Promise<ActivityEvent[]
     houseReleasePingSortAt(b.data() || {}).localeCompare(houseReleasePingSortAt(a.data() || {}))
   );
 
-  const readRefs = uniqueDocs.map((ping) =>
+  const liveDocs: (typeof uniqueDocs)[number][] = [];
+  for (const ping of uniqueDocs) {
+    const data = ping.data() || {};
+    const shareId = typeof data.shareId === 'string' ? data.shareId.trim() : '';
+    if (!shareId) continue;
+    try {
+      const shareSnap = await db.doc(`shares/${shareId}`).get();
+      if (!shareSnap.exists) continue;
+      const share = shareSnap.data() || {};
+      if (share.houseRelease !== true) continue;
+      const { shareDocumentVisibility } = await import('@/lib/release-management');
+      if (!shareDocumentVisibility(share as Record<string, unknown>).releaseLive) continue;
+      if (share.houseLibraryNotice !== true) continue;
+      liveDocs.push(ping);
+    } catch {
+      continue;
+    }
+  }
+
+  const readRefs = liveDocs.map((ping) =>
     db.doc(`users/${userId}/activityGlobalReads/${ping.id}`)
   );
   const reads = readRefs.length ? await db.getAll(...readRefs) : [];
-  return uniqueDocs.map((ping, index) => {
+  return liveDocs.map((ping, index) => {
     const data = ping.data() || {};
     const readData = reads[index]?.data() || {};
     const pingedAt = houseReleasePingSortAt(data);

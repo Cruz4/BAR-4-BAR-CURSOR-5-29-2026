@@ -110,6 +110,7 @@ export function DropSocialPanel({
   const insertQuoteEmoji = useEmojiInserter(quoteText, setQuoteText, quoteTextRef);
   const {
     imprintOn,
+    showImprintToggle,
     toggleImprint,
     resetImprint,
     imprintFaders,
@@ -562,20 +563,22 @@ export function DropSocialPanel({
               >
                 <BarChart3 className="h-3.5 w-3.5" /> Poll
               </button>
-              <button
-                type="button"
-                onClick={toggleImprint}
-                disabled={busy}
-                className={cn(
-                  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
-                  imprintOn
-                    ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
-                    : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
-                )}
-              >
-                <Sparkles className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')} />
-                Imprint
-              </button>
+              {showImprintToggle ? (
+                <button
+                  type="button"
+                  onClick={toggleImprint}
+                  disabled={busy}
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+                    imprintOn
+                      ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+                      : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+                  )}
+                >
+                  <Sparkles className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')} />
+                  Imprint
+                </button>
+              ) : null}
             </div>
             <p className="text-xs text-muted-foreground">Original · {ownerName || 'Artist'} · {title}</p>
           </div>

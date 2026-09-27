@@ -83,6 +83,7 @@ export function ArtistHomeProspectPreviewClient({ viewToken }: { viewToken: stri
         <ArtistHomeProspectClaimBanner
           displayName={view.profile.displayName}
           slug={slug}
+          prospectId={prospectId}
           signedIn={Boolean(user)}
           isOwner={false}
         />

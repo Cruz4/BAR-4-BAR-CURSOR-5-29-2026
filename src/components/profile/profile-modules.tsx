@@ -865,6 +865,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const insertEmoji = useEmojiInserter(text, setText, textRef);
   const {
     imprintOn,
+    showImprintToggle,
     toggleImprint,
     resetImprint,
     imprintFaders,
@@ -1260,7 +1261,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 <BarChart3 className="h-3.5 w-3.5" /> Poll
               </Button>
             ) : null}
-            {!playground ? (
+            {!playground && showImprintToggle ? (
               <button
                 type="button"
                 onClick={toggleImprint}

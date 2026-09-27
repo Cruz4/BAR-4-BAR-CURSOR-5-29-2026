@@ -106,6 +106,7 @@ export async function getProductSurfacesPublicStatus(): Promise<ProductSurfacesP
     artistSignature: config.artistSignature,
     voiceMatch: config.voiceMatch,
     stemsMidi: config.stemsMidi,
+    imprintComposer: config.imprintComposer,
     source: config.source,
     updatedAt: config.updatedAt,
   };

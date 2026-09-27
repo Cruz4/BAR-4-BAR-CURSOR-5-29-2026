@@ -99,6 +99,10 @@ import {
   saveArtistHomeConfigClient,
   subscribeHouseReleaseHome,
 } from '@/lib/profile/artist-home-client';
+import {
+  fetchProspectPressDesk,
+  saveProspectPressDesk,
+} from '@/lib/admin-prospect-press-desk-client';
 import { fetchGamificationSummary, patchGamificationSettings } from '@/lib/gamification-client';
 import type { GamificationSummary } from '@/lib/gamification/types';
 import { STUDIO_RANKS } from '@/lib/gamification/ranks';
@@ -612,7 +616,8 @@ function TagEditor({
 // The desk
 // ---------------------------------------------------------------------------
 
-export function PressDesk() {
+export function PressDesk({ prospectId }: { prospectId?: string } = {}) {
+  const prospectMode = Boolean(prospectId);
   const { user } = useAuth();
   const { albums, loading: vaultLoading } = useContext(DataContext);
   const { toast } = useToast();
@@ -665,6 +670,7 @@ export function PressDesk() {
     }>
   >([]);
   const [moduleDragIndex, setModuleDragIndex] = useState<number | null>(null);
+  const [prospectDisplayName, setProspectDisplayName] = useState('Artist');
 
   useEffect(() => {
     if (!previewing) return;
@@ -687,6 +693,43 @@ export function PressDesk() {
   }, [config, previewing, previewViewport]);
 
   useEffect(() => {
+    if (prospectMode && prospectId) {
+      void fetchProspectPressDesk(prospectId)
+        .then(({ prospect, summary: nextSummary }) => {
+          setProspectDisplayName(prospect.displayName);
+          setConfig(prospect.artistHome);
+          setCommittedMemoPath(prospect.artistHome.featured.voiceMemo?.storagePath);
+          setCommittedFeaturedPreviewPath(prospect.artistHome.featured.featuredTrack?.previewPath);
+          setSummary(nextSummary);
+          setProfileSlug(prospect.slug);
+          setProfileLive(false);
+          setPhotoMode(
+            nextSummary.profilePhotoMode === 'custom'
+              ? 'custom'
+              : nextSummary.profilePhotoMode === 'collage'
+                ? 'collage'
+                : 'initials'
+          );
+          setPhotoUrl(nextSummary.profilePhotoUrl?.trim() ? nextSummary.profilePhotoUrl : null);
+          setCollageAlbumIds(
+            Array.isArray(nextSummary.profileCollageAlbumIds)
+              ? nextSummary.profileCollageAlbumIds.filter((id): id is string => typeof id === 'string')
+              : []
+          );
+          setStarMarkUseStar(Boolean(nextSummary.starMarkUseStar));
+          setStarMarkSeed(normalizeVesperfoldSeed(nextSummary.starMarkSeed ?? 0));
+          setStarMarkSlots(sanitizeVesperfoldSlots(nextSummary.starMarkSlots));
+          setStarMarkPinnedSlotId(
+            typeof nextSummary.starMarkPinnedSlotId === 'string' && nextSummary.starMarkPinnedSlotId.trim()
+              ? nextSummary.starMarkPinnedSlotId.trim()
+              : null
+          );
+        })
+        .catch(() =>
+          toast({ variant: 'destructive', title: 'Could not load outreach prospect' })
+        );
+      return;
+    }
     if (!user?.id) return;
     void fetchArtistHomeConfig()
       .then((next) => {
@@ -723,7 +766,7 @@ export function PressDesk() {
       );
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [prospectMode, prospectId, user?.id]);
 
   useEffect(() => {
     if (!config || typeof window === 'undefined' || window.location.hash !== '#artist-home-releases') return;
@@ -913,14 +956,15 @@ export function PressDesk() {
   }, [albums]);
 
   const previewProfile = useMemo((): PublicProfileData | null => {
-    if (!user?.id || !summary) return null;
+    if (!summary) return null;
+    if (!prospectMode && !user?.id) return null;
     const rank =
       STUDIO_RANKS.find((r) => r.id === summary.rankId) ?? STUDIO_RANKS[0]!;
     const badges = Object.keys(summary.unlockedAchievements || {})
       .map((id) => getAchievement(id))
       .filter((b): b is NonNullable<typeof b> => Boolean(b));
     return {
-      displayName: user.displayName || 'Artist',
+      displayName: prospectMode ? prospectDisplayName : user?.displayName || 'Artist',
       rankLabel: rank.label,
       rankId: summary.rankId,
       xp: summary.xp,
@@ -931,11 +975,11 @@ export function PressDesk() {
       albumCoverUrls: useInitialsHero ? [] : heroCollageUrls,
       badges,
       unlockedAchievements: summary.unlockedAchievements || {},
-      userId: user.id,
+      userId: prospectMode ? '' : user!.id,
       profilePhotoMode: photoMode,
       profilePhotoUrl: photoUrl,
       slug: summary.profileSlug || profileSlug || 'preview',
-      studioBadge: studioChromeFromUser(user),
+      studioBadge: prospectMode ? undefined : studioChromeFromUser(user!),
       starMarkUseStar,
       starMarkSeed,
       liveDnaDrops: (() => {
@@ -1023,6 +1067,25 @@ export function PressDesk() {
   }) => {
     setHeroBusy(true);
     try {
+      if (prospectMode && prospectId && config) {
+        const saved = await saveProspectPressDesk(prospectId, {
+          artistHome: config,
+          profilePhotoMode: next.profilePhotoMode ?? photoMode,
+          profilePhotoUrl: next.profilePhotoUrl !== undefined ? next.profilePhotoUrl : photoUrl,
+          profileCollageAlbumIds:
+            next.profileCollageAlbumIds !== undefined ? next.profileCollageAlbumIds : collageAlbumIds,
+        });
+        setConfig(saved.artistHome);
+        if (next.profilePhotoMode) setPhotoMode(next.profilePhotoMode);
+        if (next.profilePhotoUrl !== undefined) setPhotoUrl(next.profilePhotoUrl);
+        if (next.profileCollageAlbumIds !== undefined) {
+          setCollageAlbumIds(
+            Array.isArray(next.profileCollageAlbumIds) ? next.profileCollageAlbumIds : []
+          );
+        }
+        toast({ title: 'Outreach hero updated' });
+        return;
+      }
       const data = await patchGamificationSettings(next);
       const nextSummary = data.summary;
       if (nextSummary) {
@@ -1121,6 +1184,25 @@ export function PressDesk() {
   }) => {
     setStarBusy(true);
     try {
+      if (prospectMode && prospectId && config) {
+        const saved = await saveProspectPressDesk(prospectId, {
+          artistHome: config,
+          starMarkUseStar: next.starMarkUseStar ?? starMarkUseStar,
+          starMarkSeed: next.starMarkSeed ?? starMarkSeed,
+          starMarkSlots: next.starMarkSlots ?? starMarkSlots,
+          starMarkPinnedSlotId:
+            next.starMarkPinnedSlotId !== undefined ? next.starMarkPinnedSlotId : starMarkPinnedSlotId,
+        });
+        setConfig(saved.artistHome);
+        if (next.starMarkUseStar !== undefined) setStarMarkUseStar(next.starMarkUseStar);
+        if (next.starMarkSeed !== undefined) setStarMarkSeed(next.starMarkSeed);
+        if (next.starMarkSlots !== undefined) setStarMarkSlots(next.starMarkSlots);
+        if (next.starMarkPinnedSlotId !== undefined) {
+          setStarMarkPinnedSlotId(next.starMarkPinnedSlotId);
+        }
+        toast({ title: 'Star mark saved' });
+        return;
+      }
       const data = await patchGamificationSettings(next);
       const s = data.summary as GamificationSummary | undefined;
       if (s) {
@@ -1156,6 +1238,26 @@ export function PressDesk() {
     if (!config) return;
     setSaving(true);
     try {
+      if (prospectMode && prospectId) {
+        const saved = await saveProspectPressDesk(prospectId, {
+          artistHome: config,
+          displayName: prospectDisplayName,
+          profilePhotoMode: photoMode,
+          profilePhotoUrl: photoUrl,
+          profileCollageAlbumIds: collageAlbumIds,
+          starMarkUseStar,
+          starMarkSeed,
+          starMarkSlots,
+          starMarkPinnedSlotId,
+        });
+        setConfig(saved.artistHome);
+        setDirty(false);
+        toast({
+          title: 'Outreach home saved',
+          description: 'Publish when you are ready to share the vanity link.',
+        });
+        return;
+      }
       const previousMemoPath = committedMemoPath;
       const previousFeaturedPreviewPath = committedFeaturedPreviewPath;
       const saved = await saveArtistHomeConfigClient(config);
@@ -1239,10 +1341,20 @@ export function PressDesk() {
   if (!user) {
     return (
       <div className="container mx-auto max-w-lg px-4 py-20 text-center">
-        <p className="text-muted-foreground">Sign in to press your Artist Home.</p>
+        <p className="text-muted-foreground">
+          {prospectMode ? 'Admin sign-in required to edit outreach homes.' : 'Sign in to press your Artist Home.'}
+        </p>
         <Button className="mt-4 font-bold uppercase" asChild>
           <Link href="/login">Sign in</Link>
         </Button>
+      </div>
+    );
+  }
+
+  if (prospectMode && user.role !== 'admin') {
+    return (
+      <div className="container mx-auto max-w-lg px-4 py-20 text-center">
+        <p className="text-muted-foreground">Admin access required.</p>
       </div>
     );
   }

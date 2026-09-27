@@ -9,6 +9,9 @@ export type SupportCircleMode = 'legacy' | 'crm' | 'off';
 export type ReleaseComposerMode = 'legacy' | 'guided' | 'off';
 export type EmergencyMode = 'normal' | 'read_only' | 'maintenance';
 
+/** Wall / comment / fold composers: optional Imprint toggle vs always-on generative text. */
+export type ImprintComposerMode = 'default' | 'permanent';
+
 export type SongGenerationSurfaceMode = 'off' | 'beta' | 'on';
 
 export type SongGenerationSurfaces = {
@@ -33,6 +36,7 @@ export type ProductSurfacesConfig = {
   artistSignature: SongGenerationSurfaceMode;
   voiceMatch: SongGenerationSurfaceMode;
   stemsMidi: SongGenerationSurfaceMode;
+  imprintComposer: ImprintComposerMode;
 };
 
 export type ProductSurfacesAdminConfig = ProductSurfacesConfig & {
@@ -69,7 +73,16 @@ export const PRODUCT_SURFACES_DEFAULTS: ProductSurfacesConfig = {
   artistSignature: 'off',
   voiceMatch: 'off',
   stemsMidi: 'off',
+  imprintComposer: 'default',
 };
+
+export const IMPRINT_COMPOSER_MODES: readonly ImprintComposerMode[] = ['default', 'permanent'] as const;
+
+export function isImprintComposerPermanent(
+  mode: ImprintComposerMode | undefined | null
+): boolean {
+  return mode === 'permanent';
+}
 
 export const PRODUCT_SURFACE_MODES: readonly ProductSurfaceMode[] = [
   'legacy',
@@ -155,6 +168,9 @@ export function normalizeProductSurfacesConfig(
     stemsMidi: isOneOf(data.stemsMidi, SONG_GENERATION_SURFACE_MODES)
       ? data.stemsMidi
       : PRODUCT_SURFACES_DEFAULTS.stemsMidi,
+    imprintComposer: isOneOf(data.imprintComposer, IMPRINT_COMPOSER_MODES)
+      ? data.imprintComposer
+      : PRODUCT_SURFACES_DEFAULTS.imprintComposer,
   };
 }
 
@@ -183,6 +199,7 @@ export function parseProductSurfacesPatch(
     ['artistSignature', SONG_GENERATION_SURFACE_MODES],
     ['voiceMatch', SONG_GENERATION_SURFACE_MODES],
     ['stemsMidi', SONG_GENERATION_SURFACE_MODES],
+    ['imprintComposer', IMPRINT_COMPOSER_MODES],
   ];
 
   for (const [key, allowed] of checks) {
