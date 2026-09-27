@@ -48,6 +48,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
 import { quotePressSlotLabel } from '@/lib/profile/quote-press';
+import {
+  resolveViewerThreadImprintLock,
+  writeImprintThreadLock,
+} from '@/lib/profile/imprint-permanent';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 
 type PostCommentThreadProps = {
@@ -103,9 +107,18 @@ export function PostCommentThread({
   const [busy, setBusy] = useState(false);
   const draftRef = useRef<HTMLInputElement>(null);
   const insertEmoji = useEmojiInserter(draft, setDraft, draftRef);
+  const threadScope = postId || shareId;
+  const threadImprintLock = useMemo(
+    () =>
+      user?.id && threadScope
+        ? resolveViewerThreadImprintLock(comments, user.id, threadScope)
+        : null,
+    [comments, threadScope, user?.id]
+  );
   const {
     imprintOn,
     showImprintToggle,
+    imprintStyleLocked,
     toggleImprint,
     resetImprint,
     imprintFaders,
@@ -115,7 +128,9 @@ export function PostCommentThread({
     activeImprintConfig,
     persistImprintSlots,
     imprintPayload,
-  } = useImprintComposer(draft, isPro, summary.quotePressSlots);
+  } = useImprintComposer(draft, isPro, summary.quotePressSlots, {
+    lockedFaders: threadImprintLock,
+  });
   const pollReady = !pollOpen || (Boolean(draft.trim()) && pollOptions.every((option) => option.trim()));
   const composerReady =
     pollReady && Boolean(draft.trim() || voice || image || clip || (pollOpen && draft.trim()));
@@ -181,6 +196,9 @@ export function PostCommentThread({
           });
       onCommentsChange([...comments, comment]);
       onCommentCountChange(commentCount + 1);
+      if (user?.id && threadScope && comment.quotePress?.faders) {
+        writeImprintThreadLock(threadScope, user.id, comment.quotePress.faders);
+      }
       setDraft('');
       setVoice(null);
       revokePostImagePreview(image);
@@ -460,14 +478,14 @@ export function PostCommentThread({
               <QuotePressComposerPanel
                 faders={activeImprintConfig.faders}
                 onFadersChange={(next) => {
-                  if (!isPro) return;
+                  if (!isPro || imprintStyleLocked) return;
                   setImprintFaders(next);
                 }}
                 slots={imprintSlots}
                 isPro={isPro}
-                busy={busy || slotBusy}
+                busy={busy || slotBusy || imprintStyleLocked}
                 onLockSlot={() => {
-                  if (!isPro) return;
+                  if (!isPro || imprintStyleLocked) return;
                   const label = quotePressSlotLabel(imprintFaders);
                   void persistImprintSlots([
                     ...imprintSlots,
@@ -480,10 +498,11 @@ export function PostCommentThread({
                   ]);
                 }}
                 onLoadSlot={(slot) => {
-                  if (!isPro) return;
+                  if (!isPro || imprintStyleLocked) return;
                   setImprintFaders(slot.faders);
                 }}
                 onClearSlot={(slotId) => {
+                  if (imprintStyleLocked) return;
                   void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
                 }}
               />

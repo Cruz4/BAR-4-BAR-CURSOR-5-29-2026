@@ -30,6 +30,7 @@ import { auth, db } from '@/lib/firebase/client/firebase';
 import { parseEmbedUrl, type EmbedProvider } from '@/lib/profile/embeds';
 import { firstInlineHref } from '@/lib/profile/inline-links';
 import { parseStudioBadge } from '@/lib/studio-tier-chrome';
+import { quotePressConfigForPermanentText } from '@/lib/profile/imprint-permanent';
 import { normalizeQuotePressConfig, type QuotePressConfig } from '@/lib/profile/quote-press';
 import { sanitizePostMediaFields, sanitizePostsForFeed } from '@/lib/profile/post-media';
 import { emitWallPostFeed } from '@/lib/scene/wall-post-feed-events';
@@ -337,7 +338,10 @@ export async function createPost(input: {
   const liveProfile = await requireLiveProfileForPosting(user.uid);
   const text = input.text.trim().slice(0, MAX_POST_TEXT);
   const poll = buildPostPoll(input.poll);
-  const quotePress = normalizeQuotePressConfig(input.quotePress);
+  let quotePress = normalizeQuotePressConfig(input.quotePress);
+  if (!quotePress && text) {
+    quotePress = quotePressConfigForPermanentText(text) ?? undefined;
+  }
   const embedUrl = (input.embedUrl?.trim() || firstInlineHref(text) || '').slice(0, 500) || undefined;
   let imageUrl = input.imageUrl?.trim() || undefined;
   let imageStoragePath: string | undefined;

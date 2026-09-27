@@ -13,10 +13,22 @@ import {
   type QuotePressSlot,
 } from '@/lib/profile/quote-press';
 
-export function useImprintComposer(text: string, isPro: boolean, savedSlots?: unknown) {
+export type UseImprintComposerOptions = {
+  /** When permanent Imprint is on, reuse faders from the viewer's first Imprint on this thread. */
+  lockedFaders?: QuotePressFaders | null;
+};
+
+export function useImprintComposer(
+  text: string,
+  isPro: boolean,
+  savedSlots?: unknown,
+  options?: UseImprintComposerOptions
+) {
   const { toast } = useToast();
   const { imprintComposer } = useProductSurfaces();
   const imprintPermanent = isImprintComposerPermanent(imprintComposer);
+  const lockedFaders = options?.lockedFaders ?? null;
+  const imprintStyleLocked = imprintPermanent && lockedFaders != null;
   const [imprintToggled, setImprintToggled] = useState(false);
   const [imprintFaders, setImprintFaders] = useState<QuotePressFaders>(() =>
     quotePressFadersFromText('')
@@ -32,14 +44,19 @@ export function useImprintComposer(text: string, isPro: boolean, savedSlots?: un
   }, [savedSlots]);
 
   useEffect(() => {
+    if (imprintStyleLocked && lockedFaders) {
+      setImprintFaders(lockedFaders);
+      return;
+    }
     if (!imprintPermanent || !text.trim()) return;
     if (isPro) setImprintFaders(quotePressFadersFromText(text));
-  }, [imprintPermanent, text, isPro]);
+  }, [imprintPermanent, imprintStyleLocked, lockedFaders, text, isPro]);
 
   const activeImprintConfig = useMemo<QuotePressConfig>(() => {
+    if (imprintStyleLocked && lockedFaders) return { faders: lockedFaders };
     const faders = isPro ? imprintFaders : quotePressFadersFromText(text);
     return { faders };
-  }, [isPro, imprintFaders, text]);
+  }, [imprintStyleLocked, lockedFaders, isPro, imprintFaders, text]);
 
   const persistImprintSlots = async (nextSlots: QuotePressSlot[]) => {
     setSlotBusy(true);
@@ -67,8 +84,13 @@ export function useImprintComposer(text: string, isPro: boolean, savedSlots?: un
   };
 
   const resetImprint = () => {
-    if (!imprintPermanent) setImprintToggled(false);
-    setImprintFaders(quotePressFadersFromText(''));
+    if (!imprintPermanent) {
+      setImprintToggled(false);
+      setImprintFaders(quotePressFadersFromText(''));
+      return;
+    }
+    if (lockedFaders) setImprintFaders(lockedFaders);
+    else setImprintFaders(quotePressFadersFromText(''));
   };
 
   const setImprintOn = (next: boolean | ((prev: boolean) => boolean)) => {
@@ -81,6 +103,7 @@ export function useImprintComposer(text: string, isPro: boolean, savedSlots?: un
   return {
     imprintOn,
     imprintPermanent,
+    imprintStyleLocked,
     showImprintToggle,
     setImprintOn,
     toggleImprint,
