@@ -51,7 +51,7 @@ export function ImprintExportMenu({
   className,
   onSaveCountChange,
 }: ImprintExportMenuProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [busy, setBusy] = useState<'png' | 'giphy' | 'collection' | null>(null);
   const [saved, setSaved] = useState(false);
@@ -63,18 +63,22 @@ export function ImprintExportMenu({
   }, [post?.imprintSaveCount]);
 
   useEffect(() => {
-    if (!user?.id || !post?.id) {
-      setSaved(false);
+    if (authLoading || !user?.id || !post?.id) {
+      if (!authLoading && !user?.id) setSaved(false);
       return;
     }
     let cancelled = false;
-    void isImprintSaved(post.id).then((next) => {
-      if (!cancelled) setSaved(next);
-    });
+    void isImprintSaved(post.id)
+      .then((next) => {
+        if (!cancelled) setSaved(next);
+      })
+      .catch(() => {
+        if (!cancelled) setSaved(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [post?.id, user?.id]);
+  }, [authLoading, post?.id, user?.id]);
 
   const exportInput = {
     captureRoot,

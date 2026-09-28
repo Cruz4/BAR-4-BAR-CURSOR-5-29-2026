@@ -11,11 +11,15 @@ export type ImprintCollectionEntry = {
 async function authHeaders(): Promise<Record<string, string> | null> {
   const user = auth.currentUser;
   if (!user) return null;
-  const token = await user.getIdToken();
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
+  try {
+    const token = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchImprintCollection(): Promise<ImprintCollectionEntry[]> {
@@ -23,12 +27,16 @@ export async function fetchImprintCollection(): Promise<ImprintCollectionEntry[]
   if (!user) return [];
   const headers = await authHeaders();
   if (!headers) return [];
-  const res = await fetch(`/api/posts/imprint-collection?userId=${encodeURIComponent(user.uid)}`, {
-    headers,
-  });
-  const data = (await res.json().catch(() => ({}))) as { entries?: ImprintCollectionEntry[] };
-  if (!res.ok || !Array.isArray(data.entries)) return [];
-  return data.entries;
+  try {
+    const res = await fetch(`/api/posts/imprint-collection?userId=${encodeURIComponent(user.uid)}`, {
+      headers,
+    });
+    const data = (await res.json().catch(() => ({}))) as { entries?: ImprintCollectionEntry[] };
+    if (!res.ok || !Array.isArray(data.entries)) return [];
+    return data.entries;
+  } catch {
+    return [];
+  }
 }
 
 export async function isImprintSaved(postId: string): Promise<boolean> {
@@ -36,10 +44,14 @@ export async function isImprintSaved(postId: string): Promise<boolean> {
   if (!user || !postId.trim()) return false;
   const headers = await authHeaders();
   if (!headers) return false;
-  const params = new URLSearchParams({ userId: user.uid, postId });
-  const res = await fetch(`/api/posts/imprint-collection?${params}`, { headers });
-  const data = (await res.json().catch(() => ({}))) as { saved?: boolean };
-  return res.ok && data.saved === true;
+  try {
+    const params = new URLSearchParams({ userId: user.uid, postId });
+    const res = await fetch(`/api/posts/imprint-collection?${params}`, { headers });
+    const data = (await res.json().catch(() => ({}))) as { saved?: boolean };
+    return res.ok && data.saved === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function saveImprintToCollection(
