@@ -5,6 +5,8 @@ export const PUBLIC_IDENTITY_KINDS = [
   { id: 'engineer', label: 'Engineer' },
   { id: 'dj', label: 'DJ' },
   { id: 'music_fan', label: 'Music Fan' },
+  { id: 'vibin', label: 'Vibin' },
+  { id: 'just_here', label: 'Just here' },
 ] as const;
 
 /** Suggested public-facing genres and styles. Custom entries remain supported. */

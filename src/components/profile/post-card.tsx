@@ -50,6 +50,7 @@ import {
 } from '@/lib/profile/social-client';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import {
@@ -428,7 +429,10 @@ export function PostCard({
     toggleImprint: toggleReverbImprint,
     resetImprint: resetReverbImprint,
     imprintFaders: reverbImprintFaders,
-    setImprintFaders: setReverbImprintFaders,
+    pinImprintLook: pinReverbImprintLook,
+    shuffleImprint: shuffleReverbImprint,
+    shuffleRemaining: reverbShuffleRemaining,
+    shuffleCap: reverbShuffleCap,
     imprintSlots: reverbImprintSlots,
     slotBusy: reverbImprintSlotBusy,
     activeImprintConfig: reverbActiveImprintConfig,
@@ -586,7 +590,7 @@ export function PostCard({
     }
     if (viewerReverbPost?.quotePress) {
       setReverbImprintOn(true);
-      setReverbImprintFaders(viewerReverbPost.quotePress.faders);
+      pinReverbImprintLook(viewerReverbPost.quotePress.faders);
     } else {
       resetReverbImprint();
     }
@@ -1159,11 +1163,9 @@ export function PostCard({
               <div className="space-y-2">
                 <QuotePressCard text={reverbQuote} config={reverbActiveImprintConfig} withMentions />
                 <QuotePressComposerPanel
-                  faders={reverbActiveImprintConfig.faders}
-                  onFadersChange={(next) => {
-                    if (!isPro) return;
-                    setReverbImprintFaders(next);
-                  }}
+                  onShuffle={() => void shuffleReverbImprint()}
+                  shuffleRemaining={reverbShuffleRemaining}
+                  shuffleCap={reverbShuffleCap}
                   slots={reverbImprintSlots}
                   isPro={isPro}
                   busy={busy || reverbImprintSlotBusy}
@@ -1182,7 +1184,7 @@ export function PostCard({
                   }}
                   onLoadSlot={(slot) => {
                     if (!isPro) return;
-                    setReverbImprintFaders(slot.faders);
+                    pinReverbImprintLook(slot.faders);
                   }}
                   onClearSlot={(slotId) => {
                     void persistReverbImprintSlots(reverbImprintSlots.filter((s) => s.id !== slotId));
@@ -1225,6 +1227,13 @@ export function PostCard({
                   }
                 />
               </div>
+              <GifAttachButton
+                disabled={busy}
+                image={reverbImage}
+                onImageChange={setReverbImage}
+                clip={reverbClip}
+                onClipChange={setReverbClip}
+              />
               <EmojiPickerButton compact disabled={busy} onInsert={insertReverbEmoji} />
               <button
                 type="button"

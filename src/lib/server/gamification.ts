@@ -43,7 +43,13 @@ import {
   vesperfoldDataUrl,
   type VesperfoldSlot,
 } from '@/lib/profile/vesperfold';
-import { sanitizeQuotePressSlots, type QuotePressSlot } from '@/lib/profile/quote-press';
+import {
+  activeImprintShuffleUses,
+  normalizeQuotePressConfig,
+  sanitizeQuotePressSlots,
+  type QuotePressConfig,
+  type QuotePressSlot,
+} from '@/lib/profile/quote-press';
 import { artistHomeForPublic, normalizeArtistHomeConfig } from '@/lib/profile/modules';
 import type { ArtistHomeSoundIdentity } from '@/lib/profile/sound-identity';
 import {
@@ -127,6 +133,7 @@ function mergeSummary(existing: Partial<GamificationSummary>): GamificationSumma
     starMarkSeed: normalizeVesperfoldSeed(raw.starMarkSeed ?? 0),
     starMarkSlots: sanitizeVesperfoldSlots(raw.starMarkSlots),
     quotePressSlots: sanitizeQuotePressSlots(raw.quotePressSlots),
+    imprintShuffleUses: activeImprintShuffleUses(raw.imprintShuffleUses),
     starMarkPinnedSlotId:
       typeof raw.starMarkPinnedSlotId === 'string' && raw.starMarkPinnedSlotId.trim()
         ? raw.starMarkPinnedSlotId.trim().slice(0, 64)
@@ -965,6 +972,11 @@ export async function updateGamificationSettings(
   if (settings.quotePressSlots === null) {
     summary.quotePressSlots = [];
   } else if (Array.isArray(settings.quotePressSlots)) {
+    const account = await db.doc(`users/${userId}`).get();
+    const paidPro = account.data()?.subscriptionStatus === 'active';
+    if (!paidPro) {
+      throw new Error('Style locks are a Pro feature.');
+    }
     summary.quotePressSlots = sanitizeQuotePressSlots(settings.quotePressSlots);
   }
   let clearCollageIds = false;
@@ -1084,6 +1096,16 @@ export async function getGamificationSummaryForUser(userId: string): Promise<Gam
 
 export type { AdminGamificationRosterEntry } from '@/lib/gamification/admin-roster-types';
 
+function laterTimestamp(a: string | null | undefined, b: string | null | undefined): string | null {
+  const at = Date.parse(a || '');
+  const bt = Date.parse(b || '');
+  const aOk = Number.isFinite(at);
+  const bOk = Number.isFinite(bt);
+  if (!aOk && !bOk) return null;
+  if (!bOk || (aOk && at >= bt)) return a || null;
+  return b || null;
+}
+
 export async function getAdminGamificationRoster(): Promise<Record<string, AdminGamificationRosterEntry>> {
   if (!hasAdminFirestoreCredentials()) {
     return {};
@@ -1101,7 +1123,14 @@ export async function getAdminGamificationRoster(): Promise<Record<string, Admin
         typeof profile.lastSignInAt === 'string' && profile.lastSignInAt.trim()
           ? profile.lastSignInAt.trim()
           : null;
-      const lastSignInAt = lastSignIn[userDoc.id] || storedLastSignIn;
+      const lastActiveAt =
+        typeof profile.lastActiveAt === 'string' && profile.lastActiveAt.trim()
+          ? profile.lastActiveAt.trim()
+          : null;
+      const lastSignInAt = laterTimestamp(
+        laterTimestamp(lastSignIn[userDoc.id], storedLastSignIn),
+        lastActiveAt
+      );
       const base = {
         displayName: String(profile.displayName || 'Artist'),
         email: String(profile.email || ''),
@@ -2534,6 +2563,8 @@ export type DiscoverPostSummary = {
   reverbText?: string;
   reverbEmbedUrl?: string;
   reverbImageUrl?: string;
+  quotePress?: QuotePressConfig;
+  reverbQuotePress?: QuotePressConfig;
   createdAt: string;
   pressing?: PressingConfig;
   /** Verified Love / reply / Reverb / view total. Present when the post has heat. */
@@ -2571,6 +2602,14 @@ function discoverPostFromDoc(
     ...(typeof data.reverbText === 'string' ? { reverbText: data.reverbText } : {}),
     ...(typeof data.reverbEmbedUrl === 'string' ? { reverbEmbedUrl: data.reverbEmbedUrl } : {}),
     ...(typeof data.reverbImageUrl === 'string' ? { reverbImageUrl: data.reverbImageUrl } : {}),
+    ...(() => {
+      const quotePress = normalizeQuotePressConfig(data.quotePress);
+      const reverbQuotePress = normalizeQuotePressConfig(data.reverbQuotePress);
+      return {
+        ...(quotePress ? { quotePress } : {}),
+        ...(reverbQuotePress ? { reverbQuotePress } : {}),
+      };
+    })(),
     createdAt: String(data.createdAt || ''),
     ...(discoverHeat > 0 ? { discoverHeat } : {}),
     ...(lastEngagedAt ? { lastEngagedAt } : {}),

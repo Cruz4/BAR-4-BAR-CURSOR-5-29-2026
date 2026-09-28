@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { ExpandableImage } from '@/components/profile/expandable-image';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import { buildCommentTree, type CommentNode } from '@/lib/profile/comment-tree';
@@ -122,7 +123,10 @@ export function PostCommentThread({
     toggleImprint,
     resetImprint,
     imprintFaders,
-    setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining,
+    shuffleCap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,
@@ -439,6 +443,13 @@ export function PostCommentThread({
                 }
               />
             </div>
+            <GifAttachButton
+              disabled={busy}
+              image={image}
+              onImageChange={setImage}
+              clip={clip}
+              onClipChange={setClip}
+            />
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
             {postId ? (
               <>
@@ -476,11 +487,9 @@ export function PostCommentThread({
             <div className="space-y-2">
               <QuotePressCard text={draft} config={activeImprintConfig} withMentions compact />
               <QuotePressComposerPanel
-                faders={activeImprintConfig.faders}
-                onFadersChange={(next) => {
-                  if (!isPro || imprintStyleLocked) return;
-                  setImprintFaders(next);
-                }}
+                onShuffle={() => void shuffleImprint()}
+                shuffleRemaining={shuffleRemaining}
+                shuffleCap={shuffleCap}
                 slots={imprintSlots}
                 isPro={isPro}
                 busy={busy || slotBusy || imprintStyleLocked}
@@ -499,7 +508,7 @@ export function PostCommentThread({
                 }}
                 onLoadSlot={(slot) => {
                   if (!isPro || imprintStyleLocked) return;
-                  setImprintFaders(slot.faders);
+                  pinImprintLook(slot.faders);
                 }}
                 onClearSlot={(slotId) => {
                   if (imprintStyleLocked) return;

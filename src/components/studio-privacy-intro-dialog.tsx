@@ -30,6 +30,12 @@ import {
   STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT,
 } from '@/lib/studio-privacy-intro';
 import { dispatchActivityPushIntroEligible } from '@/lib/activity-push-intro';
+import { fetchArtistHomeConfig, saveArtistHomeConfigClient } from '@/lib/profile/artist-home-client';
+import {
+  PUBLIC_IDENTITY_KINDS,
+  type PublicIdentityKind,
+} from '@/lib/profile/sound-identity';
+import { cn } from '@/lib/utils';
 
 export function StudioPrivacyIntroDialog() {
   const pathname = usePathname();
@@ -41,6 +47,8 @@ export function StudioPrivacyIntroDialog() {
   const [publicProfile, setPublicProfile] = useState(false);
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [identityKinds, setIdentityKinds] = useState<PublicIdentityKind[]>([]);
+  const [askIdentity, setAskIdentity] = useState<boolean | null>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasOpenRef = useRef(false);
 
@@ -57,6 +65,24 @@ export function StudioPrivacyIntroDialog() {
     }
     wasOpenRef.current = open;
   }, [open, summary.publicProfile, summary.leaderboardHidden]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void fetchArtistHomeConfig()
+      .then((config) => {
+        if (cancelled) return;
+        const existing = config.featured.soundIdentity?.kinds || [];
+        setAskIdentity(existing.length === 0);
+        setIdentityKinds(existing);
+      })
+      .catch(() => {
+        if (!cancelled) setAskIdentity(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const finishIntro = useCallback(async () => {
     setOpen(false);
@@ -139,7 +165,24 @@ export function StudioPrivacyIntroDialog() {
     return () => window.removeEventListener(STUDIO_PRIVACY_INTRO_ELIGIBLE_EVENT, onEligible);
   }, [schedulePrivacyIntro]);
 
+  const toggleIdentity = (kind: PublicIdentityKind) => {
+    setIdentityKinds((current) => {
+      if (current.includes(kind)) return current.filter((item) => item !== kind);
+      if (current.length >= 3) return current;
+      return [...current, kind];
+    });
+  };
+
   const handleSave = async () => {
+    if (askIdentity === null) return;
+    if (askIdentity && identityKinds.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Pick who you are',
+        description: 'Choose at least one. You can change it later on Edit Public Page.',
+      });
+      return;
+    }
     setSaving(true);
     try {
       await patchGamificationSettings({
@@ -147,6 +190,14 @@ export function StudioPrivacyIntroDialog() {
         leaderboardHidden: !showOnLeaderboard,
         displayName: user?.displayName,
       });
+      if (askIdentity && identityKinds.length) {
+        const config = await fetchArtistHomeConfig();
+        config.featured.soundIdentity = {
+          ...(config.featured.soundIdentity || {}),
+          kinds: identityKinds,
+        };
+        await saveArtistHomeConfigClient(config);
+      }
       await finishIntro();
       toast({
         title: 'Visibility saved',
@@ -214,6 +265,34 @@ export function StudioPrivacyIntroDialog() {
           </p>
         </div>
 
+        {askIdentity ? (
+          <div className="space-y-2 rounded-lg border border-white/10 bg-black/25 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide">Who are you?</p>
+            <p className="text-[10px] text-muted-foreground">Pick up to 3. This shows on your Artist Home.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PUBLIC_IDENTITY_KINDS.map((option) => {
+                const active = identityKinds.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={saving || (!active && identityKinds.length >= 3)}
+                    onClick={() => toggleIdentity(option.id)}
+                    className={cn(
+                      'rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+                      active
+                        ? 'border-primary bg-primary/20 text-primary'
+                        : 'border-white/15 text-muted-foreground hover:border-white/30'
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         <div className="space-y-4 rounded-lg border border-white/10 bg-black/25 p-4">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-0.5 min-w-0">
@@ -259,7 +338,7 @@ export function StudioPrivacyIntroDialog() {
           <Button variant="ghost" className="w-full sm:w-auto" disabled={saving} onClick={remindLater}>
             Remind me later
           </Button>
-          <Button className="w-full sm:flex-1 font-bold uppercase" disabled={saving} onClick={() => void handleSave()}>
+          <Button className="w-full sm:flex-1 font-bold uppercase" disabled={saving || askIdentity === null} onClick={() => void handleSave()}>
             {saving ? 'Saving…' : 'Save preferences'}
           </Button>
         </DialogFooter>

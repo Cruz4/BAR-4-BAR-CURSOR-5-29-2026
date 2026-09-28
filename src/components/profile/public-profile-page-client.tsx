@@ -182,16 +182,23 @@ export function PublicProfilePageClient({
               ? data.ownerProfileViewCount
               : undefined;
         if (typeof count !== 'number') return;
-        setProfile((current) =>
-          current
-            ? {
-                ...current,
-                ownerProfileViewCount: count,
-                profileViewCount: count,
-                profileViewCountUnique: count,
-              }
-            : current
-        );
+        setProfile((current) => {
+          if (!current) return current;
+          const kept =
+            count > 0
+              ? count
+              : Math.max(current.profileViewCount || 0, current.ownerProfileViewCount || 0);
+          if (kept <= 0 && count <= 0) return current;
+          return {
+            ...current,
+            ownerProfileViewCount: kept,
+            profileViewCount: kept,
+            profileViewCountUnique:
+              typeof data.profileViewCountUnique === 'number' && data.profileViewCountUnique > 0
+                ? data.profileViewCountUnique
+                : current.profileViewCountUnique,
+          };
+        });
       } catch {
         /* ignore */
       }

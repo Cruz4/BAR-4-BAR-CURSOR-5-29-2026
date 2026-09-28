@@ -177,7 +177,7 @@ export default function PricingPage() {
       billedText: isYearly ? `Billed annually (${PRO_YEARLY_BILLED})` : 'Billed monthly',
       description: isYearly
         ? 'All Pro Monthly workflow unlocks — plus yearly Ink, pack discounts & roadmap input below.'
-        : 'Pro-only studio workflow below — catalog, vault, Imprint mix, Pro AI tools, export, Performance, Freestyle, Collab & Lyrics DNA Drop.',
+        : 'Pro-only studio workflow below — unlimited songs for sale, catalog, vault, Imprint shuffle and style locks, Pro AI tools, export, Performance, Freestyle, Collab & Lyrics DNA Drop.',
       membership: 'Professional Member',
       ink: isYearly
         ? `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo included`

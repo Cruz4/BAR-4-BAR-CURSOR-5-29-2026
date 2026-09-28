@@ -2,6 +2,10 @@ import type { User } from '@/lib/types';
 
 export const FREE_ALBUM_LIMIT = 1;
 export const FREE_TRACK_LIMIT = 2;
+/** Songs a Visitor can have for sale at the same time. Paid Pro is unlimited. */
+export const FREE_LIVE_SONG_LIMIT = 2;
+export const FREE_LIVE_SONG_LIMIT_ERROR =
+  'Visitor accounts can have 2 songs for sale at a time. Take one offline to press another, or go Pro for unlimited.';
 export const SIGNUP_INK = 250;
 /** Optional permanent Ink at signup (0 = residency-only welcome grant). */
 export const SIGNUP_PERMANENT_INK = 0;

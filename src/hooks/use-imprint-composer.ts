@@ -2,16 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { useGamification } from '@/context/gamification-context';
 import { useProductSurfaces } from '@/hooks/use-product-surfaces';
+import { auth } from '@/lib/firebase/client/firebase';
 import { patchGamificationSettings } from '@/lib/gamification-client';
+import { dispatchGamificationSummaryPatch } from '@/lib/gamification/unlock-events';
 import { isImprintComposerPermanent } from '@/lib/product-surface-modes';
 import {
+  imprintShuffleRemaining,
   quotePressFadersFromText,
   sanitizeQuotePressSlots,
   type QuotePressConfig,
   type QuotePressFaders,
   type QuotePressSlot,
 } from '@/lib/profile/quote-press';
+import { isProUser } from '@/lib/subscription';
 
 export type UseImprintComposerOptions = {
   /** When permanent Imprint is on, reuse faders from the viewer's first Imprint on this thread. */
@@ -25,6 +31,9 @@ export function useImprintComposer(
   options?: UseImprintComposerOptions
 ) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { summary } = useGamification();
+  const paidPro = isProUser(user);
   const { imprintComposer } = useProductSurfaces();
   const imprintPermanent = isImprintComposerPermanent(imprintComposer);
   const lockedFaders = options?.lockedFaders ?? null;
@@ -34,7 +43,9 @@ export function useImprintComposer(
     quotePressFadersFromText('')
   );
   const [imprintSlots, setImprintSlots] = useState<QuotePressSlot[]>([]);
+  const [lookPinned, setLookPinned] = useState(false);
   const [slotBusy, setSlotBusy] = useState(false);
+  const [shuffleNow, setShuffleNow] = useState(() => Date.now());
 
   const imprintOn = imprintPermanent ? Boolean(text.trim()) : imprintToggled;
   const showImprintToggle = !imprintPermanent;
@@ -44,19 +55,28 @@ export function useImprintComposer(
   }, [savedSlots]);
 
   useEffect(() => {
+    const timer = window.setInterval(() => setShuffleNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (imprintStyleLocked && lockedFaders) {
       setImprintFaders(lockedFaders);
       return;
     }
-    if (!imprintPermanent || !text.trim()) return;
-    if (isPro) setImprintFaders(quotePressFadersFromText(text));
-  }, [imprintPermanent, imprintStyleLocked, lockedFaders, text, isPro]);
+    if (lookPinned) return;
+    setImprintFaders(quotePressFadersFromText(text));
+  }, [imprintStyleLocked, lockedFaders, lookPinned, text]);
+
+  const shuffleMeter = useMemo(
+    () => imprintShuffleRemaining(summary.imprintShuffleUses, paidPro, shuffleNow),
+    [summary.imprintShuffleUses, paidPro, shuffleNow]
+  );
 
   const activeImprintConfig = useMemo<QuotePressConfig>(() => {
     if (imprintStyleLocked && lockedFaders) return { faders: lockedFaders };
-    const faders = isPro ? imprintFaders : quotePressFadersFromText(text);
-    return { faders };
-  }, [imprintStyleLocked, lockedFaders, isPro, imprintFaders, text]);
+    return { faders: imprintFaders };
+  }, [imprintStyleLocked, lockedFaders, imprintFaders]);
 
   const persistImprintSlots = async (nextSlots: QuotePressSlot[]) => {
     setSlotBusy(true);
@@ -83,7 +103,13 @@ export function useImprintComposer(
     });
   };
 
+  const pinImprintLook = (faders: QuotePressFaders) => {
+    setLookPinned(true);
+    setImprintFaders(faders);
+  };
+
   const resetImprint = () => {
+    setLookPinned(false);
     if (!imprintPermanent) {
       setImprintToggled(false);
       setImprintFaders(quotePressFadersFromText(''));
@@ -91,6 +117,48 @@ export function useImprintComposer(
     }
     if (lockedFaders) setImprintFaders(lockedFaders);
     else setImprintFaders(quotePressFadersFromText(''));
+  };
+
+  const shuffleImprint = async () => {
+    if (imprintStyleLocked || slotBusy) return;
+    if (shuffleMeter.remaining <= 0) {
+      toast({
+        title: 'No shuffles left',
+        description: 'Each one comes back 24 hours after you use it.',
+      });
+      return;
+    }
+    setSlotBusy(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Sign in to shuffle an Imprint.');
+      const res = await fetch('/api/imprint/shuffle', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        faders?: QuotePressFaders;
+        imprintShuffleUses?: string[];
+      };
+      if (Array.isArray(data.imprintShuffleUses)) {
+        dispatchGamificationSummaryPatch({
+          imprintShuffleUses: data.imprintShuffleUses,
+        } as never);
+      }
+      if (!res.ok || !data.faders) {
+        throw new Error(data.error || 'Could not shuffle that Imprint.');
+      }
+      pinImprintLook(data.faders);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not shuffle',
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setSlotBusy(false);
+    }
   };
 
   const setImprintOn = (next: boolean | ((prev: boolean) => boolean)) => {
@@ -110,6 +178,10 @@ export function useImprintComposer(
     resetImprint,
     imprintFaders,
     setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining: shuffleMeter.remaining,
+    shuffleCap: shuffleMeter.cap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,

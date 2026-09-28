@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { StudioLoader } from '@/components/studio-loader';
 import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase/client/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useGamification } from '@/context/gamification-context';
 import { useArtistHomeEngagementGate } from '@/context/artist-home-engagement-context';
@@ -53,6 +54,7 @@ import { ExpandableMedia } from '@/components/profile/expandable-image';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
 import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
@@ -209,7 +211,10 @@ export function FoldSheet({ foldId }: { foldId: string }) {
     toggleImprint,
     resetImprint,
     imprintFaders,
-    setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining,
+    shuffleCap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,
@@ -347,9 +352,28 @@ export function FoldSheet({ foldId }: { foldId: string }) {
       let sentImage: FoldBar['image'];
       let sentVoice: FoldBar['voice'];
       if (outgoingImage) {
+        let image = outgoingImage;
+        const hosted = outgoingImage.remoteUrl?.trim();
+        if (hosted) {
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) throw new Error('Sign in to send that GIF.');
+          const res = await fetch(`/api/gifs/file?url=${encodeURIComponent(hosted)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('Could not load that GIF.');
+          const blob = await res.blob();
+          image = {
+            ...outgoingImage,
+            blob,
+            contentType: blob.type || 'image/gif',
+            remoteUrl: undefined,
+          };
+        }
         sentImage = await uploadPostImage({
-          storagePath: foldImageStoragePath(foldId, clientId),
-          image: outgoingImage,
+          storagePath: hosted
+            ? `folds/${foldId}/${clientId}.gif`
+            : foldImageStoragePath(foldId, clientId),
+          image,
           kind: 'fold_image',
         });
       }
@@ -632,11 +656,9 @@ export function FoldSheet({ foldId }: { foldId: string }) {
             <div className="mb-2 space-y-2">
               <QuotePressCard text={text} config={activeImprintConfig} compact withMentions />
               <QuotePressComposerPanel
-                faders={activeImprintConfig.faders}
-                onFadersChange={(next) => {
-                  if (!isPro) return;
-                  setImprintFaders(next);
-                }}
+                onShuffle={() => void shuffleImprint()}
+                shuffleRemaining={shuffleRemaining}
+                shuffleCap={shuffleCap}
                 slots={imprintSlots}
                 isPro={isPro}
                 busy={busy || slotBusy}
@@ -654,7 +676,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 }}
                 onLoadSlot={(slot) => {
                   if (!isPro) return;
-                  setImprintFaders(slot.faders);
+                  pinImprintLook(slot.faders);
                 }}
                 onClearSlot={(slotId) => {
                   void persistImprintSlots(imprintSlots.filter((slot) => slot.id !== slotId));
@@ -693,6 +715,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 })
               }
             />
+            <GifAttachButton disabled={busy} image={image} onImageChange={setImage} />
             <EmojiPickerButton
               compact
               disabled={busy}

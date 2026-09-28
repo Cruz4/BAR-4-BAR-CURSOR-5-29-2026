@@ -18,6 +18,7 @@ import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ComposerLinkPreview } from '@/components/profile/inline-link-preview';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
@@ -212,7 +213,10 @@ function SceneComposer({
     toggleImprint,
     resetImprint,
     imprintFaders,
-    setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining,
+    shuffleCap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,
@@ -301,11 +305,9 @@ function SceneComposer({
             creatorSlug={profileSlug}
           />
           <QuotePressComposerPanel
-            faders={activeImprintConfig.faders}
-            onFadersChange={(next) => {
-              if (!isPro) return;
-              setImprintFaders(next);
-            }}
+            onShuffle={() => void shuffleImprint()}
+            shuffleRemaining={shuffleRemaining}
+            shuffleCap={shuffleCap}
             slots={imprintSlots}
             isPro={isPro}
             busy={busy || slotBusy}
@@ -322,7 +324,7 @@ function SceneComposer({
             }}
             onLoadSlot={(slot) => {
               if (!isPro) return;
-              setImprintFaders(slot.faders);
+              pinImprintLook(slot.faders);
             }}
             onClearSlot={(slotId) => {
               void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
@@ -361,6 +363,13 @@ function SceneComposer({
             }
           />
         </div>
+        <GifAttachButton
+          disabled={busy}
+          image={image}
+          onImageChange={setImage}
+          clip={clip}
+          onClipChange={setClip}
+        />
         <EmojiPickerButton
           compact
           disabled={busy}

@@ -29,21 +29,18 @@ export function ProfileReachStrip({
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [display, setDisplay] = useState(() =>
-    typeof profileViewCountUnique === 'number'
-      ? profileViewCountUnique
-      : typeof profileViewCount === 'number'
-        ? profileViewCount
-        : 0
+    Math.max(
+      typeof profileViewCount === 'number' ? profileViewCount : 0,
+      typeof profileViewCountUnique === 'number' ? profileViewCountUnique : 0
+    )
   );
 
   useEffect(() => {
-    const next =
-      typeof profileViewCount === 'number'
-        ? profileViewCount
-        : typeof profileViewCountUnique === 'number'
-          ? profileViewCountUnique
-          : 0;
-    setDisplay(next);
+    const next = Math.max(
+      typeof profileViewCount === 'number' ? profileViewCount : 0,
+      typeof profileViewCountUnique === 'number' ? profileViewCountUnique : 0
+    );
+    setDisplay((current) => (next === 0 && current > 0 ? current : next));
   }, [profileViewCount, profileViewCountUnique]);
 
   const isOwner = Boolean(user?.id && ownerId && user.id === ownerId);
@@ -76,7 +73,7 @@ export function ProfileReachStrip({
               : typeof data.profileViewCountUnique === 'number'
                 ? data.profileViewCountUnique
                 : 0;
-        setDisplay(count);
+        setDisplay((current) => (count <= 0 && current > 0 ? current : count));
       } catch {
         /* ignore */
       }

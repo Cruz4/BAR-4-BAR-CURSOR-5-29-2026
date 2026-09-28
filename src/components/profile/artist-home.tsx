@@ -389,10 +389,10 @@ export function ArtistHome({
         onTokensChange={onTokensChange}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-6 sm:px-6 sm:pt-10">
+      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-3 sm:px-6 sm:pt-10">
         {/* Sheet header */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[var(--ph-border)] pb-4">
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-3 sm:gap-2 sm:pb-4">
+          <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
             {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
               <ArtistHomeBackButton label="Back" profileSlug={profile.slug} />
             ) : (
@@ -407,22 +407,12 @@ export function ArtistHome({
                 </Link>
               </Button>
             )}
-            <span className="font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)]">
+            <span className="hidden font-code text-[9px] uppercase tracking-[0.3em] text-[var(--ph-muted)] min-[420px]:inline">
               {tokens.plateSerial}
               {tokens.autoDrift ? ' · restless' : ''}
             </span>
           </div>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 sm:gap-2 [&_button]:shrink-0">
-            {profile.slug && !previewMode ? (
-              <ProfileReachStrip
-                slug={profile.slug}
-                ownerId={profile.userId}
-                profileViewCount={profile.profileViewCount ?? profile.ownerProfileViewCount}
-                profileViewCountUnique={profile.profileViewCountUnique}
-                legacyProfilePageLoads={profile.legacyProfilePageLoads}
-                className="mr-0.5 text-[var(--ph-muted)]"
-              />
-            ) : null}
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-1 sm:gap-2 [&_button]:shrink-0">
             {previewMode && onExitPreview ? (
               <Button
                 size="sm"
@@ -435,9 +425,10 @@ export function ArtistHome({
             ) : previewMode ? null : (
               <>
                 {isOwner ? (
-                  <Button size="sm" variant="outline" className="h-9 gap-1.5 font-bold uppercase" asChild>
+                  <Button size="sm" variant="outline" className="h-8 gap-1 px-2 font-bold uppercase sm:h-9 sm:gap-1.5 sm:px-3" asChild>
                     <Link href="/profile/customize">
-                      <Settings2 className="h-3.5 w-3.5" /> Edit Public Page
+                      <Settings2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="text-[9px] tracking-wide sm:text-xs sm:tracking-widest">Edit Public Page</span>
                     </Link>
                   </Button>
                 ) : profile.userId ? (
@@ -479,11 +470,27 @@ export function ArtistHome({
           )}
         >
           <div className="min-w-0 space-y-5 lg:col-span-7">
-            {config.featured.tagline && (
-              <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
-                {config.featured.tagline}
-              </p>
-            )}
+            {config.featured.tagline || (isOwner && profile.slug && !previewMode) ? (
+              <div className="flex items-center justify-between gap-3">
+                {config.featured.tagline ? (
+                  <p className="min-w-0 text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
+                    {config.featured.tagline}
+                  </p>
+                ) : (
+                  <span className="min-w-0" />
+                )}
+                {profile.slug && !previewMode ? (
+                  <ProfileReachStrip
+                    slug={profile.slug}
+                    ownerId={profile.userId}
+                    profileViewCount={profile.profileViewCount ?? profile.ownerProfileViewCount}
+                    profileViewCountUnique={profile.profileViewCountUnique}
+                    legacyProfilePageLoads={profile.legacyProfilePageLoads}
+                    className="shrink-0 text-[var(--ph-muted)]"
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <h1
               data-profile-safe-check
               data-name-scale={displayNameScale}

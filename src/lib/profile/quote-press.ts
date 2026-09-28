@@ -10,7 +10,32 @@
 import { tokenizeLine, heuristicSyllables } from '@/lib/lyrics-analysis';
 import { dieCutClip, hashSeed, type CutStyle } from '@/lib/profile/pressing';
 
-export const QUOTE_PRESS_SLOT_LIMIT = 5;
+export const QUOTE_PRESS_SLOT_LIMIT = 7;
+export const IMPRINT_SHUFFLE_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const IMPRINT_SHUFFLE_CAP_VISITOR = 3;
+export const IMPRINT_SHUFFLE_CAP_PRO = 10;
+
+/** Timestamps still inside the rolling 24-hour window, oldest first. */
+export function activeImprintShuffleUses(raw: unknown, now = Date.now()): string[] {
+  if (!Array.isArray(raw)) return [];
+  const fresh = raw.filter((item): item is string => {
+    if (typeof item !== 'string') return false;
+    const at = Date.parse(item);
+    return Number.isFinite(at) && now - at < IMPRINT_SHUFFLE_WINDOW_MS;
+  });
+  return fresh.slice(-IMPRINT_SHUFFLE_CAP_PRO);
+}
+
+export function imprintShuffleRemaining(
+  raw: unknown,
+  isPro: boolean,
+  now = Date.now()
+): { remaining: number; cap: number; uses: string[] } {
+  const cap = isPro ? IMPRINT_SHUFFLE_CAP_PRO : IMPRINT_SHUFFLE_CAP_VISITOR;
+  const uses = activeImprintShuffleUses(raw, now);
+  const counted = uses.slice(-cap);
+  return { remaining: Math.max(0, cap - counted.length), cap, uses };
+}
 
 export type QuotePressFaders = {
   heat: number;

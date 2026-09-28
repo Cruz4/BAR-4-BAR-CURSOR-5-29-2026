@@ -180,7 +180,7 @@ const GROUP_STYLE: Record<
 > = {
   privateDrafts: {
     border: 'border-cyan-400/35',
-    surface: 'bg-gradient-to-br from-cyan-500/[0.12] via-cyan-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-cyan-500/[0.28] via-cyan-950/20 to-black/30',
     iconWrap: 'border-cyan-400/30 bg-cyan-400/15',
     icon: 'text-cyan-200',
     badge: 'border-cyan-400/35 bg-cyan-400/15 text-cyan-100',
@@ -188,7 +188,7 @@ const GROUP_STYLE: Record<
   },
   offlineReleases: {
     border: 'border-amber-400/30',
-    surface: 'bg-gradient-to-br from-amber-500/[0.1] via-amber-950/15 to-black/30',
+    surface: 'bg-gradient-to-br from-amber-500/[0.26] via-amber-950/15 to-black/30',
     iconWrap: 'border-amber-400/30 bg-amber-400/12',
     icon: 'text-amber-200',
     badge: 'border-amber-400/35 bg-amber-400/12 text-amber-100',
@@ -196,7 +196,7 @@ const GROUP_STYLE: Record<
   },
   liveSinglesWithLyrics: {
     border: 'border-fuchsia-400/35',
-    surface: 'bg-gradient-to-br from-fuchsia-500/[0.12] via-fuchsia-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-fuchsia-500/[0.28] via-fuchsia-950/20 to-black/30',
     iconWrap: 'border-fuchsia-400/30 bg-fuchsia-400/15',
     icon: 'text-fuchsia-200',
     badge: 'border-fuchsia-400/35 bg-fuchsia-400/15 text-fuchsia-100',
@@ -204,7 +204,7 @@ const GROUP_STYLE: Record<
   },
   liveSinglesAudioOnly: {
     border: 'border-emerald-400/35',
-    surface: 'bg-gradient-to-br from-emerald-500/[0.1] via-emerald-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-emerald-500/[0.26] via-emerald-950/20 to-black/30',
     iconWrap: 'border-emerald-400/30 bg-emerald-400/15',
     icon: 'text-emerald-200',
     badge: 'border-emerald-400/35 bg-emerald-400/15 text-emerald-100',
@@ -212,7 +212,7 @@ const GROUP_STYLE: Record<
   },
   liveAlbumsAllLyrics: {
     border: 'border-sky-400/35',
-    surface: 'bg-gradient-to-br from-sky-500/[0.1] via-sky-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-sky-500/[0.26] via-sky-950/20 to-black/30',
     iconWrap: 'border-sky-400/30 bg-sky-400/15',
     icon: 'text-sky-200',
     badge: 'border-sky-400/35 bg-sky-400/15 text-sky-100',
@@ -220,7 +220,7 @@ const GROUP_STYLE: Record<
   },
   liveAlbumsMixedLyrics: {
     border: 'border-indigo-400/35',
-    surface: 'bg-gradient-to-br from-indigo-500/[0.1] via-indigo-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-indigo-500/[0.26] via-indigo-950/20 to-black/30',
     iconWrap: 'border-indigo-400/30 bg-indigo-400/15',
     icon: 'text-indigo-200',
     badge: 'border-indigo-400/35 bg-indigo-400/15 text-indigo-100',
@@ -228,7 +228,7 @@ const GROUP_STYLE: Record<
   },
   liveAlbumsAudioOnly: {
     border: 'border-blue-400/35',
-    surface: 'bg-gradient-to-br from-blue-500/[0.1] via-blue-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-blue-500/[0.26] via-blue-950/20 to-black/30',
     iconWrap: 'border-blue-400/30 bg-blue-400/15',
     icon: 'text-blue-200',
     badge: 'border-blue-400/35 bg-blue-400/15 text-blue-100',
@@ -236,7 +236,7 @@ const GROUP_STYLE: Record<
   },
   dnaPreviews: {
     border: 'border-violet-400/35',
-    surface: 'bg-gradient-to-br from-violet-500/[0.12] via-violet-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-violet-500/[0.28] via-violet-950/20 to-black/30',
     iconWrap: 'border-violet-400/30 bg-violet-400/15',
     icon: 'text-violet-200',
     badge: 'border-violet-400/35 bg-violet-400/15 text-violet-100',
@@ -244,12 +244,24 @@ const GROUP_STYLE: Record<
   },
   unpressed: {
     border: 'border-slate-400/30',
-    surface: 'bg-gradient-to-br from-slate-500/[0.08] via-slate-950/20 to-black/30',
+    surface: 'bg-gradient-to-br from-slate-500/[0.22] via-slate-950/20 to-black/30',
     iconWrap: 'border-slate-400/25 bg-slate-400/10',
     icon: 'text-slate-200',
     badge: 'border-slate-400/30 bg-slate-400/10 text-slate-100',
     chip: 'border-slate-400/35 bg-slate-500/12 text-slate-100 hover:bg-slate-500/20',
   },
+};
+
+const ROW_TINT: Record<GroupKey, string> = {
+  privateDrafts: 'border-cyan-300/35 bg-cyan-950/40',
+  offlineReleases: 'border-amber-300/35 bg-amber-950/40',
+  liveSinglesWithLyrics: 'border-fuchsia-300/35 bg-fuchsia-950/40',
+  liveSinglesAudioOnly: 'border-emerald-300/35 bg-emerald-950/40',
+  liveAlbumsAllLyrics: 'border-sky-300/35 bg-sky-950/40',
+  liveAlbumsMixedLyrics: 'border-indigo-300/35 bg-indigo-950/40',
+  liveAlbumsAudioOnly: 'border-blue-300/35 bg-blue-950/40',
+  dnaPreviews: 'border-violet-300/35 bg-violet-950/40',
+  unpressed: 'border-slate-300/30 bg-slate-900/55',
 };
 
 function groupIcon(key: GroupKey) {
@@ -720,7 +732,8 @@ function ReleaseCatalogBody({
   };
 
   const [showEmptySections, setShowEmptySections] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set());
+  const [catalogPrefsReady, setCatalogPrefsReady] = useState(false);
 
   const liveDnaRows = useMemo(() => liveLyricDnaCatalogRows(albums), [albums]);
 
@@ -906,15 +919,51 @@ function ReleaseCatalogBody({
     .filter((s) => s.zone === 'vault')
     .reduce((sum, s) => sum + s.rows.length, 0);
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('b4b.releaseCatalog.openSections');
+      if (raw) {
+        const ids = JSON.parse(raw) as unknown;
+        if (Array.isArray(ids)) {
+          setOpenSections(new Set(ids.filter((id): id is string => typeof id === 'string')));
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setCatalogPrefsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!catalogPrefsReady) return;
+    try {
+      window.localStorage.setItem(
+        'b4b.releaseCatalog.openSections',
+        JSON.stringify([...openSections])
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [catalogPrefsReady, openSections]);
+
   const scrollToGroup = (key: CatalogSectionId | 'house') => {
-    setExpandedSection(key);
+    setOpenSections((current) => {
+      const next = new Set(current);
+      next.add(key);
+      return next;
+    });
     window.requestAnimationFrame(() => {
       document.getElementById(`release-catalog-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   };
 
   const toggleSection = (key: string) => {
-    setExpandedSection((current) => (current === key ? null : key));
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   };
 
   const setHouseOnHome = async (shareId: string, visible: boolean) => {
@@ -969,8 +1018,12 @@ function ReleaseCatalogBody({
           <li
             key={rowKey}
             className={cn(
-              'rounded-lg border bg-slate-950/75 p-2.5',
-              opts?.houseLyricStrand ? 'border-violet-400/25 bg-violet-950/30' : 'border-white/10'
+              'rounded-lg border p-2.5',
+              opts?.houseLyricStrand
+                ? 'border-violet-400/25 bg-violet-950/30'
+                : listKey !== 'liveMusic'
+                  ? ROW_TINT[listKey]
+                  : 'border-white/10 bg-slate-950/75'
             )}
           >
             <div className="flex min-w-0 items-start gap-2">
@@ -1169,12 +1222,12 @@ function ReleaseCatalogBody({
       key={section.id}
       id={`release-catalog-${section.id}`}
       className={cn(
-        'group w-full scroll-mt-0 overflow-hidden rounded-xl border shadow-sm ring-1 ring-black/20',
+        'group w-full scroll-mt-0 overflow-hidden rounded-xl border-2 shadow-sm ring-1 ring-black/20',
         section.style.border,
         section.style.surface,
         section.rows.length === 0 && opts?.compactEmpty && 'opacity-70'
       )}
-      open={expandedSection === section.id}
+      open={openSections.has(section.id)}
     >
       <summary
         className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden"
@@ -1208,8 +1261,8 @@ function ReleaseCatalogBody({
   const renderHouseCard = () => (
     <details
       id="release-catalog-house"
-      className="group w-full scroll-mt-0 overflow-hidden rounded-xl border border-cyan-400/40 bg-gradient-to-br from-cyan-500/[0.14] via-cyan-950/25 to-black/30 shadow-sm ring-1 ring-black/20"
-      open={expandedSection === 'house'}
+      className="group w-full scroll-mt-0 overflow-hidden rounded-xl border-2 border-cyan-300/70 bg-gradient-to-br from-cyan-400/[0.32] via-cyan-950/40 to-black/40 shadow-sm ring-1 ring-cyan-400/20"
+      open={openSections.has('house')}
     >
       <summary
         className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 [&::-webkit-details-marker]:hidden"

@@ -135,6 +135,12 @@ export async function initializeUserUsage(
     if (authLastSignInAt && authLastSignInAt !== userData?.lastSignInAt) {
       identityPatch.lastSignInAt = authLastSignInAt;
     }
+    const nowIso = new Date().toISOString();
+    const today = nowIso.slice(0, 10);
+    const activeAt = typeof userData?.lastActiveAt === 'string' ? userData.lastActiveAt : '';
+    if (activeAt.slice(0, 10) !== today) {
+      identityPatch.lastActiveAt = nowIso;
+    }
     if (Object.keys(identityPatch).length > 0) {
       identityPatch.updatedAt = new Date().toISOString();
       await userRef.set(identityPatch, { merge: true });

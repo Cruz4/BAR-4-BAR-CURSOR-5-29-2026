@@ -42,7 +42,9 @@ export async function resolveProfileReachDisplay(
   const legacy = readLegacyProfilePageLoads(data);
   const wallOpens = ownerId.trim() ? await sumWallPostOpensForOwner(db, ownerId.trim()) : 0;
   const fromLegacy = legacy > 0 ? displayReachFromParts(unique, legacy) : unique;
-  /** Header: unique people, but include total public wall opens when that reflects real repeat engagement. */
-  const display = Math.max(fromLegacy, wallOpens);
+  const stored = Number(data?.profileViewCount);
+  const storedCount = Number.isFinite(stored) && stored > 0 ? Math.floor(stored) : 0;
+  /** Header: unique people, wall opens, and the stored counter — never drop a known total to 0. */
+  const display = Math.max(fromLegacy, wallOpens, storedCount);
   return { unique, legacy, display };
 }

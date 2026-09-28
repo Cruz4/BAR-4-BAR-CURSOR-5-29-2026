@@ -495,6 +495,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (offline) {
+        if (!cached.albums?.length) applyLocalVault([], cached.styleProfile);
         setLoading(false);
         vaultLoadedUserIdRef.current = userId;
         return;
@@ -506,18 +507,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       const isSameUserReload = vaultLoadedUserIdRef.current === userId;
       const hasVisibleVault = albumsRef.current.length > 0;
-      if ((!isSameUserReload || !hasVisibleVault) && !onHome) {
+      if ((!isSameUserReload || !hasVisibleVault) && !onHome && !cached.albums?.length) {
         setLoading(true);
       }
 
+      const cloudTimeout = <T,>(promise: Promise<T>, ms = 8000): Promise<T> =>
+        new Promise((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error('vault-cloud-timeout')), ms);
+          promise.then(
+            (value) => {
+              window.clearTimeout(timer);
+              resolve(value);
+            },
+            (error) => {
+              window.clearTimeout(timer);
+              reject(error);
+            }
+          );
+        });
+
       try {
-        const firebaseUser = await waitForAuthUser();
+        const firebaseUser = await cloudTimeout(waitForAuthUser());
         if (!firebaseUser || firebaseUser.uid !== userId) {
           throw new Error('Auth session not ready');
         }
 
         const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
+        const userSnap = await cloudTimeout(getDoc(userRef));
         if (!userSnap.exists()) {
           const { markFreshSignup } = await import('@/lib/post-login-redirect');
           const { trackStudioEvent } = await import('@/lib/analytics-client');
@@ -585,11 +601,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Universal Residency: Cloud Sync enabled for ALL users (Visitor and Pro)
-        const albumsSnap = await getDocs(collection(db, 'users', userId, 'albums'));
+        const albumsSnap = await cloudTimeout(getDocs(collection(db, 'users', userId, 'albums')));
         const loadedAlbums: Album[] = [];
         
         for (const albumDoc of albumsSnap.docs) {
-          const tracksSnap = await getDocs(collection(db, 'users', userId, 'albums', albumDoc.id, 'tracks'));
+          const tracksSnap = await cloudTimeout(
+            getDocs(collection(db, 'users', userId, 'albums', albumDoc.id, 'tracks')),
+            8000
+          );
           const albumData = albumDoc.data() as Omit<Album, 'id' | 'tracks'> & { tracks?: unknown };
           const tracks = tracksSnap.docs.map(d => ({ ...d.data(), id: d.id })) as Track[];
           const orderedTracks = orderAlbumTracks(tracks, albumData);
@@ -603,7 +622,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         // Loose tracks may exist under albums/unassigned/tracks without an album doc.
         const looseTracks = (
-          await getDocs(collection(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID, 'tracks'))
+          await cloudTimeout(getDocs(collection(db, 'users', userId, 'albums', UNASSIGNED_ALBUM_ID, 'tracks')))
         ).docs.map((d) => ({ ...d.data(), id: d.id, albumId: UNASSIGNED_ALBUM_ID })) as Track[];
 
         // Self-heal: if local backup has loose tracks missing from cloud, push them back up.
@@ -643,7 +662,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           finalAlbums.unshift({ ...createUnassignedShell(userId), tracks: [] });
         }
         
-        const styleSnap = await getDoc(doc(db, 'users', userId, 'styleProfile', 'main'));
+        const styleSnap = await cloudTimeout(getDoc(doc(db, 'users', userId, 'styleProfile', 'main')));
         const loadedStyleProfile = styleSnap.exists()
           ? (styleSnap.data() as StyleProfile)
           : cached.styleProfile;
@@ -668,9 +687,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (e) {
         console.error('Load failed', e);
-        if (cached.albums?.length) {
-          applyLocalVault(cached.albums, cached.styleProfile);
-        }
+        applyLocalVault(cached.albums?.length ? cached.albums : [], cached.styleProfile);
       } finally {
         setLoading(false);
       }

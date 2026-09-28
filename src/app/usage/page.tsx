@@ -311,11 +311,11 @@ function UsagePageContent() {
       <div className="container relative z-10 mx-auto max-w-5xl py-8 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">Studio Intelligence</h1>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-3xl sm:text-4xl font-headline font-bold text-primary tracking-tight">Studio Intelligence</h1>
             <Badge
               className={cn(
-                'uppercase justify-center text-center px-3 shrink-0 border',
+                'uppercase justify-center text-center px-2 sm:px-3 max-w-full whitespace-normal border',
                 studioHeaderBadgeClass(studioChromeFromUser(user))
               )}
             >
@@ -611,7 +611,7 @@ function UsagePageContent() {
                             </Badge>
                           </div>
                         )}
-                        <div className={cn("p-6 flex flex-col flex-1 text-center border-b min-h-[400px] overflow-hidden rounded-t-lg", plan.badge && "pt-8", isProPlan ? "bg-accent/10" : "bg-primary/10")}>
+                        <div className={cn("p-6 flex flex-col flex-1 text-center border-b overflow-hidden rounded-t-lg", plan.badge && "pt-8", isProPlan ? "bg-accent/10" : "bg-primary/10")}>
                             <div className="space-y-3 shrink-0">
                               <h3 className={cn("text-2xl font-headline font-bold uppercase", plan.isCurrent && (isProPlan ? "text-accent" : "text-[rgb(125,211,252)]"))}>{plan.name}</h3>
                               <div className="flex flex-col items-center">
@@ -630,7 +630,7 @@ function UsagePageContent() {
                               lines={plan.headlinePerks}
                               variant={plan.name === 'Pro Yearly' ? 'yearly' : plan.name === 'Visitor' ? 'visitor' : 'pro'}
                               align="center"
-                              className="px-1 flex-1 mt-4 min-h-[140px]"
+                              className="px-1 mt-4"
                             />
                             <Button
                               className={cn("w-full shadow-lg h-12 text-sm font-bold uppercase mt-6 shrink-0", plan.isCurrent ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground")}

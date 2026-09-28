@@ -45,6 +45,7 @@ import { firstInlineHref } from '@/lib/profile/inline-links';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
 import { firstDropTracks, LiveDnaDropsGroupedList, selectDropShelfDna } from '@/components/profile/live-dna-drop-card';
@@ -869,7 +870,10 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     toggleImprint,
     resetImprint,
     imprintFaders,
-    setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining,
+    shuffleCap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,
@@ -1174,11 +1178,9 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 creatorSlug={ctx.profileSlug}
               />
               <QuotePressComposerPanel
-                faders={activeImprintConfig.faders}
-                onFadersChange={(next) => {
-                  if (!isPro) return;
-                  setImprintFaders(next);
-                }}
+                onShuffle={() => void shuffleImprint()}
+                shuffleRemaining={shuffleRemaining}
+                shuffleCap={shuffleCap}
                 slots={imprintSlots}
                 isPro={isPro}
                 busy={busy || slotBusy}
@@ -1197,7 +1199,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 }}
                 onLoadSlot={(slot) => {
                   if (!isPro) return;
-                  setImprintFaders(slot.faders);
+                  pinImprintLook(slot.faders);
                 }}
                 onClearSlot={(slotId) => {
                   void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
@@ -1248,6 +1250,15 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 }
               />
             </div>
+            {!playground ? (
+              <GifAttachButton
+                disabled={busy}
+                image={image}
+                onImageChange={setImage}
+                clip={clip}
+                onClipChange={setClip}
+              />
+            ) : null}
             <EmojiPickerButton compact disabled={busy} onInsert={insertEmoji} />
             {!playground ? (
               <Button

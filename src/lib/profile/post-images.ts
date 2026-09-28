@@ -15,7 +15,36 @@ export type PendingPostImage = {
   blob: Blob;
   previewUrl: string;
   contentType: string;
+  /** Hosted GIF (Giphy). Skips Storage upload and keeps animation. */
+  remoteUrl?: string;
 };
+
+export function pendingRemoteGif(url: string): PendingPostImage {
+  return {
+    blob: new Blob(),
+    previewUrl: url,
+    contentType: 'image/gif',
+    remoteUrl: url,
+  };
+}
+
+/** Only Giphy HTTPS URLs may be stored as a remote post image. */
+export function hostedGifUrl(image: PendingPostImage | null | undefined): string | null {
+  const url = image?.remoteUrl?.trim();
+  if (!url || url.length > 2000) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return null;
+    const host = parsed.hostname.toLowerCase();
+    const allowed =
+      host === 'giphy.com' ||
+      host.endsWith('.giphy.com') ||
+      host.endsWith('.giphyusercontent.com');
+    return allowed ? url : null;
+  } catch {
+    return null;
+  }
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -77,7 +106,7 @@ export function imageFileFromClipboard(e: {
 }
 
 export function revokePostImagePreview(image: PendingPostImage | null | undefined): void {
-  if (!image?.previewUrl) return;
+  if (!image?.previewUrl || !image.previewUrl.startsWith('blob:')) return;
   try {
     URL.revokeObjectURL(image.previewUrl);
   } catch {
@@ -146,6 +175,8 @@ export async function pendingPostImageFromDataUrl(dataUrl: string): Promise<Pend
 }
 
 export async function pendingImageToDataUrl(image: PendingPostImage): Promise<string> {
+  const hosted = hostedGifUrl(image);
+  if (hosted) return hosted;
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -159,6 +190,17 @@ export async function pendingImageToDataUrl(image: PendingPostImage): Promise<st
     reader.onerror = () => reject(new Error('Could not attach that image.'));
     reader.readAsDataURL(image.blob);
   });
+}
+
+/** Use a hosted GIF URL when present; otherwise upload the blob. */
+export async function storePendingPostImage(opts: {
+  storagePath: string;
+  image: PendingPostImage;
+  kind?: 'wall_image' | 'fold_image';
+}): Promise<{ url: string; storagePath?: string }> {
+  const hosted = hostedGifUrl(opts.image);
+  if (hosted) return { url: hosted };
+  return uploadPostImage(opts);
 }
 
 export async function uploadPostImage(opts: {

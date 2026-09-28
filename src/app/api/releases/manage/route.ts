@@ -22,6 +22,7 @@ import {
 } from '@/lib/release-management';
 import { orderAlbumTracks, trackOrderFromTracks } from '@/lib/album-track-order';
 import { canManageReleaseShare, houseReleaseVaultRef } from '@/lib/house-artist-link';
+import { FREE_LIVE_SONG_LIMIT, FREE_LIVE_SONG_LIMIT_ERROR, isProUser } from '@/lib/subscription';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +30,34 @@ type ManageAction = 'save-draft' | 'publish' | 'unpublish' | 'remove';
 
 function safeId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200 && !value.includes('/');
+}
+
+function songSaleKey(albumId: string, trackId: string): string {
+  return `${albumId}/${trackId}`;
+}
+
+/** Non-House songs already for sale: live singles, plus audio tracks on a live album. */
+async function liveSongsForSale(
+  db: Awaited<ReturnType<typeof getDb>>,
+  userId: string
+): Promise<Set<string>> {
+  const keys = new Set<string>();
+  const albumsSnap = await db.collection(`users/${userId}/albums`).get();
+  for (const albumDoc of albumsSnap.docs) {
+    const album = albumDoc.data() || {};
+    const albumLive = album.releaseStatus === 'live' && album.houseRelease !== true;
+    const tracksSnap = await albumDoc.ref.collection('tracks').get();
+    for (const trackDoc of tracksSnap.docs) {
+      const track = trackDoc.data() || {};
+      if (track.houseRelease === true) continue;
+      const trackLive = track.releaseStatus === 'live';
+      const hasAudio = Boolean(normalizeDropAudio(track.dropAudio));
+      if (trackLive || (albumLive && hasAudio)) {
+        keys.add(songSaleKey(albumDoc.id, trackDoc.id));
+      }
+    }
+  }
+  return keys;
 }
 
 async function unusedShareId(db: Awaited<ReturnType<typeof getDb>>): Promise<string> {
@@ -359,6 +388,21 @@ export async function POST(req: Request) {
     const releasePrice = normalizeDropPrice(target.dropPrice);
     if (!houseRelease && !isCommerceLive(releasePrice)) {
       return NextResponse.json({ error: 'Set a valid sale price before pressing it live.' }, { status: 400 });
+    }
+    if (!houseRelease && !isProUser({ subscriptionStatus: userSnap.data()?.subscriptionStatus })) {
+      const selling = await liveSongsForSale(db, vaultUserId);
+      let added = 0;
+      if (kind === 'track' && safeId(albumId) && safeId(trackId)) {
+        if (!selling.has(songSaleKey(albumId, trackId))) added = 1;
+      } else if (kind === 'album' && safeId(albumId)) {
+        for (const item of audioTracks) {
+          if (item.houseRelease === true) continue;
+          if (!selling.has(songSaleKey(albumId, item.id))) added += 1;
+        }
+      }
+      if (selling.size + added > FREE_LIVE_SONG_LIMIT) {
+        return NextResponse.json({ error: FREE_LIVE_SONG_LIMIT_ERROR }, { status: 403 });
+      }
     }
     if (!houseRelease && isDropFree(releasePrice)) {
       const freeAllowed = await isFreeDropsEnabled();

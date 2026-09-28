@@ -21,7 +21,7 @@ import {
   parseImageStoragePath,
   processPostImageFile,
   revokePostImagePreview,
-  uploadPostImage,
+  storePendingPostImage,
   wallImageDropCommentPath,
   type PendingPostImage,
 } from '@/lib/profile/post-images';
@@ -117,7 +117,7 @@ export async function addDropComment(
   let imageStoragePath: string | undefined;
   if (image) {
     try {
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImageDropCommentPath(user.uid, shareId, id),
         image,
       });
@@ -130,7 +130,7 @@ export async function addDropComment(
   } else if (opts?.video?.posterBlob) {
     try {
       const poster = await processPostImageFile(opts.video.posterBlob);
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImageDropCommentPath(user.uid, shareId, id),
         image: poster,
       });

@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { MentionField } from '@/components/profile/mention-suggestions';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
 import { QuotePressCard } from '@/components/profile/quote-press-card';
@@ -114,7 +115,10 @@ export function DropSocialPanel({
     toggleImprint,
     resetImprint,
     imprintFaders,
-    setImprintFaders,
+    pinImprintLook,
+    shuffleImprint,
+    shuffleRemaining,
+    shuffleCap,
     imprintSlots,
     slotBusy,
     activeImprintConfig,
@@ -485,11 +489,9 @@ export function DropSocialPanel({
               <div className="space-y-2">
                 <QuotePressCard text={quoteText} config={activeImprintConfig} withMentions />
                 <QuotePressComposerPanel
-                  faders={activeImprintConfig.faders}
-                  onFadersChange={(next) => {
-                    if (!isPro) return;
-                    setImprintFaders(next);
-                  }}
+                  onShuffle={() => void shuffleImprint()}
+                  shuffleRemaining={shuffleRemaining}
+                  shuffleCap={shuffleCap}
                   slots={imprintSlots}
                   isPro={isPro}
                   busy={busy || slotBusy}
@@ -508,7 +510,7 @@ export function DropSocialPanel({
                   }}
                   onLoadSlot={(slot) => {
                     if (!isPro) return;
-                    setImprintFaders(slot.faders);
+                    pinImprintLook(slot.faders);
                   }}
                   onClearSlot={(slotId) => {
                     void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
@@ -551,6 +553,13 @@ export function DropSocialPanel({
                   }
                 />
               </div>
+              <GifAttachButton
+                disabled={busy}
+                image={quoteImage}
+                onImageChange={setQuoteImage}
+                clip={quoteClip}
+                onClipChange={setQuoteClip}
+              />
               <EmojiPickerButton compact disabled={busy} onInsert={insertQuoteEmoji} />
               <button
                 type="button"

@@ -9,6 +9,7 @@ import {
   FREE_RESIDENCY_POOL_CAP,
   FREE_ALBUM_LIMIT,
   FREE_TRACK_LIMIT,
+  FREE_LIVE_SONG_LIMIT,
   REFERRAL_INK_SPEND_THRESHOLD,
   isProUser,
   isYearlyPro,
@@ -16,7 +17,11 @@ import {
 import type { User } from '@/lib/types';
 import { MAX_MONTHLY_RESIDENCY, PRO_MONTHLY_RESIDENCY, PRO_YEARLY_RESIDENCY } from '@/lib/stripe-catalog';
 import { isStudioMaxUser } from '@/lib/subscription-products';
-import { QUOTE_PRESS_SLOT_LIMIT } from '@/lib/profile/quote-press';
+import {
+  IMPRINT_SHUFFLE_CAP_PRO,
+  IMPRINT_SHUFFLE_CAP_VISITOR,
+  QUOTE_PRESS_SLOT_LIMIT,
+} from '@/lib/profile/quote-press';
 import { getVisitorInkGrantSummary } from '@/lib/ink-grants';
 import { MAX_REFERRAL_REWARDS, REFERRAL_INK_REWARD } from '@/lib/referrals';
 
@@ -92,7 +97,10 @@ export const STUDIO_MAX_FEATURES = [
 ] as const;
 
 export function getStudioMaxHeadlinePerks(): readonly string[] {
-  return ['Pro Writer workflow + optional ACE-Step song rendering'];
+  return [
+    `${STUDIO_MAX_MONTHLY_INK.toLocaleString()} residency Ink/mo included`,
+    'Pro Writer workflow + optional ACE-Step song rendering',
+  ];
 }
 
 export const INK_PACK_STUDIO_AMOUNT = 10_000;
@@ -202,13 +210,13 @@ export function getCompetitorAnchorCopy(includeSongGeneration: boolean): string 
  * - Lyrics DNA Drop = shareable lyric snapshot link (Pro)
  * - The Pressing = Artist Home living background (Free)
  */
-export const MUSIC_RELEASE_FREE_LINE = `Song and album music releases are Free. Open New release on The Scene, upload, set a price, and press live — within your catalog slots (${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks on Visitor).`;
+export const MUSIC_RELEASE_FREE_LINE = `Song and album music releases are Free. Open New release on The Scene, upload, set a price, and press live. Visitor can have ${FREE_LIVE_SONG_LIMIT} songs for sale at a time (take one offline to press another). Catalog editing stays ${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks on Visitor.`;
 export const DNA_DROP_PRO_LINE =
   'Lyrics DNA Drop is Studio Pro: publish, view, download, and import lyric snapshots (lyrics, structure, DNA). Guests sign in to check tier or create an account; Visitor members upgrade on Studio Tier. It is not the music sell desk.';
 export const PRESSING_FREE_LINE =
   'The Pressing — your Artist Home living skin — is Free with your public page.';
 export const MUSIC_RELEASE_PRO_PERKS_LINE =
-  `Pro perks around music: unlimited catalog (${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} track cap on Visitor). Song & album releases stay Free. Library offline saves work for music you own or purchased on any tier.`;
+  `Pro perks around music: unlimited songs for sale at once (Visitor: ${FREE_LIVE_SONG_LIMIT} at a time) and unlimited catalog (${FREE_ALBUM_LIMIT} album / ${FREE_TRACK_LIMIT} track cap on Visitor). Song & album releases stay Free. Library offline saves work for music you own or purchased on any tier.`;
 export const MUSIC_VS_DNA_GLOSSARY = `${MUSIC_RELEASE_FREE_LINE} ${DNA_DROP_PRO_LINE} ${MUSIC_RELEASE_PRO_PERKS_LINE}`;
 
 export const PRO_FULL_UNLOCK_LINE = 'Full studio workflow — Pro-only unlocks in the list below';
@@ -217,11 +225,15 @@ export const PRO_YEARLY_INCLUDES_LINE = 'Everything in Pro Monthly included';
 
 /** Short positioning under tier price — no Ink/pricing repeats (those live in Studio Capacity + feature list). */
 export function getProMonthlyHeadlinePerks(): readonly string[] {
-  return [PRO_FULL_UNLOCK_LINE];
+  return [
+    `${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo included`,
+    PRO_FULL_UNLOCK_LINE,
+  ];
 }
 
 export function getProYearlyHeadlinePerks(): readonly string[] {
   return [
+    `${PRO_YEARLY_INK.toLocaleString()} residency Ink/mo included`,
     PRO_YEARLY_INCLUDES_LINE,
     'Plus more residency Ink, Permanent Ink savings & Studio Roadmap Input',
   ];
@@ -339,7 +351,7 @@ export function getReferralFaqAnswer(): string {
 
 /** Pricing FAQ — is Artist Home / The Scene free */
 export function getArtistHomeFaqAnswer(): string {
-  return `Yes — every artist gets a free Artist Home: a shareable /profile page with skin, Album Rooms, wall posts, and embeds from TikTok, Instagram, Facebook, and YouTube. It is private by default; flip it live whenever you want eyes on it. Signing in lands you on The Scene — your friends feed, Discover, and Your Booth — with the Vault one click away. ${PRESSING_FREE_LINE} ${MUSIC_RELEASE_FREE_LINE} Pro does not gate Artist Home or music releases; it unlocks the full studio workflow (unlimited catalog, custom vault saves, Imprint mix controls, DNA Strain Mixer, Pro AI studio tools, Performance Mode, Freestyle, Collab Sheet, and Lyrics DNA Drop links). Offline Library downloads work for music you own or purchased on any tier.`;
+  return `Yes — every artist gets a free Artist Home: a shareable /profile page with skin, Album Rooms, wall posts, and embeds from TikTok, Instagram, Facebook, and YouTube. It is private by default; flip it live whenever you want eyes on it. Signing in lands you on The Scene — your friends feed, Discover, and Your Booth — with the Vault one click away. ${PRESSING_FREE_LINE} ${MUSIC_RELEASE_FREE_LINE} Pro does not gate Artist Home or music releases; it unlocks the full studio workflow (unlimited songs for sale, unlimited catalog, custom vault saves, Imprint shuffle and style locks, DNA Strain Mixer, Pro AI studio tools, Performance Mode, Freestyle, Collab Sheet, and Lyrics DNA Drop links). Offline Library downloads work for music you own or purchased on any tier.`;
 }
 
 /** Pricing FAQ — do I need Pro to publish a song/album */
@@ -355,7 +367,7 @@ export function getPostSharingFaqAnswer(): string {
 /** Shown on Ink Store for non-Pro artists */
 export const VISITOR_INK_STORE_NOTICE = {
   headline: 'Visitor — AI lyric tools on Ink',
-  body: `Every Ink-priced bar-by-bar AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Artist Home, The Pressing, The Block, and song/album music releases are included on Free. Pro unlocks custom vault saves, Imprint mix controls, DNA Strain Mixer, Pro-only AI studio tools, Performance Mode, Freestyle, Collab Sheet, vault import/export, and Lyrics DNA Drop links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro. Offline Library downloads work for music you own or purchased on any tier.`,
+  body: `Every Ink-priced bar-by-bar AI tool works on welcome + monthly residency Ink and permanent packs — Generate Next Line, Smart Structure, all 9 Creative Effects, and more. Artist Home, The Pressing, The Block, and song/album music releases are included on Free. Pro unlocks unlimited songs for sale, custom vault saves, Imprint shuffle and ${QUOTE_PRESS_SLOT_LIMIT} style locks, DNA Strain Mixer, Pro-only AI studio tools, Performance Mode, Freestyle, Collab Sheet, vault import/export, and Lyrics DNA Drop links — plus ${PRO_MONTHLY_INK.toLocaleString()} residency Ink/mo on Pro. Offline Library downloads work for music you own or purchased on any tier.`,
 } as const;
 
 /** Free tier limits — shown on comparison charts */
@@ -365,18 +377,20 @@ export const VISITOR_FEATURES = [
   'Full bar-by-bar AI on Ink — Generate Next/Previous, Smart Structure, Studio Draft & Rhyme Pulse',
   'All 9 Creative Effects — Simile, Metaphor, Twist, POV, Blend & more (10 Ink each)',
   'Artist Home — shareable public page, The Pressing skin, Edit Public Page, The Block friends feed',
-  'Song & album music releases — New release on The Scene (Free; demo catalog slots)',
+  `Song & album music releases — ${FREE_LIVE_SONG_LIMIT} songs for sale at a time`,
   'System presets only — custom DNA/Vibe/Style vault saves are Pro',
-  'Locked on Visitor: Imprint faders, custom vault saves, DNA Strain Mixer, Pro AI studio tools, lyric export, Performance Mode, Freestyle (30s demo), Collab Sheet, vault JSON import/export & Lyrics DNA Drop links',
+  `Imprint shuffle — ${IMPRINT_SHUFFLE_CAP_VISITOR} looks, each back 24 hours after you use it`,
+  'Locked on Visitor: Imprint style locks, custom vault saves, DNA Strain Mixer, Pro AI studio tools, lyric export, Performance Mode, Freestyle (30s demo), Collab Sheet, vault JSON import/export & Lyrics DNA Drop links',
 ] as const;
 
 /** Studio Pro-only workflow (paid Pro for catalog + some album tools; Pro or active preview for most workflow — see subscription.ts). */
 export const PRO_UNLOCKS = [
+  `Unlimited songs for sale at once — paid Pro only (Visitor: ${FREE_LIVE_SONG_LIMIT} at a time)`,
   `Unlimited albums & tracks — paid Pro only (Visitor: ${FREE_ALBUM_LIMIT} album · ${FREE_TRACK_LIMIT} tracks)`,
   'Custom DNA, Vibe & Style vault saves — store your strains (Visitor: system presets only)',
   'DNA Strain Mixer — blend saved strains into album direction (paid Pro)',
   'Pro AI studio — Extract Album DNA, Train AI on Style & Scene Gen prompts (Ink-priced; blocked on Visitor)',
-  `Imprint mix on posts & comments — Color/Texture/Rhythm/Depth faders, shuffle & ${QUOTE_PRESS_SLOT_LIMIT} lockable style slots (Visitor: auto look from text)`,
+  `Imprint shuffle — ${IMPRINT_SHUFFLE_CAP_PRO} looks, each back 24 hours after you use it, plus ${QUOTE_PRESS_SLOT_LIMIT} lockable styles (Visitor: ${IMPRINT_SHUFFLE_CAP_VISITOR}, no locks)`,
   'Lyric export — PDF, TXT & JSON downloads (Visitor: preview layout only)',
   'Performance Mode — full-screen teleprompter with rhyme focus',
   'Freestyle capture — full sessions (Visitor: 30-second demo)',

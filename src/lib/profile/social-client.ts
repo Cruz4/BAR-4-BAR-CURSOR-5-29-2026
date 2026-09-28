@@ -59,7 +59,7 @@ import {
   pendingPostImageFromDataUrl,
   processPostImageFile,
   revokePostImagePreview,
-  uploadPostImage,
+  storePendingPostImage,
   wallImageCommentPath,
   wallImagePostPath,
   type PendingPostImage,
@@ -384,7 +384,7 @@ export async function createPost(input: {
   }
   if (image) {
     try {
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImagePostPath(user.uid, id),
         image,
       });
@@ -400,7 +400,7 @@ export async function createPost(input: {
   } else if (input.video?.posterBlob) {
     try {
       const poster = await processPostImageFile(input.video.posterBlob);
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImagePostPath(user.uid, id),
         image: poster,
       });
@@ -701,7 +701,7 @@ async function uploadReverbQuoteAttachments(
   }
   if (input.image) {
     try {
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImagePostPath(userId, postId),
         image: input.image,
       });
@@ -715,7 +715,7 @@ async function uploadReverbQuoteAttachments(
   } else if (input.video?.posterBlob) {
     try {
       const poster = await processPostImageFile(input.video.posterBlob);
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImagePostPath(userId, postId),
         image: poster,
       });
@@ -1177,7 +1177,7 @@ export async function addComment(
   let imageStoragePath: string | undefined;
   if (image) {
     try {
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImageCommentPath(user.uid, postId, id),
         image,
       });
@@ -1191,7 +1191,7 @@ export async function addComment(
   } else if (opts?.video?.posterBlob) {
     try {
       const poster = await processPostImageFile(opts.video.posterBlob);
-      const uploaded = await uploadPostImage({
+      const uploaded = await storePendingPostImage({
         storagePath: wallImageCommentPath(user.uid, postId, id),
         image: poster,
       });

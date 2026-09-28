@@ -81,7 +81,9 @@ export type GamificationSummary = {
     lockedAt: string;
     label: string;
   }>;
-  /** Saved Imprint fader presets for booth posts (Studio Pro). */
+  /** Imprint shuffle timestamps still charging the rolling 24-hour pool. */
+  imprintShuffleUses?: string[];
+  /** Saved Imprint style locks for booth posts (Studio Pro, max 7). */
   quotePressSlots?: Array<{
     id: string;
     faders: { heat: number; grain: number; pace: number; ink: number };
@@ -218,6 +220,7 @@ export const DEFAULT_GAMIFICATION_SUMMARY: GamificationSummary = {
   creatorListenerWeekCount: 0,
   lifetimePaidSupports: 0,
   lifetimeQualifiedListeningDays: 0,
+  imprintShuffleUses: [],
   lifetimePressedSongs: 0,
   lifetimeFirstDropSales: 0,
   lifetimeQuoteReverbs: 0,

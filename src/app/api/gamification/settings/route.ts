@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
   } catch (err) {
     console.error('[gamification/settings]', err);
     const message = err instanceof Error ? err.message : '';
-    if (/already taken|not allowed|reserved|at least 2|32 characters|lowercase/i.test(message)) {
+    if (/already taken|not allowed|reserved|at least 2|32 characters|lowercase|Pro feature/i.test(message)) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
     if (/exceeds the maximum allowed size/i.test(message)) {

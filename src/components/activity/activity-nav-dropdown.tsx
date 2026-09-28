@@ -52,6 +52,7 @@ import {
 } from '@/lib/activity/types';
 import { refreshActivityAlerts } from '@/hooks/use-activity-alerts';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { StudioLoader } from '@/components/studio-loader';
 import { fetchFriendships } from '@/lib/profile/social-client';
 import { fetchPendingContactRequesterIds } from '@/lib/profile/contact-client';
@@ -128,6 +129,7 @@ export function ActivityNavDropdown({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<ActivityEvent[]>([]);
@@ -338,7 +340,14 @@ export function ActivityNavDropdown({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-[min(22rem,calc(100vw-1.25rem))] p-0 bg-card border-2 shadow-2xl overflow-hidden"
+        side="bottom"
+        collisionPadding={8}
+        className={cn(
+          'p-0 bg-card border-2 shadow-2xl overflow-hidden',
+          isMobile
+            ? 'w-[min(18rem,calc(100vw-4.5rem))]'
+            : 'w-[min(22rem,calc(100vw-1.25rem))]'
+        )}
       >
         <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-2.5">
           <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">

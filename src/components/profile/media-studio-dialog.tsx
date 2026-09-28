@@ -27,6 +27,7 @@ import {
 import { IMAGE_TO_VIDEO_SECONDS, WALL_CLIP_MAX_SECONDS, type PendingWallClip } from '@/lib/profile/wall-clips';
 import type { PendingPostImage } from '@/lib/profile/post-images';
 import type { DeckPlayable } from '@/lib/drop-library';
+import { ProfileMediaLightbox } from '@/components/profile/profile-media-lightbox';
 import { cn } from '@/lib/utils';
 
 export type MediaStudioMode = 'camera' | 'library';
@@ -134,6 +135,8 @@ export function MediaStudioDialog({
   const chunksRef = useRef<BlobPart[]>([]);
   const recordTimerRef = useRef<number | null>(null);
   const reviewVideoRef = useRef<HTMLVideoElement>(null);
+  const editVideoRef = useRef<HTMLVideoElement>(null);
+  const [clipPreviewPlaying, setClipPreviewPlaying] = useState(false);
   const reviewAudioRef = useRef<HTMLAudioElement>(null);
   const inlineAudioRef = useRef<HTMLAudioElement>(null);
   const segmentPreviewEndRef = useRef(0);
@@ -604,7 +607,7 @@ export function MediaStudioDialog({
     >
       <DialogContent
         hideClose={exporting}
-        className="!fixed z-[60] max-h-[min(92dvh,100svh)] w-[min(calc(100vw-1rem),28rem)] max-w-[min(calc(100vw-1rem),28rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
+        className="!fixed z-[60] max-h-[min(94dvh,100svh)] w-[min(calc(100vw-1rem),36rem)] max-w-[min(calc(100vw-1rem),36rem)] min-w-0 overflow-x-hidden overflow-y-auto border-white/10 bg-[#0b0f14] p-4 text-white sm:rounded-2xl"
       >
         <DialogHeader className="min-w-0 space-y-1 pr-8 text-left">
           <DialogTitle className="text-sm font-bold uppercase tracking-widest text-cyan-200">
@@ -717,76 +720,105 @@ export function MediaStudioDialog({
           )
         ) : source ? (
           <div className="min-w-0 space-y-3">
-            <button
-              type="button"
-              onClick={openReview}
-              className="relative mx-auto flex max-h-[min(42dvh,20rem)] min-w-0 w-full cursor-zoom-in items-center justify-center overflow-hidden rounded-xl bg-black"
-              aria-label="Review fullscreen preview"
-            >
+            <div className="relative mx-auto flex max-h-[min(48dvh,24rem)] min-w-0 w-full items-center justify-center overflow-hidden rounded-xl bg-black">
               {source.kind === 'video' ? (
                 <video
+                  ref={editVideoRef}
                   src={source.url}
-                  muted
                   playsInline
-                  autoPlay
-                  loop
-                  className="max-h-[min(42dvh,20rem)] max-w-full object-contain"
+                  className="max-h-[min(48dvh,24rem)] max-w-full object-contain"
                   style={{ filter: mediaFilterCss(filterId) }}
+                  onClick={openReview}
+                  onTimeUpdate={(event) => {
+                    const video = event.currentTarget;
+                    if (video.currentTime >= trimEnd - 0.05) {
+                      video.pause();
+                      video.currentTime = trimStart;
+                      setClipPreviewPlaying(false);
+                    }
+                  }}
+                  onPause={() => setClipPreviewPlaying(false)}
+                  onPlay={() => setClipPreviewPlaying(true)}
                 />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={source.url}
-                  alt="Preview"
-                  className="max-h-[min(42dvh,20rem)] max-w-full object-contain"
-                  style={{ filter: mediaFilterCss(filterId) }}
-                />
+                <button
+                  type="button"
+                  onClick={openReview}
+                  className="flex max-h-[min(48dvh,24rem)] w-full cursor-zoom-in items-center justify-center"
+                  aria-label="Review fullscreen preview"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={source.url}
+                    alt="Preview"
+                    className="max-h-[min(48dvh,24rem)] max-w-full object-contain"
+                    style={{ filter: mediaFilterCss(filterId) }}
+                  />
+                </button>
               )}
-              <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white/80">
+              {source.kind === 'video' ? (
+                <button
+                  type="button"
+                  className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white"
+                  onClick={() => {
+                    const video = editVideoRef.current;
+                    if (!video) return;
+                    if (!video.paused) {
+                      video.pause();
+                      return;
+                    }
+                    video.muted = videoMuted || videoVol <= 0;
+                    video.volume = videoMuted ? 0 : videoVol;
+                    const begin = () => {
+                      video.currentTime = trimStart;
+                      void video.play().catch(() => setClipPreviewPlaying(false));
+                    };
+                    if (video.readyState >= 1) begin();
+                    else video.addEventListener('loadedmetadata', begin, { once: true });
+                  }}
+                >
+                  {clipPreviewPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                  {clipPreviewPlaying ? 'Pause' : 'Play crop'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={openReview}
+                className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white/80"
+              >
                 <Maximize2 className="h-3 w-3" /> Review
-              </span>
-            </button>
+              </button>
+            </div>
             <p className="text-center text-[10px] uppercase tracking-widest text-white/40">
-              Tap the picture to review it fullscreen before you use it.
+              {source.kind === 'video'
+                ? 'Play the cropped window here with audio. Tap the picture to open it larger.'
+                : 'Tap the picture to review it fullscreen before you use it.'}
             </p>
 
             {source.kind === 'video' ? (
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/45">
-                  Video crop {formatSec(trimStart)}–{formatSec(trimEnd)}
+                  Crop {formatSec(trimStart)}–{formatSec(trimEnd)}
                   <span className="ml-1 font-normal text-white/35">
-                    ({formatSec(Math.min(WALL_CLIP_MAX_SECONDS, trimEnd - trimStart))} max {WALL_CLIP_MAX_SECONDS}s)
+                    ({formatSec(Math.min(WALL_CLIP_MAX_SECONDS, trimEnd - trimStart))} / {WALL_CLIP_MAX_SECONDS}s)
                   </span>
                 </p>
                 <input
                   type="range"
                   min={0}
-                  max={source.durationSec}
+                  max={Math.max(0, source.durationSec - 0.6)}
                   step={0.1}
-                  value={trimStart}
+                  value={Math.min(trimStart, Math.max(0, source.durationSec - 0.6))}
                   onChange={(e) => {
-                    const next = Math.min(Number(e.target.value), trimEnd - 0.6);
+                    const next = Math.min(Number(e.target.value), Math.max(0, source.durationSec - 0.6));
+                    const end = Math.min(source.durationSec, next + WALL_CLIP_MAX_SECONDS);
                     setTrimStart(next);
-                    if (trimEnd - next > WALL_CLIP_MAX_SECONDS) {
-                      setTrimEnd(next + WALL_CLIP_MAX_SECONDS);
-                    }
+                    setTrimEnd(Math.max(next + 0.6, end));
+                    const video = editVideoRef.current;
+                    if (video && video.paused) video.currentTime = next;
                   }}
                   className="w-full accent-cyan-300"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={source.durationSec}
-                  step={0.1}
-                  value={trimEnd}
-                  onChange={(e) => {
-                    const next = Math.max(Number(e.target.value), trimStart + 0.6);
-                    setTrimEnd(next);
-                    if (next - trimStart > WALL_CLIP_MAX_SECONDS) {
-                      setTrimStart(next - WALL_CLIP_MAX_SECONDS);
-                    }
-                  }}
-                  className="w-full accent-fuchsia-300"
+                  aria-label="Crop start"
                 />
               </div>
             ) : (
@@ -1099,52 +1131,38 @@ export function MediaStudioDialog({
           }}
         />
         <audio ref={inlineAudioRef} className="sr-only" preload="none" />
-        {reviewOpen && source ? (
-          <div className="absolute inset-0 z-20 flex flex-col bg-black/95 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">
-                Review {source.kind === 'video' || music ? 'clip' : 'photo'}
-              </p>
-              <button
-                type="button"
-                onClick={() => setReviewOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-                aria-label="Close review"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              {source.kind === 'video' ? (
-                <video
-                  ref={reviewVideoRef}
-                  src={source.url}
-                  controls
-                  playsInline
-                  className="max-h-full max-w-full rounded-lg object-contain"
-                  style={{ filter: mediaFilterCss(filterId) }}
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={source.url}
-                  alt="Review"
-                  className="max-h-full max-w-full rounded-lg object-contain"
-                  style={{ filter: mediaFilterCss(filterId) }}
-                />
-              )}
-            </div>
-            {reviewMusicUrl ? (
-              <audio ref={reviewAudioRef} src={reviewMusicUrl} className="mt-2 w-full" controls />
-            ) : music ? (
-              <p className="mt-2 text-center text-[10px] text-white/40">Opening attached music…</p>
-            ) : null}
-            <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-white/40">
-              Close this if it looks right, then tap Use {source.kind === 'image' && !music ? 'photo' : 'clip'}.
-            </p>
-          </div>
-        ) : null}
       </DialogContent>
+      {reviewOpen && source ? (
+        <ProfileMediaLightbox
+          open
+          elevated
+          onOpenChange={(next) => {
+            if (!next) setReviewOpen(false);
+          }}
+          title={source.kind === 'video' || music ? 'Review clip' : 'Review photo'}
+          src={source.kind === 'image' ? source.url : undefined}
+        >
+          {source.kind === 'video' ? (
+            <div className="space-y-3">
+              <video
+                ref={reviewVideoRef}
+                src={source.url}
+                controls
+                playsInline
+                className="max-h-[min(70vh,40rem)] w-full rounded-lg object-contain"
+                style={{ filter: mediaFilterCss(filterId) }}
+              />
+              {reviewMusicUrl ? (
+                <audio ref={reviewAudioRef} src={reviewMusicUrl} className="w-full" controls />
+              ) : music ? (
+                <p className="text-center text-[10px] text-white/40">Opening attached music…</p>
+              ) : null}
+            </div>
+          ) : reviewMusicUrl ? (
+            <audio ref={reviewAudioRef} src={reviewMusicUrl} className="w-full" controls />
+          ) : null}
+        </ProfileMediaLightbox>
+      ) : null}
     </Dialog>
   );
 }
