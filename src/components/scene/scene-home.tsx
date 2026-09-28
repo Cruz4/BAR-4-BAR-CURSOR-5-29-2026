@@ -32,7 +32,7 @@ import { SceneHouseBarPin } from '@/components/scene/scene-house-bar-pin';
 import { SceneWeatherChip } from '@/components/scene/scene-weather-chip';
 import { SceneBoothMemoryCard } from '@/components/scene/scene-booth-memory-card';
 import { SceneBlockAtmosphere } from '@/components/scene/scene-block-atmosphere';
-import { InfiniteFeedSentinel } from '@/components/scene/infinite-feed-sentinel';
+import { SectionPager } from '@/components/scene/section-pager';
 import { SceneFeedJumpHints } from '@/components/scene/scene-feed-jump-hints';
 import { SceneUniversalSearch } from '@/components/scene/scene-universal-search';
 import { SceneChartSpotlight } from '@/components/scene/scene-chart-spotlight';
@@ -102,7 +102,7 @@ import {
   COOKIE_CONSENT_CHANGED_EVENT,
   hasMarketingCookieConsent,
 } from '@/lib/tiktok-pixel';
-import { quotePressSlotLabel, type QuotePressSlot } from '@/lib/profile/quote-press';
+import type { QuotePressSlot } from '@/lib/profile/quote-press';
 import { isProOrTrial } from '@/lib/subscription';
 import { postGamificationEvent } from '@/lib/gamification-client';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
@@ -114,6 +114,7 @@ import {
 } from '@/lib/scene-home';
 import { parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
 import {
+  BLOCK_FETCH_PER_OWNER,
   BLOCK_PAGE_SIZE,
   DISCOVER_PAGE_SIZE,
   SCENE_BLOCK_EXPANDED_KEY,
@@ -271,8 +272,81 @@ function SceneComposer({
     }
   };
 
+  const imprintPreviewActive = imprintOn && Boolean(text.trim());
+
+  const composerAttachTools = (
+    <>
+      <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+        <ImageAttachComposer
+          image={image}
+          onImageChange={setImage}
+          clip={clip}
+          onClipChange={setClip}
+          disabled={busy}
+          compact
+          onError={(message) =>
+            toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
+          }
+        />
+      <GifAttachButton
+        disabled={busy}
+        image={image}
+        onImageChange={setImage}
+        clip={clip}
+        onClipChange={setClip}
+      />
+      <EmojiPickerButton
+        compact
+        disabled={busy}
+        onInsert={insertEmoji}
+        className="text-muted-foreground hover:text-primary"
+      />
+      <button
+        type="button"
+        onClick={() => setPollOpen((value) => !value)}
+        disabled={busy}
+        className={cn(
+          'inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider transition-colors',
+          pollOpen ? 'text-cyan-300' : 'text-muted-foreground/70 hover:text-cyan-300'
+        )}
+      >
+        <BarChart3 className="h-3.5 w-3.5" /> Poll
+      </button>
+      {showImprintToggle ? (
+        <button
+          type="button"
+          onClick={toggleImprint}
+          disabled={busy}
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
+            imprintOn
+              ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
+              : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
+          )}
+        >
+          <Sparkles className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')} />
+          Imprint
+        </button>
+      ) : null}
+    </>
+  );
+
+  const composerActionRow = (
+    <div className="flex min-w-0 items-center gap-1 overflow-x-auto px-0.5 py-0.5 sm:px-1">
+      {composerAttachTools}
+      <Button
+        size="sm"
+        className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"
+        disabled={busy || !pollReady || (!text.trim() && !voice && !image && !clip)}
+        onClick={() => void submit()}
+      >
+        <Send className="h-3 w-3" /> Post
+      </Button>
+    </div>
+  );
+
   return (
-    <div data-tour="scene-composer" className="relative">
+    <div data-tour="scene-composer" className="relative space-y-1.5">
       <MentionField value={text} onChange={setText} excludeUserId={user?.id}>
         <Textarea
           ref={textRef}
@@ -296,8 +370,8 @@ function SceneComposer({
         />
       </MentionField>
       <ComposerLinkPreview text={text} />
-      {imprintOn && text.trim() ? (
-        <div className="mt-2 space-y-2">
+      {imprintPreviewActive ? (
+        <div className="space-y-2">
           <QuotePressCard
             ref={imprintPreviewRef}
             text={text}
@@ -309,11 +383,10 @@ function SceneComposer({
             shuffleRemaining={shuffleRemaining}
             shuffleCap={shuffleCap}
             slots={imprintSlots}
+            faders={imprintFaders}
             isPro={isPro}
             busy={busy || slotBusy}
-            onLockSlot={() => {
-              if (!isPro) return;
-              const label = quotePressSlotLabel(imprintFaders);
+            onLockSlot={(label) => {
               const next: QuotePressSlot = {
                 id: `qp-${Date.now()}`,
                 faders: { ...imprintFaders },
@@ -346,74 +419,7 @@ function SceneComposer({
           disabled={busy}
         />
       ) : null}
-      <div className="mt-1.5 flex min-w-0 items-center gap-1 overflow-x-auto">
-        <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
-          <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
-        </div>
-        <div className="shrink-0">
-          <ImageAttachComposer
-            image={image}
-            onImageChange={setImage}
-            clip={clip}
-            onClipChange={setClip}
-            disabled={busy}
-            compact
-            onError={(message) =>
-              toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
-            }
-          />
-        </div>
-        <GifAttachButton
-          disabled={busy}
-          image={image}
-          onImageChange={setImage}
-          clip={clip}
-          onClipChange={setClip}
-        />
-        <EmojiPickerButton
-          compact
-          disabled={busy}
-          onInsert={insertEmoji}
-          className="text-muted-foreground hover:text-primary"
-        />
-        <button
-          type="button"
-          onClick={() => setPollOpen((value) => !value)}
-          disabled={busy}
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-code text-[9px] font-bold uppercase tracking-wider transition-colors',
-            pollOpen ? 'text-cyan-300' : 'text-muted-foreground/70 hover:text-cyan-300'
-          )}
-        >
-          <BarChart3 className="h-3.5 w-3.5" /> Poll
-        </button>
-        {showImprintToggle ? (
-          <button
-            type="button"
-            onClick={toggleImprint}
-            disabled={busy}
-            className={cn(
-              'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border px-1.5 py-1 font-code text-[9px] font-bold uppercase tracking-wider transition-all',
-              imprintOn
-                ? 'border-cyan-400/55 bg-cyan-500/20 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.28)]'
-                : 'border-transparent text-muted-foreground/70 hover:border-cyan-500/35 hover:bg-cyan-500/10 hover:text-cyan-300'
-            )}
-          >
-            <Sparkles
-              className={cn('h-3.5 w-3.5', imprintOn ? 'text-cyan-200' : 'text-cyan-400/80')}
-            />
-            Imprint
-          </button>
-        ) : null}
-        <Button
-          size="sm"
-          className="ml-auto h-7 shrink-0 gap-1 px-2.5 font-bold uppercase"
-          disabled={busy || !pollReady || (!text.trim() && !voice && !image && !clip)}
-          onClick={() => void submit()}
-        >
-          <Send className="h-3 w-3" /> Post
-        </Button>
-      </div>
+      {composerActionRow}
     </div>
   );
 }
@@ -442,8 +448,8 @@ export function SceneHome() {
   const [showMine, setShowMine] = useState(true);
   const [blockExpanded, setBlockExpanded] = useState(true);
   const [discoverExpanded, setDiscoverExpanded] = useState(true);
-  const [blockVisible, setBlockVisible] = useState(BLOCK_PAGE_SIZE);
-  const [discoverVisible, setDiscoverVisible] = useState(DISCOVER_PAGE_SIZE);
+  const [blockPage, setBlockPage] = useState(0);
+  const [discoverPage, setDiscoverPage] = useState(0);
   const [blockLastSeen, setBlockLastSeen] = useState<string | null>(null);
   const [discoverLastSeen, setDiscoverLastSeen] = useState<string | null>(null);
   const [immersiveFeed, setImmersiveFeed] = useState<'block' | 'discover' | null>(null);
@@ -494,7 +500,7 @@ export function SceneHome() {
 
   const setShowMinePersist = useCallback((next: boolean) => {
     setShowMine(next);
-    setBlockVisible(BLOCK_PAGE_SIZE);
+    setBlockPage(0);
     try {
       localStorage.setItem(SCENE_BLOCK_SHOW_MINE_KEY, next ? '1' : '0');
     } catch {
@@ -528,7 +534,7 @@ export function SceneHome() {
       email: user?.email,
       displayName: user?.displayName,
     }).map((f) => f.userId);
-    const feed = await fetchPostsByOwners([viewerId, ...friendIds], 8);
+    const feed = await fetchPostsByOwners([viewerId, ...friendIds], BLOCK_FETCH_PER_OWNER);
     setPosts((prev) => mergePosts(prev, feed));
   }, [user?.email, user?.displayName]);
 
@@ -548,7 +554,7 @@ export function SceneHome() {
       }
     };
 
-    void fetchPostsByOwners([user.id], 8)
+    void fetchPostsByOwners([user.id], BLOCK_FETCH_PER_OWNER)
       .then((ownPosts) => {
         if (cancelled) return;
         setPosts((prev) => mergePosts(prev, ownPosts));
@@ -875,16 +881,39 @@ export function SceneHome() {
     [blockPosts, friendDropCards]
   );
 
-  const visibleBlockFeedItems = blockFeedItems.slice(0, blockVisible);
-  const visibleDiscoverCards = discoverCards.slice(0, discoverVisible);
+  const blockPageCount = Math.max(1, Math.ceil(blockFeedItems.length / BLOCK_PAGE_SIZE) || 1);
+  const safeBlockPage = Math.min(Math.max(0, blockPage), blockPageCount - 1);
+  const visibleBlockFeedItems = blockFeedItems.slice(
+    safeBlockPage * BLOCK_PAGE_SIZE,
+    safeBlockPage * BLOCK_PAGE_SIZE + BLOCK_PAGE_SIZE
+  );
+
+  const discoverPageCount = Math.max(1, Math.ceil(discoverCards.length / DISCOVER_PAGE_SIZE) || 1);
+  const safeDiscoverPage = Math.min(Math.max(0, discoverPage), discoverPageCount - 1);
+  const visibleDiscoverCards = discoverCards.slice(
+    safeDiscoverPage * DISCOVER_PAGE_SIZE,
+    safeDiscoverPage * DISCOVER_PAGE_SIZE + DISCOVER_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (blockPage !== safeBlockPage) setBlockPage(safeBlockPage);
+  }, [blockPage, safeBlockPage]);
+
+  useEffect(() => {
+    if (discoverPage !== safeDiscoverPage) setDiscoverPage(safeDiscoverPage);
+  }, [discoverPage, safeDiscoverPage]);
 
   const applySceneScrollExtras = useCallback((extras?: Record<string, unknown>) => {
     if (!extras) return;
-    if (typeof extras.blockVisible === 'number') {
-      setBlockVisible((n) => Math.max(n, extras.blockVisible as number));
+    if (typeof extras.blockPage === 'number') {
+      setBlockPage(Math.max(0, extras.blockPage));
+    } else if (typeof extras.blockVisible === 'number') {
+      setBlockPage(Math.max(0, Math.floor((extras.blockVisible as number) / BLOCK_PAGE_SIZE)));
     }
-    if (typeof extras.discoverVisible === 'number') {
-      setDiscoverVisible((n) => Math.max(n, extras.discoverVisible as number));
+    if (typeof extras.discoverPage === 'number') {
+      setDiscoverPage(Math.max(0, extras.discoverPage));
+    } else if (typeof extras.discoverVisible === 'number') {
+      setDiscoverPage(Math.max(0, Math.floor((extras.discoverVisible as number) / DISCOVER_PAGE_SIZE)));
     }
     if (typeof extras.showMine === 'boolean') setShowMine(extras.showMine);
     if (typeof extras.blockExpanded === 'boolean') setBlockExpanded(extras.blockExpanded);
@@ -893,14 +922,36 @@ export function SceneHome() {
 
   const sceneScrollExtras = useCallback(
     () => ({
-      blockVisible,
-      discoverVisible,
+      blockPage: safeBlockPage,
+      discoverPage: safeDiscoverPage,
       showMine,
       blockExpanded,
       discoverExpanded,
     }),
-    [blockVisible, discoverVisible, showMine, blockExpanded, discoverExpanded]
+    [safeBlockPage, safeDiscoverPage, showMine, blockExpanded, discoverExpanded]
   );
+
+  const goBlockPage = useCallback((next: number) => {
+    setBlockPage(next);
+    if (typeof document === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      document.getElementById('scene-block-body')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }, []);
+
+  const goDiscoverPage = useCallback((next: number) => {
+    setDiscoverPage(next);
+    if (typeof document === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      document.getElementById('scene-discover-body')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }, []);
 
   const handleSceneFeedLinkCapture = useCallback(
     (event: React.MouseEvent) => {
@@ -961,7 +1012,7 @@ export function SceneHome() {
         (item) => item.kind === 'post' && item.post.id === target.postId
       );
       if (idx >= 0) {
-        setBlockVisible((n) => Math.max(n, idx + 1));
+        setBlockPage(Math.floor(idx / BLOCK_PAGE_SIZE));
       }
       if (showPortalHub) {
         markBlockSeen();
@@ -979,18 +1030,6 @@ export function SceneHome() {
     window.addEventListener('hashchange', run);
     return () => window.removeEventListener('hashchange', run);
   }, [blockFeedItems, showPortalHub, portalFeed, router]);
-
-  useEffect(() => {
-    setBlockVisible((n) =>
-      Math.min(Math.max(BLOCK_PAGE_SIZE, n), Math.max(BLOCK_PAGE_SIZE, blockFeedItems.length))
-    );
-  }, [blockFeedItems.length]);
-
-  useEffect(() => {
-    setDiscoverVisible((n) =>
-      Math.min(Math.max(DISCOVER_PAGE_SIZE, n), Math.max(DISCOVER_PAGE_SIZE, discoverCards.length))
-    );
-  }, [discoverCards.length]);
 
   const newBlockCount = useMemo(() => {
     if ((!showPortalHub && blockExpanded) || !user?.id || !blockLastSeen) return 0;
@@ -1067,14 +1106,6 @@ export function SceneHome() {
     setDiscover((prev) =>
       prev ? { ...prev, locks: prev.locks.filter((lock) => lock.id !== lockId) } : prev
     );
-  }, []);
-
-  const loadMoreBlock = useCallback(() => {
-    setBlockVisible((n) => n + BLOCK_PAGE_SIZE);
-  }, []);
-
-  const loadMoreDiscover = useCallback(() => {
-    setDiscoverVisible((n) => n + DISCOVER_PAGE_SIZE);
   }, []);
 
   const respond = async (friendship: Friendship, accept: boolean) => {
@@ -1352,6 +1383,15 @@ export function SceneHome() {
 
               {blockExpanded ? (
                 <div id="scene-block-body" className="space-y-4">
+                  <SectionPager
+                    edge="top"
+                    page={safeBlockPage}
+                    pageCount={blockPageCount}
+                    total={blockFeedItems.length}
+                    unit="items"
+                    onPrev={() => goBlockPage(Math.max(0, safeBlockPage - 1))}
+                    onNext={() => goBlockPage(Math.min(blockPageCount - 1, safeBlockPage + 1))}
+                  />
                   {!blockReady && visibleBlockFeedItems.length === 0 ? (
                     <>
                       <FeedCardSkeleton />
@@ -1397,10 +1437,13 @@ export function SceneHome() {
                       Catching up your circle…
                     </p>
                   ) : null}
-                  <InfiniteFeedSentinel
-                    key={`block-${blockVisible}`}
-                    disabled={visibleBlockFeedItems.length >= blockFeedItems.length}
-                    onVisible={loadMoreBlock}
+                  <SectionPager
+                    page={safeBlockPage}
+                    pageCount={blockPageCount}
+                    total={blockFeedItems.length}
+                    unit="items"
+                    onPrev={() => goBlockPage(Math.max(0, safeBlockPage - 1))}
+                    onNext={() => goBlockPage(Math.min(blockPageCount - 1, safeBlockPage + 1))}
                   />
                 </div>
               ) : null}
@@ -1452,6 +1495,15 @@ export function SceneHome() {
 
               {discoverExpanded ? (
                 <div id="scene-discover-body" className="space-y-4">
+                  <SectionPager
+                    edge="top"
+                    page={safeDiscoverPage}
+                    pageCount={discoverPageCount}
+                    total={discoverCards.length}
+                    unit="cards"
+                    onPrev={() => goDiscoverPage(Math.max(0, safeDiscoverPage - 1))}
+                    onNext={() => goDiscoverPage(Math.min(discoverPageCount - 1, safeDiscoverPage + 1))}
+                  />
                   <SceneHouseBarPin variant="dock" />
                   {!discoverReady && visibleDiscoverCards.length === 0 ? (
                     <>
@@ -1480,10 +1532,13 @@ export function SceneHome() {
                       </p>
                     </div>
                   )}
-                  <InfiniteFeedSentinel
-                    key={`discover-${discoverVisible}`}
-                    disabled={visibleDiscoverCards.length >= discoverCards.length}
-                    onVisible={loadMoreDiscover}
+                  <SectionPager
+                    page={safeDiscoverPage}
+                    pageCount={discoverPageCount}
+                    total={discoverCards.length}
+                    unit="cards"
+                    onPrev={() => goDiscoverPage(Math.max(0, safeDiscoverPage - 1))}
+                    onNext={() => goDiscoverPage(Math.min(discoverPageCount - 1, safeDiscoverPage + 1))}
                   />
                 </div>
               ) : null}

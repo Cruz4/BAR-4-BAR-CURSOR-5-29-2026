@@ -147,7 +147,11 @@ const CATALOG_SECTION_DEFS: Array<{
   },
 ];
 
-const ZONE_COPY: Record<(typeof CATALOG_SECTION_DEFS)[number]['zone'], { title: string; note: string }> = {
+type CatalogZoneKey = (typeof CATALOG_SECTION_DEFS)[number]['zone'];
+
+const OPEN_ZONES_STORAGE_KEY = 'b4b.releaseCatalog.openZones';
+
+const ZONE_COPY: Record<CatalogZoneKey, { title: string; note: string }> = {
   public: {
     title: 'Live & public',
     note: 'House music + its lyric strands stay together. Other live music and standalone lyric DNA are separate below.',
@@ -329,10 +333,14 @@ function CatalogVisibilityPills({
 function CatalogZone({
   zone,
   itemCount,
+  open,
+  onToggle,
   children,
 }: {
-  zone: keyof typeof ZONE_COPY;
+  zone: CatalogZoneKey;
   itemCount: number;
+  open: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   const copy = ZONE_COPY[zone];
@@ -351,37 +359,58 @@ function CatalogZone({
     >
       <header
         className={cn(
-          'border-b px-3 py-2.5 sm:px-4 sm:py-3',
-          zone === 'public' && 'border-emerald-400/15 bg-black/20',
-          zone === 'private' && 'border-cyan-400/15 bg-black/20',
-          zone === 'vault' && 'border-slate-400/15 bg-black/20'
+          open ? 'border-b' : 'border-b border-transparent',
+          zone === 'public' && 'border-emerald-400/15',
+          zone === 'private' && 'border-cyan-400/15',
+          zone === 'vault' && 'border-slate-400/15'
         )}
       >
-        <div className="flex items-center gap-2">
-          <p
-            className={cn(
-              'min-w-0 flex-1 text-center font-headline text-xs font-bold uppercase tracking-[0.16em] sm:text-sm',
-              zone === 'public' && 'text-emerald-100/95',
-              zone === 'private' && 'text-cyan-100/95',
-              zone === 'vault' && 'text-slate-100/95'
-            )}
-          >
-            {copy.title}
-          </p>
-          <span
-            className={cn(
-              'shrink-0 rounded-full border px-2 py-0.5 font-code text-[10px] font-bold tabular-nums sm:text-[11px]',
-              zone === 'public' && 'border-emerald-400/30 bg-emerald-500/12 text-emerald-100',
-              zone === 'private' && 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100',
-              zone === 'vault' && 'border-slate-400/30 bg-slate-500/10 text-slate-100'
-            )}
-          >
-            {itemCount}
+        <button
+          type="button"
+          className={cn(
+            'flex w-full flex-col gap-1.5 px-3 py-2.5 text-left transition-colors sm:px-4 sm:py-3',
+            'cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.06]',
+            zone === 'public' && 'bg-black/20',
+            zone === 'private' && 'bg-black/20',
+            zone === 'vault' && 'bg-black/20'
+          )}
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          <span className="flex w-full items-center gap-2">
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+                open && 'rotate-180'
+              )}
+            />
+            <span
+              className={cn(
+                'min-w-0 flex-1 text-center font-headline text-xs font-bold uppercase tracking-[0.16em] sm:text-sm',
+                zone === 'public' && 'text-emerald-100/95',
+                zone === 'private' && 'text-cyan-100/95',
+                zone === 'vault' && 'text-slate-100/95'
+              )}
+            >
+              {copy.title}
+            </span>
+            <span
+              className={cn(
+                'shrink-0 rounded-full border px-2 py-0.5 font-code text-[10px] font-bold tabular-nums sm:text-[11px]',
+                zone === 'public' && 'border-emerald-400/30 bg-emerald-500/12 text-emerald-100',
+                zone === 'private' && 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100',
+                zone === 'vault' && 'border-slate-400/30 bg-slate-500/10 text-slate-100'
+              )}
+            >
+              {itemCount}
+            </span>
           </span>
-        </div>
-        <p className="mt-1.5 text-center text-[11px] leading-snug text-muted-foreground sm:text-xs">{copy.note}</p>
+          <span className="block text-center text-[11px] leading-snug text-muted-foreground sm:text-xs">
+            {copy.note}
+          </span>
+        </button>
       </header>
-      <div className="space-y-2 p-2 sm:p-3">{children}</div>
+      {open ? <div className="space-y-2 p-2 sm:p-3">{children}</div> : null}
     </section>
   );
 }
@@ -514,6 +543,20 @@ function ReleaseCatalogBody({
   useEffect(() => {
     if (!catalogOpen) return;
     const state = consumeReleaseCatalogReopen();
+    if (state?.sectionId) {
+      const match = /^release-catalog-(.+)$/.exec(state.sectionId);
+      const key = match?.[1];
+      if (key === 'house') {
+        setOpenZones((current) => new Set(current).add('public'));
+        setOpenSections((current) => new Set(current).add('house'));
+      } else if (key) {
+        const def = CATALOG_SECTION_DEFS.find((section) => section.id === key);
+        if (def) {
+          setOpenZones((current) => new Set(current).add(def.zone));
+          setOpenSections((current) => new Set(current).add(key));
+        }
+      }
+    }
     applyReleaseCatalogScrollRestore(state);
   }, [catalogOpen]);
 
@@ -733,7 +776,9 @@ function ReleaseCatalogBody({
 
   const [showEmptySections, setShowEmptySections] = useState(false);
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set());
+  const [openZones, setOpenZones] = useState<Set<CatalogZoneKey>>(() => new Set());
   const [catalogPrefsReady, setCatalogPrefsReady] = useState(false);
+  const [zonePrefsReady, setZonePrefsReady] = useState(false);
 
   const liveDnaRows = useMemo(() => liveLyricDnaCatalogRows(albums), [albums]);
 
@@ -935,6 +980,27 @@ function ReleaseCatalogBody({
   }, []);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(OPEN_ZONES_STORAGE_KEY);
+      if (raw) {
+        const ids = JSON.parse(raw) as unknown;
+        if (Array.isArray(ids)) {
+          setOpenZones(
+            new Set(
+              ids.filter(
+                (id): id is CatalogZoneKey => id === 'public' || id === 'private' || id === 'vault'
+              )
+            )
+          );
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setZonePrefsReady(true);
+  }, []);
+
+  useEffect(() => {
     if (!catalogPrefsReady) return;
     try {
       window.localStorage.setItem(
@@ -946,7 +1012,34 @@ function ReleaseCatalogBody({
     }
   }, [catalogPrefsReady, openSections]);
 
+  useEffect(() => {
+    if (!zonePrefsReady) return;
+    try {
+      window.localStorage.setItem(OPEN_ZONES_STORAGE_KEY, JSON.stringify([...openZones]));
+    } catch {
+      /* ignore */
+    }
+  }, [zonePrefsReady, openZones]);
+
+  const toggleZone = (zone: CatalogZoneKey) => {
+    setOpenZones((current) => {
+      const next = new Set(current);
+      if (next.has(zone)) next.delete(zone);
+      else next.add(zone);
+      return next;
+    });
+  };
+
   const scrollToGroup = (key: CatalogSectionId | 'house') => {
+    const zone: CatalogZoneKey =
+      key === 'house'
+        ? 'public'
+        : CATALOG_SECTION_DEFS.find((def) => def.id === key)?.zone ?? 'public';
+    setOpenZones((current) => {
+      const next = new Set(current);
+      next.add(zone);
+      return next;
+    });
     setOpenSections((current) => {
       const next = new Set(current);
       next.add(key);
@@ -1504,18 +1597,33 @@ function ReleaseCatalogBody({
 
           <div className="flex w-full min-w-0 flex-col gap-4 sm:gap-5">
             {houseRows.length || activeSections.some((s) => s.zone === 'public') ? (
-              <CatalogZone zone="public" itemCount={publicZoneItemCount}>
+              <CatalogZone
+                zone="public"
+                itemCount={publicZoneItemCount}
+                open={openZones.has('public')}
+                onToggle={() => toggleZone('public')}
+              >
                 {houseRows.length ? renderHouseCard() : null}
                 {activeSections.filter((s) => s.zone === 'public').map((section) => renderGroupCard(section))}
               </CatalogZone>
             ) : null}
             {activeSections.some((s) => s.zone === 'private') ? (
-              <CatalogZone zone="private" itemCount={privateZoneItemCount}>
+              <CatalogZone
+                zone="private"
+                itemCount={privateZoneItemCount}
+                open={openZones.has('private')}
+                onToggle={() => toggleZone('private')}
+              >
                 {activeSections.filter((s) => s.zone === 'private').map((section) => renderGroupCard(section))}
               </CatalogZone>
             ) : null}
             {activeSections.some((s) => s.zone === 'vault') ? (
-              <CatalogZone zone="vault" itemCount={vaultZoneItemCount}>
+              <CatalogZone
+                zone="vault"
+                itemCount={vaultZoneItemCount}
+                open={openZones.has('vault')}
+                onToggle={() => toggleZone('vault')}
+              >
                 {activeSections.filter((s) => s.zone === 'vault').map((section) => renderGroupCard(section))}
               </CatalogZone>
             ) : null}

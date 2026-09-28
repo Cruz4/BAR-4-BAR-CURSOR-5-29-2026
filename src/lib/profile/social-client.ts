@@ -20,6 +20,7 @@ import {
   getDoc,
   getDocs,
   limit as limitTo,
+  orderBy,
   query,
   runTransaction,
   setDoc,
@@ -599,7 +600,7 @@ function postFromDoc(id: string, data: Record<string, unknown>): ProfilePost {
 
 type FetchPostsOpts = { enrichSlugs?: boolean };
 
-/** Wall — a single artist's posts, newest first (id-ordered). */
+/** Wall — a single artist's posts, newest first. */
 export async function fetchPostsByOwner(
   ownerId: string,
   max = 20,
@@ -608,7 +609,12 @@ export async function fetchPostsByOwner(
   if (!ownerId) return [];
   try {
     const snap = await getDocs(
-      query(collection(db, 'posts'), where('ownerId', '==', ownerId), limitTo(max))
+      query(
+        collection(db, 'posts'),
+        where('ownerId', '==', ownerId),
+        orderBy('createdAt', 'desc'),
+        limitTo(max)
+      )
     );
     const raw = snap.docs.map((d) => postFromDoc(d.id, d.data()));
     const posts = opts?.enrichSlugs === false ? raw : await enrichPostsWithLiveSlugs(raw);
@@ -1122,6 +1128,95 @@ export async function fetchHasLiked(postId: string): Promise<boolean> {
     return snap.exists();
   } catch {
     return false;
+  }
+}
+
+export type PostLiker = {
+  userId: string;
+  createdAt: string;
+  displayName: string;
+  slug?: string;
+  avatarUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
+};
+
+/** Newest loves first — enriched with live Artist Home names. */
+export async function fetchPostLikers(postId: string, max = 250): Promise<PostLiker[]> {
+  const id = postId.trim();
+  if (!id) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'posts', id, 'likes'), limitTo(Math.max(1, Math.min(500, max))))
+    );
+    const rows = snap.docs
+      .map((d) => ({
+        userId: d.id,
+        createdAt: String(d.data().createdAt || ''),
+      }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.userId.localeCompare(a.userId));
+    if (!rows.length) return [];
+    const metas = await fetchPublicArtistMetas(rows.map((r) => ({ userId: r.userId })));
+    return rows.map((r) => {
+      const meta = metas.get(r.userId);
+      return {
+        userId: r.userId,
+        createdAt: r.createdAt,
+        displayName: meta?.displayName?.trim() || 'Artist',
+        ...(meta?.slug ? { slug: meta.slug } : {}),
+        ...(meta?.avatarUrl ? { avatarUrl: meta.avatarUrl } : {}),
+        ...(meta?.starMarkUseStar === true ? { starMarkUseStar: true } : {}),
+        ...(typeof meta?.starMarkSeed === 'number' ? { starMarkSeed: meta.starMarkSeed } : {}),
+      };
+    });
+  } catch (err) {
+    console.warn('[post-likers]', err);
+    return [];
+  }
+}
+
+export type PostReverber = PostLiker & { wallPostId?: string };
+
+/** Newest Reverbs first — root post id, not a Reverb wall copy. */
+export async function fetchPostReverbers(rootPostId: string, max = 250): Promise<PostReverber[]> {
+  const id = rootPostId.trim();
+  if (!id) return [];
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'posts', id, 'reverbs'), limitTo(Math.max(1, Math.min(500, max))))
+    );
+    const rows = snap.docs
+      .map((d) => {
+        const data = d.data();
+        const wallPostId =
+          typeof data.wallPostId === 'string' && data.wallPostId.trim()
+            ? data.wallPostId.trim()
+            : undefined;
+        return {
+          userId: d.id,
+          createdAt: String(data.createdAt || ''),
+          ...(wallPostId ? { wallPostId } : {}),
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.userId.localeCompare(a.userId));
+    if (!rows.length) return [];
+    const metas = await fetchPublicArtistMetas(rows.map((r) => ({ userId: r.userId })));
+    return rows.map((r) => {
+      const meta = metas.get(r.userId);
+      return {
+        userId: r.userId,
+        createdAt: r.createdAt,
+        displayName: meta?.displayName?.trim() || 'Artist',
+        ...(r.wallPostId ? { wallPostId: r.wallPostId } : {}),
+        ...(meta?.slug ? { slug: meta.slug } : {}),
+        ...(meta?.avatarUrl ? { avatarUrl: meta.avatarUrl } : {}),
+        ...(meta?.starMarkUseStar === true ? { starMarkUseStar: true } : {}),
+        ...(typeof meta?.starMarkSeed === 'number' ? { starMarkSeed: meta.starMarkSeed } : {}),
+      };
+    });
+  } catch (err) {
+    console.warn('[post-reverbers]', err);
+    return [];
   }
 }
 

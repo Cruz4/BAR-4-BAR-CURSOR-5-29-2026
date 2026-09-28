@@ -4,6 +4,8 @@
 
 /** Friend/circle posts per page on Scene Your Block. */
 export const BLOCK_PAGE_SIZE = 25;
+/** Newest posts loaded per circle member for Your Block (client-paged). */
+export const BLOCK_FETCH_PER_OWNER = 80;
 /** Discover cards per page on Scene home and /discover. */
 export const DISCOVER_PAGE_SIZE = 40;
 

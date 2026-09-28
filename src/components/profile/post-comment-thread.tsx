@@ -48,7 +48,6 @@ import { PostPollCard } from '@/components/profile/post-poll';
 import { useAuth } from '@/hooks/use-auth';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
-import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import {
   resolveViewerThreadImprintLock,
   writeImprintThreadLock,
@@ -491,11 +490,11 @@ export function PostCommentThread({
                 shuffleRemaining={shuffleRemaining}
                 shuffleCap={shuffleCap}
                 slots={imprintSlots}
+                faders={imprintFaders}
                 isPro={isPro}
                 busy={busy || slotBusy || imprintStyleLocked}
-                onLockSlot={() => {
-                  if (!isPro || imprintStyleLocked) return;
-                  const label = quotePressSlotLabel(imprintFaders);
+                onLockSlot={(label) => {
+                  if (imprintStyleLocked) return;
                   void persistImprintSlots([
                     ...imprintSlots,
                     {

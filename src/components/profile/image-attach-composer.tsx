@@ -21,6 +21,10 @@ type ImageAttachComposerProps = {
   onClipChange?: (clip: PendingWallClip | null) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Tall left rail in booth imprint toolbar — preview only, no inline thumb. */
+  railPreview?: boolean;
+  /** When media is attached, hide inline preview (shown in rail instead). */
+  hidePreview?: boolean;
   maxBytes?: number;
   onError?: (message: string) => void;
 };
@@ -32,6 +36,8 @@ export function ImageAttachComposer({
   onClipChange,
   disabled = false,
   compact = false,
+  railPreview = false,
+  hidePreview = false,
   maxBytes,
   onError,
 }: ImageAttachComposerProps) {
@@ -74,6 +80,133 @@ export function ImageAttachComposer({
   };
 
   const attached = clip || image;
+
+  if (railPreview && attached) {
+    return (
+      <div className="relative h-14 w-14 shrink-0 self-center overflow-hidden rounded-lg border border-white/10 bg-black/30">
+        {clip ? (
+          <ExpandableMedia
+            kind="video"
+            src={clip.previewUrl}
+            alt="Clip preview"
+            thumbClassName="h-full w-full object-cover"
+          />
+        ) : image ? (
+          <ExpandableMedia
+            kind="image"
+            src={image.previewUrl}
+            alt="Photo preview"
+            thumbClassName="h-full w-full object-cover"
+          />
+        ) : null}
+        <button
+          type="button"
+          onClick={clearMedia}
+          disabled={disabled || busy}
+          className="absolute right-0.5 top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-white/80 hover:text-red-400"
+          title={clip ? 'Remove clip' : 'Remove photo'}
+          aria-label={clip ? 'Remove clip' : 'Remove photo'}
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={allowVideo ? 'image/*,video/*' : 'image/*'}
+          className="sr-only"
+          tabIndex={-1}
+          disabled={disabled || busy}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            if (allowVideo) {
+              setStudioInitialFile(file);
+              setStudioMode('library');
+              setStudioOpen(true);
+              return;
+            }
+            void applyFile(file);
+          }}
+        />
+        {allowVideo ? (
+          <MediaStudioDialog
+            open={studioOpen}
+            mode={studioMode}
+            initialFile={studioInitialFile}
+            onOpenChange={(next) => {
+              setStudioOpen(next);
+              if (!next) setStudioInitialFile(null);
+            }}
+            onExportImage={(next) => {
+              revokePostImagePreview(image);
+              revokeWallClipPreview(clip);
+              onClipChange?.(null);
+              onImageChange(next);
+            }}
+            onExportClip={(next) => {
+              revokePostImagePreview(image);
+              revokeWallClipPreview(clip);
+              onImageChange(null);
+              onClipChange?.(next);
+            }}
+            onError={onError}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
+  if (hidePreview && attached) {
+    return (
+      <>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={allowVideo ? 'image/*,video/*' : 'image/*'}
+          className="sr-only"
+          tabIndex={-1}
+          disabled={disabled || busy}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            if (allowVideo) {
+              setStudioInitialFile(file);
+              setStudioMode('library');
+              setStudioOpen(true);
+              return;
+            }
+            void applyFile(file);
+          }}
+        />
+        {allowVideo ? (
+          <MediaStudioDialog
+            open={studioOpen}
+            mode={studioMode}
+            initialFile={studioInitialFile}
+            onOpenChange={(next) => {
+              setStudioOpen(next);
+              if (!next) setStudioInitialFile(null);
+            }}
+            onExportImage={(next) => {
+              revokePostImagePreview(image);
+              revokeWallClipPreview(clip);
+              onClipChange?.(null);
+              onImageChange(next);
+            }}
+            onExportClip={(next) => {
+              revokePostImagePreview(image);
+              revokeWallClipPreview(clip);
+              onImageChange(null);
+              onClipChange?.(next);
+            }}
+            onError={onError}
+          />
+        ) : null}
+      </>
+    );
+  }
 
   return (
     <div className={cn(compact ? 'inline-flex shrink-0 items-center' : 'space-y-2')}>

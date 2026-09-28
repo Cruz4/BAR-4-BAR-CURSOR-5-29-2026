@@ -103,8 +103,13 @@ export function GifAttachButton({
         GIF
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[min(86dvh,36rem)] w-[min(calc(100vw-1.25rem),28rem)] overflow-hidden border-white/10 bg-[#0b0f14] p-4 text-white">
-          <DialogHeader>
+        <DialogContent
+          className={cn(
+            'flex max-h-[min(92dvh,44rem)] w-[min(calc(100vw-1rem),40rem)] max-w-[min(calc(100vw-1rem),40rem)] flex-col gap-3 overflow-hidden',
+            'border-white/10 bg-[#0b0f14] p-4 text-white sm:p-5'
+          )}
+        >
+          <DialogHeader className="shrink-0 space-y-1 text-left">
             <DialogTitle className="text-sm font-bold uppercase tracking-widest text-fuchsia-200">
               Add a GIF
             </DialogTitle>
@@ -112,7 +117,7 @@ export function GifAttachButton({
               Search Giphy. The GIF posts with your message.
             </DialogDescription>
           </DialogHeader>
-          <div className="relative">
+          <div className="relative shrink-0">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-white/40" />
             <Input
               value={query}
@@ -121,24 +126,33 @@ export function GifAttachButton({
               className="h-9 border-white/10 bg-black/40 pl-8 text-sm"
             />
           </div>
-          {error ? <p className="text-xs text-amber-200">{error}</p> : null}
-          <div className="grid max-h-[22rem] grid-cols-3 gap-2 overflow-y-auto pr-1">
-            {gifs.map((gif) => (
-              <button
-                key={gif.id}
-                type="button"
-                onClick={() => pick(gif)}
-                className="overflow-hidden rounded-md bg-black ring-1 ring-white/10 hover:ring-fuchsia-300/60"
-                title={gif.title}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={gif.previewUrl} alt={gif.title} className="h-24 w-full object-cover" />
-              </button>
-            ))}
+          {error ? <p className="shrink-0 text-xs text-amber-200">{error}</p> : null}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {gifs.map((gif) => (
+                <button
+                  key={gif.id}
+                  type="button"
+                  onClick={() => pick(gif)}
+                  className="flex min-h-[9rem] items-center justify-center rounded-lg bg-black/70 p-2 ring-1 ring-white/10 transition hover:bg-black hover:ring-fuchsia-300/60 sm:min-h-[10rem]"
+                  title={gif.title}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={gif.previewUrl}
+                    alt={gif.title}
+                    className="max-h-[min(12rem,28vh)] w-full object-contain"
+                    loading="lazy"
+                  />
+                </button>
+              ))}
+            </div>
+            {!busy && !error && gifs.length === 0 ? (
+              <p className="py-6 text-center text-xs text-white/45">No GIFs for that search.</p>
+            ) : null}
           </div>
-          {busy ? <p className={cn('text-[10px] uppercase tracking-widest text-white/40')}>Searching…</p> : null}
-          {!busy && !error && gifs.length === 0 ? (
-            <p className="text-xs text-white/45">No GIFs for that search.</p>
+          {busy ? (
+            <p className="shrink-0 text-[10px] uppercase tracking-widest text-white/40">Searching…</p>
           ) : null}
         </DialogContent>
       </Dialog>

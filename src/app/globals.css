@@ -107,11 +107,15 @@
     font-variant-emoji: normal;
   }
 
-  /* Wall / Booth / comment composers only (see data-composer-field on MentionField). */
+  /* Wall / Booth / comment composers only (see data-composer-field on MentionField).
+     font-variant-emoji: emoji stretches ASCII digits on Windows (keycap-wide gaps).
+     Emoji fonts stay in the stack so pictographs still fall back to color glyphs. */
   [data-composer-field] textarea,
   [data-composer-field] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']) {
-    font-family: Inter, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
-    font-variant-emoji: emoji;
+    font-family: Inter, 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
+    font-variant-emoji: normal;
+    font-variant-numeric: normal;
+    letter-spacing: normal;
   }
 }
 

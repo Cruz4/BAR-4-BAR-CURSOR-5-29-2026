@@ -60,7 +60,6 @@ import { QuotePressCard } from '@/components/profile/quote-press-card';
 import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
-import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import {
   extForVoiceType,
   revokeVoiceObjectUrl,
@@ -660,17 +659,17 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                 shuffleRemaining={shuffleRemaining}
                 shuffleCap={shuffleCap}
                 slots={imprintSlots}
+                faders={imprintFaders}
                 isPro={isPro}
                 busy={busy || slotBusy}
-                onLockSlot={() => {
-                  if (!isPro) return;
+                onLockSlot={(label) => {
                   void persistImprintSlots([
                     ...imprintSlots,
                     {
                       id: `qp-${Date.now()}`,
                       faders: { ...imprintFaders },
                       lockedAt: new Date().toISOString(),
-                      label: quotePressSlotLabel(imprintFaders),
+                      label,
                     },
                   ]);
                 }}

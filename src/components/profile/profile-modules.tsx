@@ -86,7 +86,6 @@ import { queueAutoImprintSyndication } from '@/lib/profile/imprint-syndicate-cli
 import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
-import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import { activityPostHash, parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
@@ -1182,11 +1181,10 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 shuffleRemaining={shuffleRemaining}
                 shuffleCap={shuffleCap}
                 slots={imprintSlots}
+                faders={imprintFaders}
                 isPro={isPro}
                 busy={busy || slotBusy}
-                onLockSlot={() => {
-                  if (!isPro) return;
-                  const label = quotePressSlotLabel(imprintFaders);
+                onLockSlot={(label) => {
                   void persistImprintSlots([
                     ...imprintSlots,
                     {

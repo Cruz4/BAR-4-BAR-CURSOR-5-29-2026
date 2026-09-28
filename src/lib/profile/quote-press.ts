@@ -779,8 +779,87 @@ export function quotePressCssVars(tokens: QuotePressTokens): Record<string, stri
   };
 }
 
+const SLOT_LABEL_ADJECTIVES = [
+  'Neon',
+  'Velvet',
+  'Grit',
+  'Ivory',
+  'Halo',
+  'Cipher',
+  'Brass',
+  'Ash',
+  'Copper',
+  'Midnight',
+  'Solar',
+  'Static',
+  'Chrome',
+  'Ember',
+  'Frost',
+  'Pulse',
+  'Drift',
+  'Rumor',
+  'Velour',
+  'Signal',
+  'Sable',
+  'Lumen',
+  'Rogue',
+  'Plume',
+] as const;
+
+const SLOT_LABEL_NOUNS = [
+  'Press',
+  'Imprint',
+  'Glyph',
+  'Stamp',
+  'Echo',
+  'Thread',
+  'Bloom',
+  'Frame',
+  'Rune',
+  'Mark',
+  'Layer',
+  'Spark',
+  'Tone',
+  'Grain',
+  'Rim',
+  'Fold',
+  'Cast',
+  'Wave',
+  'Hush',
+  'Sheen',
+  'Mote',
+  'Plate',
+  'Weave',
+  'Glint',
+] as const;
+
+/** Legacy fallback when a slot has no stored label. */
 export function quotePressSlotLabel(faders: QuotePressFaders): string {
   const h = identityHash(hashSeed('imprint'), faders);
-  const moods = ['Neon', 'Velvet', 'Grit', 'Ivory', 'Ink', 'Halo', 'Cipher', 'Brass'];
-  return `${moods[h % moods.length]} · ${faders.heat}/${faders.grain}/${faders.pace}/${faders.ink}`;
+  const adj = SLOT_LABEL_ADJECTIVES[h % SLOT_LABEL_ADJECTIVES.length];
+  const noun = SLOT_LABEL_NOUNS[(h >>> 8) % SLOT_LABEL_NOUNS.length];
+  return `${adj} ${noun}`;
+}
+
+/** Unique name for a new lock — avoids repeating labels already in the vault. */
+export function allocateQuotePressSlotLabel(
+  existing: QuotePressSlot[],
+  faders: QuotePressFaders
+): string {
+  const taken = new Set(
+    existing
+      .map((s) => (s.label || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const h = identityHash(hashSeed('imprint-slot'), faders);
+  for (let i = 0; i < 120; i++) {
+    const mix = h + i * 7919;
+    const base = `${SLOT_LABEL_ADJECTIVES[mix % SLOT_LABEL_ADJECTIVES.length]} ${
+      SLOT_LABEL_NOUNS[(mix >>> 8) % SLOT_LABEL_NOUNS.length]
+    }`;
+    if (!taken.has(base.toLowerCase())) return base;
+    const suffixed = `${base} · ${i + 2}`;
+    if (!taken.has(suffixed.toLowerCase())) return suffixed;
+  }
+  return `Style ${existing.length + 1}`;
 }

@@ -471,14 +471,12 @@ export function ArtistHome({
         >
           <div className="min-w-0 space-y-5 lg:col-span-7">
             {config.featured.tagline || (isOwner && profile.slug && !previewMode) ? (
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 {config.featured.tagline ? (
                   <p className="min-w-0 text-[11px] font-bold uppercase tracking-[0.4em] text-[var(--ph-accent)]">
                     {config.featured.tagline}
                   </p>
-                ) : (
-                  <span className="min-w-0" />
-                )}
+                ) : null}
                 {profile.slug && !previewMode ? (
                   <ProfileReachStrip
                     slug={profile.slug}

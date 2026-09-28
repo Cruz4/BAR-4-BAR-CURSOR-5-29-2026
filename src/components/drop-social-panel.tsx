@@ -43,7 +43,6 @@ import { QuotePressCard } from '@/components/profile/quote-press-card';
 import { QuotePressComposerPanel } from '@/components/profile/quote-press-composer-panel';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
-import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import { revokePostImagePreview, type PendingPostImage } from '@/lib/profile/post-images';
 import { revokeWallClipPreview, type PendingWallClip } from '@/lib/profile/wall-clips';
 import type { RecordedVoiceClip } from '@/lib/profile/voice-notes';
@@ -493,11 +492,10 @@ export function DropSocialPanel({
                   shuffleRemaining={shuffleRemaining}
                   shuffleCap={shuffleCap}
                   slots={imprintSlots}
+                  faders={imprintFaders}
                   isPro={isPro}
                   busy={busy || slotBusy}
-                  onLockSlot={() => {
-                    if (!isPro) return;
-                    const label = quotePressSlotLabel(imprintFaders);
+                  onLockSlot={(label) => {
                     void persistImprintSlots([
                       ...imprintSlots,
                       {

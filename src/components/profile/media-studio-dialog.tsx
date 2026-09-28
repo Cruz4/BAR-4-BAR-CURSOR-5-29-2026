@@ -168,7 +168,7 @@ export function MediaStudioDialog({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewMusicUrl, setReviewMusicUrl] = useState<string | undefined>();
   const [exporting, setExporting] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [, setProgress] = useState(0);
   const [camError, setCamError] = useState<string | null>(null);
   const [inlinePreviewKey, setInlinePreviewKey] = useState<string | null>(null);
   const [inlinePreviewPlaying, setInlinePreviewPlaying] = useState(false);
@@ -1087,7 +1087,13 @@ export function MediaStudioDialog({
                 className="h-8 px-4 font-bold uppercase"
                 onClick={() => void exportMedia()}
               >
-                {exporting ? `Export ${Math.round(progress)}%` : source.kind === 'image' && !music ? 'Use photo' : 'Use clip'}
+                {exporting
+                  ? source.kind === 'image' && !music
+                    ? 'Attaching photo…'
+                    : 'Attaching clip…'
+                  : source.kind === 'image' && !music
+                    ? 'Use photo'
+                    : 'Use clip'}
               </Button>
             </div>
           </div>
@@ -1141,15 +1147,17 @@ export function MediaStudioDialog({
           }}
           title={source.kind === 'video' || music ? 'Review clip' : 'Review photo'}
           src={source.kind === 'image' ? source.url : undefined}
+          stageClassName="max-w-none"
+          className="!h-auto !max-h-[96dvh] !w-[min(96vw,110rem)] !max-w-[min(96vw,110rem)]"
         >
           {source.kind === 'video' ? (
-            <div className="space-y-3">
+            <div className="w-full space-y-3">
               <video
                 ref={reviewVideoRef}
                 src={source.url}
                 controls
                 playsInline
-                className="max-h-[min(70vh,40rem)] w-full rounded-lg object-contain"
+                className="max-h-[min(72dvh,68rem)] w-full rounded-lg object-contain"
                 style={{ filter: mediaFilterCss(filterId) }}
               />
               {reviewMusicUrl ? (

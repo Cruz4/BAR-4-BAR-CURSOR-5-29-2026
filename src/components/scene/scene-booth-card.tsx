@@ -78,7 +78,7 @@ export function SceneBoothCard({
     <Card
       id={SCENE_BOOTH_ID}
       className={cn(
-        'relative scroll-mt-[5.5rem] border px-3 py-2.5 transition-all sm:px-3.5',
+        'relative scroll-mt-[5.5rem] border px-3 py-2 transition-all sm:px-3.5',
         isLive
           ? 'border-sky-500/35 bg-gradient-to-br from-sky-500/10 via-card/90 to-card/70'
           : 'border-border/70 bg-card/60',

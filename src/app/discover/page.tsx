@@ -358,6 +358,15 @@ export default function DiscoverPage() {
           </div>
         ) : (
           <>
+            <SectionPager
+              edge="top"
+              page={safePage}
+              pageCount={pageCount}
+              total={cards.length}
+              unit="cards"
+              onPrev={() => goPage(Math.max(0, safePage - 1))}
+              onNext={() => goPage(Math.min(pageCount - 1, safePage + 1))}
+            />
             {pageCards.map((card) => (
               <SceneDiscoverCard
                 key={card.key}

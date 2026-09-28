@@ -13,6 +13,8 @@ type VoiceNoteComposerProps = {
   onClipChange: (clip: RecordedVoiceClip | null) => void;
   disabled?: boolean;
   compact?: boolean;
+  railPreview?: boolean;
+  hidePreview?: boolean;
 };
 
 export function VoiceNoteComposer({
@@ -20,6 +22,8 @@ export function VoiceNoteComposer({
   onClipChange,
   disabled = false,
   compact = false,
+  railPreview = false,
+  hidePreview = false,
 }: VoiceNoteComposerProps) {
   const recorder = useVoiceRecorder();
   const activeClip = clip || recorder.clip;
@@ -67,6 +71,34 @@ export function VoiceNoteComposer({
   if (!recorder.supported) return null;
 
   if (activeClip && recorder.status !== 'recording') {
+    if (railPreview) {
+      return (
+        <div className="relative flex h-14 w-14 shrink-0 flex-col self-center overflow-hidden rounded-lg border border-white/10 bg-black/30 p-1">
+          <VoiceNotePlayer
+            src={activeClip.objectUrl}
+            contentType={activeClip.contentType}
+            transcript={activeClip.transcript}
+            durationSec={activeClip.durationSec}
+            compact
+            showTranscriptToggle={false}
+            className="min-h-0 flex-1"
+          />
+          <button
+            type="button"
+            onClick={removeClip}
+            disabled={disabled}
+            title="Remove voice"
+            aria-label="Remove voice"
+            className="absolute right-0.5 top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-white/80 hover:text-red-400"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      );
+    }
+    if (hidePreview) {
+      return null;
+    }
     return (
       <div className={cn('space-y-1.5', compact ? '' : 'pt-1')}>
         <VoiceNotePlayer

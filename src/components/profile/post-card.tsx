@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Eye, Flag, Heart, MessageCircle, Repeat2, Share2, Sparkles, Trash2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -26,6 +26,8 @@ import { ArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { ArtistHomeLink, useLiveArtistHomeSlug } from '@/components/profile/artist-home-link';
 import { FieldsLinkPreview } from '@/components/profile/inline-link-preview';
 import { PostShareDialog } from '@/components/profile/post-share-dialog';
+import { PostLikersDialog } from '@/components/profile/post-likers-dialog';
+import { PostReverbersDialog } from '@/components/profile/post-reverbers-dialog';
 import { ExpandableImage } from '@/components/profile/expandable-image';
 import { WallClipPlayer } from '@/components/profile/wall-clip-player';
 import { PostCommentThread } from '@/components/profile/post-comment-thread';
@@ -82,7 +84,6 @@ import { QuotePressComposerPanel } from '@/components/profile/quote-press-compos
 import { useGamification } from '@/context/gamification-context';
 import { useImprintComposer } from '@/hooks/use-imprint-composer';
 import { isProOrTrial } from '@/lib/subscription';
-import { quotePressSlotLabel } from '@/lib/profile/quote-press';
 import type { QuotePressConfig } from '@/lib/profile/quote-press';
 import { isMasterAdminEmail } from '@/lib/master-admin';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -442,6 +443,12 @@ export function PostCard({
   const [loveBurst, setLoveBurst] = useState(false);
   const tapRef = useRef({ lastAt: 0, downX: 0, downY: 0 });
   const loveBusyRef = useRef(false);
+  const loveLongPressRef = useRef<number | null>(null);
+  const loveLongPressOpenedRef = useRef(false);
+  const [likersOpen, setLikersOpen] = useState(false);
+  const reverbLongPressRef = useRef<number | null>(null);
+  const reverbLongPressOpenedRef = useRef(false);
+  const [reverbersOpen, setReverbersOpen] = useState(false);
   const [authorAvatarUrl, setAuthorAvatarUrl] = useState<string | undefined>(undefined);
   const [authorStarSeed, setAuthorStarSeed] = useState<number | undefined>(undefined);
   const [authorUseStar, setAuthorUseStar] = useState(false);
@@ -466,6 +473,9 @@ export function PostCard({
     authorStudioChrome || (isOwner ? studioChromeFromUser(user) : undefined);
   const rootIdForReverb =
     post.isReverb && post.reverbPostId ? post.reverbPostId : post.id;
+  const reverbRootOwnerId =
+    post.isReverb && post.reverbOwnerId ? post.reverbOwnerId : post.ownerId;
+  const canViewReverbers = Boolean(user?.id && user.id === reverbRootOwnerId);
   const canReverb = Boolean(user && rootIdForReverb);
 
   useEffect(() => {
@@ -661,6 +671,70 @@ export function PostCard({
       cancelled = true;
     };
   }, [showInlineAuthor, liveAuthorSlug, post.ownerAvatarUrl, post.ownerStarMarkUseStar, post.ownerStarMarkSeed, post.ownerStudioBadge]);
+
+  const openLikers = useCallback(() => {
+    if (!isOwner || likeCount <= 0) return;
+    setLikersOpen(true);
+  }, [isOwner, likeCount]);
+
+  const clearLoveLongPress = useCallback(() => {
+    if (loveLongPressRef.current) {
+      window.clearTimeout(loveLongPressRef.current);
+      loveLongPressRef.current = null;
+    }
+  }, []);
+
+  const onLovePointerDown = useCallback(() => {
+    if (!isOwner || likeCount <= 0) return;
+    loveLongPressOpenedRef.current = false;
+    clearLoveLongPress();
+    loveLongPressRef.current = window.setTimeout(() => {
+      loveLongPressOpenedRef.current = true;
+      setLikersOpen(true);
+    }, 480);
+  }, [clearLoveLongPress, isOwner, likeCount]);
+
+  const onLovePointerEnd = useCallback(() => {
+    clearLoveLongPress();
+  }, [clearLoveLongPress]);
+
+  useEffect(() => () => clearLoveLongPress(), [clearLoveLongPress]);
+
+  const onLoveClick = () => {
+    if (loveLongPressOpenedRef.current) {
+      loveLongPressOpenedRef.current = false;
+      return;
+    }
+    void toggleLike();
+  };
+
+  const openReverbers = useCallback(() => {
+    if (!canViewReverbers || reverbCount <= 0) return;
+    setReverbersOpen(true);
+  }, [canViewReverbers, reverbCount]);
+
+  const clearReverbLongPress = useCallback(() => {
+    if (reverbLongPressRef.current) {
+      window.clearTimeout(reverbLongPressRef.current);
+      reverbLongPressRef.current = null;
+    }
+  }, []);
+
+  const onReverbPointerDown = useCallback(() => {
+    if (!canViewReverbers || reverbCount <= 0) return;
+    reverbLongPressOpenedRef.current = false;
+    clearReverbLongPress();
+    reverbLongPressRef.current = window.setTimeout(() => {
+      reverbLongPressOpenedRef.current = true;
+      setReverbersOpen(true);
+    }, 480);
+  }, [canViewReverbers, clearReverbLongPress, reverbCount]);
+
+  const onReverbPointerEnd = useCallback(() => {
+    clearReverbLongPress();
+  }, [clearReverbLongPress]);
+
+  useEffect(() => () => clearReverbLongPress(), [clearReverbLongPress]);
 
   const toggleLike = async (showBurst = false) => {
     if (loveBusyRef.current) return;
@@ -1013,19 +1087,47 @@ export function PostCard({
 
       <div className="mt-3 flex items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
-        <button
-          type="button"
-          onClick={() => void toggleLike()}
+        <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
+            'flex items-center gap-0.5 text-xs font-bold uppercase tracking-widest',
             liked
               ? 'text-accent'
-              : 'text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-[var(--ph-text,#fff)]'
+              : 'text-[var(--ph-muted,rgba(255,255,255,0.55))]'
           )}
+          data-no-double-love
         >
-          <Heart className={cn('h-3.5 w-3.5', liked && 'fill-current')} />
-          {likeCount > 0 ? likeCount : 'Love'}
-        </button>
+          <button
+            type="button"
+            onClick={onLoveClick}
+            onPointerDown={onLovePointerDown}
+            onPointerUp={onLovePointerEnd}
+            onPointerLeave={onLovePointerEnd}
+            onPointerCancel={onLovePointerEnd}
+            title={
+              isOwner && likeCount > 0
+                ? 'Tap to love · hold to see who loved this'
+                : undefined
+            }
+            className={cn(
+              'flex items-center gap-1.5 transition-colors hover:text-[var(--ph-text,#fff)]',
+              liked ? 'text-accent' : ''
+            )}
+          >
+            <Heart className={cn('h-3.5 w-3.5', liked && 'fill-current')} />
+            {!isOwner && (likeCount > 0 ? likeCount : 'Love')}
+            {isOwner && likeCount <= 0 ? 'Love' : null}
+          </button>
+          {isOwner && likeCount > 0 ? (
+            <button
+              type="button"
+              onClick={openLikers}
+              className="tabular-nums transition-colors hover:text-[var(--ph-text,#fff)]"
+              title="See who loved this"
+            >
+              {likeCount}
+            </button>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => void openComments()}
@@ -1035,28 +1137,98 @@ export function PostCard({
           {commentCount > 0 ? commentCount : 'Reply'}
         </button>
         {canReverb ? (
-          <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            disabled={busy}
+          <div
             className={cn(
-              'flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors',
+              'flex items-center gap-0.5 text-xs font-bold uppercase tracking-widest',
               reverbed
                 ? 'text-violet-300'
-                : 'text-[var(--ph-muted,rgba(255,255,255,0.55))] hover:text-violet-300'
+                : 'text-[var(--ph-muted,rgba(255,255,255,0.55))]'
             )}
-            title="Reverb — pass this post onto your wall (like a repost)"
+            data-no-double-love
           >
-            <Repeat2 className={cn('h-3.5 w-3.5', reverbed && 'stroke-[2.5]')} />
-            {reverbCount > 0 ? reverbCount : reverbed ? 'Reverbed' : 'Reverb'}
-          </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
-            <DropdownMenuItem onSelect={() => void handleReverb()}>{reverbed ? 'Undo Reverb' : 'Reverb'}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={openReverbComposer}>{viewerHasQuoteContent ? 'Edit Quote' : 'Quote'}</DropdownMenuItem>
-          </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onPointerDown={onReverbPointerDown}
+                  onPointerUp={onReverbPointerEnd}
+                  onPointerLeave={onReverbPointerEnd}
+                  onPointerCancel={onReverbPointerEnd}
+                  onClick={(e) => {
+                    if (reverbLongPressOpenedRef.current) {
+                      e.preventDefault();
+                      reverbLongPressOpenedRef.current = false;
+                    }
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 transition-colors hover:text-violet-300',
+                    reverbed ? 'text-violet-300' : ''
+                  )}
+                  title={
+                    canViewReverbers && reverbCount > 0
+                      ? 'Reverb menu · hold to see who Reverbed this'
+                      : 'Reverb — pass this post onto your wall (like a repost)'
+                  }
+                >
+                  <Repeat2 className={cn('h-3.5 w-3.5', reverbed && 'stroke-[2.5]')} />
+                  {!canViewReverbers && (reverbCount > 0 ? reverbCount : reverbed ? 'Reverbed' : 'Reverb')}
+                  {canViewReverbers && reverbCount <= 0 ? (reverbed ? 'Reverbed' : 'Reverb') : null}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-44 border-violet-400/25">
+                <DropdownMenuItem onSelect={() => void handleReverb()}>
+                  {reverbed ? 'Undo Reverb' : 'Reverb'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={openReverbComposer}>
+                  {viewerHasQuoteContent ? 'Edit Quote' : 'Quote'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {canViewReverbers && reverbCount > 0 ? (
+              <button
+                type="button"
+                onClick={openReverbers}
+                className="tabular-nums text-violet-300 transition-colors hover:text-violet-100"
+                title="See who Reverbed this"
+              >
+                {reverbCount}
+              </button>
+            ) : null}
+          </div>
+        ) : canViewReverbers ? (
+          <div
+            className="flex items-center gap-0.5 text-xs font-bold uppercase tracking-widest text-violet-300/75"
+            data-no-double-love
+          >
+            <button
+              type="button"
+              onPointerDown={onReverbPointerDown}
+              onPointerUp={onReverbPointerEnd}
+              onPointerLeave={onReverbPointerEnd}
+              onPointerCancel={onReverbPointerEnd}
+              onClick={reverbCount > 0 ? openReverbers : undefined}
+              className="flex items-center gap-1.5 transition-colors hover:text-violet-200"
+              title={
+                reverbCount > 0
+                  ? 'Tap count or hold to see who Reverbed this'
+                  : 'Reverbs on this post'
+              }
+            >
+              <Repeat2 className="h-3.5 w-3.5" />
+              {reverbCount <= 0 ? 'Reverb' : null}
+            </button>
+            {reverbCount > 0 ? (
+              <button
+                type="button"
+                onClick={openReverbers}
+                className="tabular-nums transition-colors hover:text-violet-100"
+                title="See who Reverbed this"
+              >
+                {reverbCount}
+              </button>
+            ) : null}
+          </div>
         ) : (
           <span
             className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-violet-300/75"
@@ -1109,6 +1281,22 @@ export function PostCard({
       </div>
 
       <PostShareDialog open={shareOpen} onOpenChange={setShareOpen} post={post} />
+      {isOwner ? (
+        <PostLikersDialog
+          postId={post.id}
+          open={likersOpen}
+          onOpenChange={setLikersOpen}
+          likeCount={likeCount}
+        />
+      ) : null}
+      {canViewReverbers ? (
+        <PostReverbersDialog
+          rootPostId={rootIdForReverb}
+          open={reverbersOpen}
+          onOpenChange={setReverbersOpen}
+          reverbCount={reverbCount}
+        />
+      ) : null}
 
       <Dialog
         open={reverbComposerOpen}
@@ -1167,11 +1355,10 @@ export function PostCard({
                   shuffleRemaining={reverbShuffleRemaining}
                   shuffleCap={reverbShuffleCap}
                   slots={reverbImprintSlots}
+                  faders={reverbImprintFaders}
                   isPro={isPro}
                   busy={busy || reverbImprintSlotBusy}
-                  onLockSlot={() => {
-                    if (!isPro) return;
-                    const label = quotePressSlotLabel(reverbImprintFaders);
+                  onLockSlot={(label) => {
                     void persistReverbImprintSlots([
                       ...reverbImprintSlots,
                       {

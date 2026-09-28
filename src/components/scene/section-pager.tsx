@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export function SectionPager({
   page,
@@ -10,6 +11,7 @@ export function SectionPager({
   unit,
   onPrev,
   onNext,
+  edge = 'bottom',
 }: {
   page: number;
   pageCount: number;
@@ -17,10 +19,16 @@ export function SectionPager({
   unit: string;
   onPrev: () => void;
   onNext: () => void;
+  edge?: 'top' | 'bottom';
 }) {
   if (total <= 0 || pageCount <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 border-t border-dashed border-white/10 pt-4">
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 border-dashed border-white/10',
+        edge === 'top' ? 'mb-4 border-b pb-4' : 'mt-4 border-t pt-4'
+      )}
+    >
       <Button
         type="button"
         size="sm"

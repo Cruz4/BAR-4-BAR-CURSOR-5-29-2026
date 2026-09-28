@@ -29,6 +29,8 @@ type ProfileMediaLightboxProps = {
   /** Raise above full-screen Scene feed and other z-50 chrome. */
   elevated?: boolean;
   className?: string;
+  /** Width cap for custom children. Defaults to a compact card; pass `max-w-none` for a large review. */
+  stageClassName?: string;
 };
 
 export function ProfileMediaLightbox({
@@ -41,6 +43,7 @@ export function ProfileMediaLightbox({
   fit = 'contain',
   elevated = false,
   className,
+  stageClassName,
 }: ProfileMediaLightboxProps) {
   const hasVideo = Boolean(videoSrc?.trim());
   const hasSrc = Boolean(src?.trim());
@@ -88,7 +91,7 @@ export function ProfileMediaLightbox({
                 )}
               />
             ) : (
-              <div className="w-full max-w-md">{children}</div>
+              <div className={cn('w-full', stageClassName ?? 'max-w-md')}>{children}</div>
             )}
           </div>
         </div>
