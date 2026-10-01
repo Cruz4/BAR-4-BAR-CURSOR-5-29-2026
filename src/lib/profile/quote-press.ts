@@ -167,14 +167,14 @@ export type QuotePressTokens = {
   accentColor: string;
   fillMode: 'solid' | 'gradient' | 'split';
   textGradient?: string;
-  highlightMode: 'none' | 'rhyme' | 'stress' | 'scatter' | 'gradientWords';
+  highlightMode: QuotePressHighlightMode;
   highlights: QuotePressHighlight[];
   textShadow: string;
   cardBackground: string;
   cardBorder: string;
   cardGlow: string;
   frameClip: string;
-  ornament: 'quotes' | 'corner' | 'serial' | 'barcode' | 'none';
+  ornament: QuotePressOrnament;
   serial: string;
   layers: QuotePressLayer[];
   fontSizeClamp: string;
