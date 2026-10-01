@@ -21,6 +21,7 @@ import { ImageAttachComposer, attachPastedImage } from '@/components/profile/ima
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
+import { AppFeedChrome } from '@/components/site-chrome';
 import { VaultStudioProgress, SCENE_STUDIO_PROGRESS_EXPANDED_KEY, SCENE_STUDIO_PROGRESS_MOBILE_EXPANDED_KEY } from '@/components/gamification/vault-studio-progress';
 import { SceneNavDock } from '@/components/scene/scene-nav-dock';
 import { SceneBoothCard } from '@/components/scene/scene-booth-card';
@@ -1546,8 +1547,9 @@ export function SceneHome() {
           </>
           )}
 
-          <div id={FIND_ARTISTS_SECTION_ID} className="scroll-mt-[5.5rem]" data-tour="scene-find-artists">
-            <ReferAFriendSection />
+          <div id={FIND_ARTISTS_SECTION_ID} className="scroll-mt-[5.5rem] space-y-6" data-tour="scene-find-artists">
+            <ReferAFriendSection compact />
+            <AppFeedChrome className="mt-6" />
           </div>
         </div>
       </div>

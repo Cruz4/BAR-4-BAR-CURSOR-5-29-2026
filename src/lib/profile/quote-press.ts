@@ -9,6 +9,13 @@
 
 import { tokenizeLine, heuristicSyllables } from '@/lib/lyrics-analysis';
 import { dieCutClip, hashSeed, type CutStyle } from '@/lib/profile/pressing';
+import {
+  PLUS_LAYER_KINDS,
+  buildPlusLayer,
+  isPlusLayerKind,
+  type QuotePressPlusLayer,
+  type QuotePressPlusLayerKind,
+} from '@/lib/profile/quote-press-plus-layers';
 
 export const QUOTE_PRESS_SLOT_LIMIT = 7;
 export const IMPRINT_SHUFFLE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -86,7 +93,8 @@ export type QuotePressLayerKind =
   | 'haloPulse'
   | 'noiseDrift'
   | 'laserGrid'
-  | 'emberField';
+  | 'emberField'
+  | QuotePressPlusLayerKind;
 
 export type QuotePressLayer =
   | { kind: 'gradientWash'; depth: number; from: string; via: string; to: string; angle: number }
@@ -120,7 +128,32 @@ export type QuotePressLayer =
   | { kind: 'haloPulse'; depth: number; color: string; durationSec: number }
   | { kind: 'noiseDrift'; depth: number; opacity: number; durationSec: number }
   | { kind: 'laserGrid'; depth: number; color: string; durationSec: number }
-  | { kind: 'emberField'; depth: number; embers: Array<{ x: number; delaySec: number }> };
+  | { kind: 'emberField'; depth: number; embers: Array<{ x: number; delaySec: number }> }
+  | QuotePressPlusLayer;
+
+export type QuotePressHighlightMode =
+  | 'none'
+  | 'rhyme'
+  | 'stress'
+  | 'scatter'
+  | 'gradientWords'
+  | 'caps'
+  | 'ends'
+  | 'pulse'
+  | 'underline'
+  | 'alternate';
+
+export type QuotePressOrnament =
+  | 'quotes'
+  | 'corner'
+  | 'serial'
+  | 'barcode'
+  | 'none'
+  | 'stamp'
+  | 'glyph'
+  | 'brackets'
+  | 'dots'
+  | 'frame';
 
 export type QuotePressTokens = {
   compositionId: string;
@@ -260,20 +293,26 @@ const ALL_LAYER_KINDS: QuotePressLayerKind[] = [
 ];
 
 const WEIGHTS = [300, 400, 500, 600, 700, 800];
-const HIGHLIGHT_MODES: QuotePressTokens['highlightMode'][] = [
+const HIGHLIGHT_MODES: QuotePressHighlightMode[] = [
   'none',
   'rhyme',
   'stress',
   'scatter',
   'gradientWords',
 ];
-const ORNAMENTS: QuotePressTokens['ornament'][] = [
-  'quotes',
-  'corner',
-  'serial',
-  'barcode',
-  'none',
+const HIGHLIGHT_MODES_PLUS: QuotePressHighlightMode[] = [
+  'caps',
+  'ends',
+  'pulse',
+  'underline',
+  'alternate',
 ];
+const ORNAMENTS: QuotePressOrnament[] = ['quotes', 'corner', 'serial', 'barcode', 'none'];
+const ORNAMENTS_PLUS: QuotePressOrnament[] = ['stamp', 'glyph', 'brackets', 'dots', 'frame'];
+
+export type QuotePressTokenOptions = {
+  imprintPressPlus?: boolean;
+};
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -350,9 +389,9 @@ export function sanitizeQuotePressSlots(raw: unknown): QuotePressSlot[] {
   return out;
 }
 
-function pickLayerKinds(hash: number): QuotePressLayerKind[] {
-  const count = 4 + ((hash >>> 3) % 4);
-  const pool = [...ALL_LAYER_KINDS];
+function pickLayerKinds(hash: number, plus: boolean): QuotePressLayerKind[] {
+  const count = plus ? 5 + ((hash >>> 3) % 5) : 4 + ((hash >>> 3) % 4);
+  const pool = plus ? [...ALL_LAYER_KINDS, ...PLUS_LAYER_KINDS] : [...ALL_LAYER_KINDS];
   const picked: QuotePressLayerKind[] = [];
   let h = hash;
   for (let i = 0; i < count && pool.length; i++) {
@@ -371,7 +410,7 @@ function hsl(h: number, s: number, l: number, a = 1): string {
 
 function buildHighlights(
   text: string,
-  mode: QuotePressTokens['highlightMode'],
+  mode: QuotePressHighlightMode,
   hash: number,
   accent: string,
   textColor: string
@@ -412,6 +451,11 @@ function buildHighlights(
     }
     if (mode === 'scatter') active = ((hash >>> (i * 5)) % 5) < 2;
     if (mode === 'gradientWords') active = i % 2 === 0;
+    if (mode === 'caps') active = /^[A-Z]/.test(wr.word) || i === 0;
+    if (mode === 'ends') active = i === wordRanges.length - 1 || i % 5 === 4;
+    if (mode === 'pulse') active = ((hash >>> (i * 4)) % 6) < 2;
+    if (mode === 'underline') active = wr.syl >= 2 || i % 4 === 2;
+    if (mode === 'alternate') active = i % 3 === 1;
 
     if (!active) return;
     const hueShift = ((hash >>> (i * 7)) % 40) - 20;
@@ -436,7 +480,10 @@ function buildHighlights(
             : mode === 'scatter'
               ? `0 2px 8px ${accent}`
               : 'none',
-        fontWeight: mode === 'stress' ? '700' : 'inherit',
+        fontWeight: mode === 'stress' || mode === 'caps' ? '700' : 'inherit',
+        ...(mode === 'underline'
+          ? { textDecoration: `underline 2px ${accent}`, textUnderlineOffset: '3px' }
+          : { textDecoration: 'none' }),
         ...(highlightBg !== 'transparent'
           ? { borderRadius: '3px', padding: '0 3px' }
           : {}),
@@ -459,6 +506,10 @@ function buildLayer(
   const sat = 42 + faders.heat * 0.38;
   const accent = hsl(hue, sat, 58 + faders.heat * 0.12);
   const accentSoft = hsl(hue, sat * 0.7, 72, 0.45);
+
+  if (isPlusLayerKind(kind)) {
+    return buildPlusLayer(kind, hash, faders, hue, depth);
+  }
 
   switch (kind) {
     case 'gradientWash':
@@ -685,20 +736,29 @@ function plateSerial(hash: number): string {
   return `IM-${a}-${b}`;
 }
 
-export function quotePressTokens(text: string, config?: QuotePressConfig | null): QuotePressTokens {
+export function quotePressTokens(
+  text: string,
+  config?: QuotePressConfig | null,
+  options?: QuotePressTokenOptions
+): QuotePressTokens {
+  const plus = Boolean(options?.imprintPressPlus);
   const trimmed = text.trim().slice(0, 1000);
   const faders = normalizeQuotePressFaders(config?.faders ?? quotePressFadersFromText(trimmed));
   const seedHash = hashSeed(trimmed || 'imprint');
   const pressHash = identityHash(seedHash, faders);
   const words = tokenizeLine(trimmed);
 
+  const highlightModes = plus ? [...HIGHLIGHT_MODES, ...HIGHLIGHT_MODES_PLUS] : HIGHLIGHT_MODES;
+  const ornamentModes = plus ? [...ORNAMENTS, ...ORNAMENTS_PLUS] : ORNAMENTS;
+  const cutMod = plus ? 12 : 6;
+
   const fontIdx = pressHash % QUOTE_PRESS_FONTS.length;
   const weightIdx = (pressHash >>> 6) % WEIGHTS.length;
   const alignIdx = (pressHash >>> 10) % 3;
   const fillIdx = (pressHash >>> 12) % 3;
-  const highlightIdx = (pressHash >>> 14) % HIGHLIGHT_MODES.length;
-  const ornamentIdx = (pressHash >>> 18) % ORNAMENTS.length;
-  const cutStyle = ((pressHash >>> 22) % 6) as CutStyle;
+  const highlightIdx = (pressHash >>> 14) % highlightModes.length;
+  const ornamentIdx = (pressHash >>> 18) % ornamentModes.length;
+  const cutStyle = ((pressHash >>> 22) % cutMod) as CutStyle;
 
   const hue = pressHash % 360;
   const sat = 38 + faders.heat * 0.42;
@@ -708,8 +768,8 @@ export function quotePressTokens(text: string, config?: QuotePressConfig | null)
 
   const fillMode: QuotePressTokens['fillMode'] =
     fillIdx === 0 ? 'solid' : fillIdx === 1 ? 'gradient' : 'split';
-  const highlightMode = HIGHLIGHT_MODES[highlightIdx];
-  const ornament = ORNAMENTS[ornamentIdx];
+  const highlightMode = highlightModes[highlightIdx];
+  const ornament = ornamentModes[ornamentIdx];
 
   const letterEm = Number((-0.02 + faders.pace * 0.0016).toFixed(3));
   const lineHeight = Number((1.08 + faders.pace * 0.004).toFixed(2));
@@ -721,7 +781,7 @@ export function quotePressTokens(text: string, config?: QuotePressConfig | null)
   const textShadow = `${shadowY}px ${shadowY + 1}px ${shadowBlur}px hsl(${hue} 30% 4% / 0.65)`;
 
   const serial = plateSerial(pressHash);
-  const layerKinds = pickLayerKinds(pressHash);
+  const layerKinds = pickLayerKinds(pressHash, plus);
   const layers = layerKinds.map((kind, i) =>
     buildLayer(kind, mix(pressHash, i * 997), faders, hue, serial, 1 - i / (layerKinds.length + 1), words.length)
   );

@@ -88,6 +88,7 @@ import { NotificationSettingsCard } from '@/components/activity/notification-set
 import { PressTrackingSettingsCard } from '@/components/press-tracking-settings-card';
 import { DeviceSessionsCard } from '@/components/security/device-sessions-card';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
+import { AppFeedChrome } from '@/components/site-chrome';
 import { DeleteAccountDialog } from '@/components/delete-account-dialog';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { dropArtistShareLabel } from '@/lib/drop-commerce';
@@ -425,7 +426,7 @@ function UsagePageContent() {
         </TabsList>
 
         <TabsContent value="buy-ink" className="space-y-8 w-full">
-          <ReferAFriendSection />
+          <ReferAFriendSection compact />
 
           {!paidPro && (
             <div className="border p-6 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg bg-orange-500/5 border-orange-500/25">
@@ -920,6 +921,8 @@ function UsagePageContent() {
             </div>
         </TabsContent>
       </Tabs>
+
+      <AppFeedChrome className="max-w-4xl mx-auto w-full px-2" />
 
       <DeleteAccountDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} />
       </div>

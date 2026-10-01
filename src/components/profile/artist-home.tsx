@@ -71,7 +71,14 @@ import { ProfileSectionTabs } from '@/components/profile/profile-section-tabs';
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import type { ProfilePost } from '@/lib/profile/social-client';
 import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
+import { GuestSandboxPhotoSheet } from '@/components/profile/guest-sandbox-photo-sheet';
 import { ProfileReachStrip } from '@/components/reach/profile-reach-strip';
+
+export type PlaygroundProfilePhoto = {
+  onCustomPhoto: (dataUrl: string) => void;
+  onUseInitials: () => void;
+  onShuffleStar: () => void;
+};
 
 type ArtistHomeProps = {
   profile: PublicProfileData;
@@ -95,6 +102,8 @@ type ArtistHomeProps = {
   playgroundFriends?: ModuleContext['playgroundFriends'];
   playgroundGuestbook?: ModuleContext['playgroundGuestbook'];
   playgroundBarOfWeek?: ModuleContext['playgroundBarOfWeek'];
+  /** Guest sandbox — hero photo upload / initials / feed star shuffle. */
+  playgroundProfilePhoto?: PlaygroundProfilePhoto;
   /** Where the top-left studio / about control goes (guest sandbox → `/welcome`). */
   studioHomeHref?: string;
   studioHomeLabel?: string;
@@ -129,6 +138,7 @@ export function ArtistHome({
   playgroundFriends,
   playgroundGuestbook,
   playgroundBarOfWeek,
+  playgroundProfilePhoto,
   studioHomeHref = '/',
   studioHomeLabel = 'AKAsheet',
 }: ArtistHomeProps) {
@@ -137,6 +147,7 @@ export function ArtistHome({
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [sandboxPhotoOpen, setSandboxPhotoOpen] = useState(false);
   const [viewerSlug, setViewerSlug] = useState<string | undefined>(undefined);
   const [tokens, setTokens] = useState<PressingTokens>(() => pressTokens(config.theme));
 
@@ -241,9 +252,10 @@ export function ArtistHome({
     return config.modules.filter((m) => {
       if (!m.enabled) return false;
       if (m.id === 'openLock' && !lockOn) return false;
+      if (guestSandbox && m.id === 'dropShelf') return false;
       return true;
     });
-  }, [config.modules, lockOn]);
+  }, [config.modules, lockOn, guestSandbox]);
 
   const showLiveDnaDrops = useMemo(
     () => config.modules.some((m) => m.id === 'dropShelf' && m.enabled),
@@ -383,19 +395,19 @@ export function ArtistHome({
           }
         }
         @media (max-width: 639px) {
-          .ph-guest-sandbox-hero {
+          .ph-mobile-hero {
             margin-top: 0.5rem !important;
             gap: 0.85rem !important;
           }
-          .ph-guest-sandbox-hero .ph-guest-sandbox-copy {
+          .ph-mobile-hero .ph-hero-copy-col {
             order: 1;
           }
-          .ph-guest-sandbox-hero .ph-guest-sandbox-photo {
+          .ph-mobile-hero .ph-hero-photo-col {
             order: 2;
             max-width: 11.5rem;
             margin-inline: auto;
           }
-          .ph-guest-sandbox-photo-btn {
+          .ph-hero-photo-btn {
             clip-path: none !important;
           }
         }
@@ -410,14 +422,14 @@ export function ArtistHome({
       <div
         className={cn(
           'relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-3 sm:px-6 sm:pt-10',
-          guestSandbox && 'max-sm:px-3 max-sm:pt-1'
+          'max-sm:px-3 max-sm:pt-1'
         )}
       >
         {/* Sheet header */}
         <div
           className={cn(
             'flex items-center gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-3 sm:gap-2 sm:pb-4',
-            guestSandbox && 'max-sm:pb-2'
+            'max-sm:pb-2'
           )}
         >
           <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
@@ -487,23 +499,18 @@ export function ArtistHome({
         </div>
 
         {!previewMode && !playgroundWall ? (
-          <ProfileSectionTabs slug={profile.slug} className="mt-3" />
+          <ProfileSectionTabs slug={profile.slug} className="mt-3 max-sm:mt-1.5" />
         ) : null}
 
-        {/* Hero — original scale; preview/sandbox centers shorter copy with the photo column */}
+        {/* Hero — tighter mobile stack (name + actions, then photo) */}
         <section
           className={cn(
-            'ph-hero-grid mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
+            'ph-hero-grid ph-mobile-hero mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
             previewMode ? 'lg:items-center' : 'lg:items-end',
-            guestSandbox && 'ph-guest-sandbox-hero max-sm:mt-2 max-sm:flex max-sm:flex-col max-sm:gap-3'
+            'max-sm:mt-2 max-sm:flex max-sm:flex-col max-sm:gap-3'
           )}
         >
-          <div
-            className={cn(
-              'ph-guest-sandbox-copy min-w-0 space-y-5 lg:col-span-7',
-              guestSandbox && 'max-sm:space-y-3'
-            )}
-          >
+          <div className="ph-hero-copy-col min-w-0 space-y-5 max-sm:space-y-3 lg:col-span-7">
             {config.featured.tagline || (isOwner && profile.slug && !previewMode) ? (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 {config.featured.tagline ? (
@@ -555,7 +562,7 @@ export function ArtistHome({
               <StudioStandingRankBadge
                 variant="pill"
                 allowShare={isOwner}
-                compactOnMobile={showFirstDropsStorefront}
+                compactOnMobile
                 className="self-start"
                 badgeClassName={cn(
                   rankBadgeClass(rankId),
@@ -678,13 +685,8 @@ export function ArtistHome({
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
 
-            <div
-              className={cn(
-                'w-full max-w-md min-w-0 space-y-3',
-                guestSandbox && 'max-sm:hidden'
-              )}
-            >
-              <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
+            <div className="w-full max-w-md min-w-0 space-y-3">
+              <div className="grid min-w-0 grid-cols-2 gap-1.5 max-sm:hidden sm:grid-cols-3 sm:gap-2">
                 {[
                   { label: 'Total XP', value: totalXp.toLocaleString(), icon: Zap },
                   { label: 'Live streak', value: `${liveStreak}d`, icon: Flame },
@@ -738,16 +740,11 @@ export function ArtistHome({
             </div>
           </div>
 
-          <div
-            className={cn(
-              'ph-guest-sandbox-photo flex min-w-0 justify-center overflow-visible lg:col-span-5 lg:justify-end',
-              guestSandbox && 'max-sm:w-full'
-            )}
-          >
+          <div className="ph-hero-photo-col flex min-w-0 justify-center overflow-visible max-sm:w-full lg:col-span-5 lg:justify-end">
             <div
               className={cn(
                 'relative w-full max-w-[20rem] animate-in fade-in zoom-in-95 duration-500 sm:max-w-96',
-                guestSandbox && 'max-sm:max-w-[11.5rem]'
+                'max-sm:max-w-[11.5rem]'
               )}
             >
               {tokens.alive && (
@@ -768,17 +765,25 @@ export function ArtistHome({
               />
               <button
                 type="button"
-                onClick={() => setPhotoOpen(true)}
-                aria-label={`View ${profile.displayName}'s profile photo`}
-                className={cn(
-                  'ph-guest-sandbox-photo-btn relative aspect-square w-full max-w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]',
-                  guestSandbox && 'max-sm:overflow-visible'
-                )}
-                style={
-                  guestSandbox
-                    ? undefined
-                    : { clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }
+                onClick={() => {
+                  if (guestSandbox && playgroundProfilePhoto) {
+                    setSandboxPhotoOpen(true);
+                  } else {
+                    setPhotoOpen(true);
+                  }
+                }}
+                aria-label={
+                  guestSandbox && playgroundProfilePhoto
+                    ? `Change ${profile.displayName}'s profile photo`
+                    : `View ${profile.displayName}'s profile photo`
                 }
+                className={cn(
+                  'ph-hero-photo-btn relative aspect-square w-full max-w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]',
+                  'max-sm:overflow-visible'
+                )}
+                style={{
+                  clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5),
+                }}
               >
                 {useCustomPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -814,15 +819,23 @@ export function ArtistHome({
                     guestSandbox && 'max-sm:mt-2 max-sm:space-y-1'
                   )}
                 >
-                  <ProfileSocialExampleBadges />
-                  <p
-                    className={cn(
-                      'text-[10px] leading-snug text-[var(--ph-muted)]',
-                      guestSandbox && 'max-sm:text-[9px]'
-                    )}
-                  >
-                    (example socials — upload or change your picture once you sign in)
-                  </p>
+                  {guestSandbox ? (
+                    <>
+                      <p className="text-[10px] leading-snug text-[var(--ph-muted)] max-sm:text-[9px]">
+                        Tap your photo to upload or shuffle your feed star.
+                      </p>
+                      <p className="text-[9px] leading-snug text-[var(--ph-muted)]/80 max-sm:text-[8px]">
+                        Saved when you claim — not stored if you leave without signing up.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <ProfileSocialExampleBadges />
+                      <p className="text-[10px] leading-snug text-[var(--ph-muted)]">
+                        (example socials — upload or change your picture once you sign in)
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <ProfileSocialLinks
@@ -954,6 +967,17 @@ export function ArtistHome({
           artistName={profile.displayName}
           referralCode={profile.referralCode}
           nextPath={profileHref(profile.slug) || '/'}
+        />
+      ) : null}
+
+      {guestSandbox && playgroundProfilePhoto ? (
+        <GuestSandboxPhotoSheet
+          open={sandboxPhotoOpen}
+          onOpenChange={setSandboxPhotoOpen}
+          displayName={profile.displayName}
+          onCustomPhoto={playgroundProfilePhoto.onCustomPhoto}
+          onUseInitials={playgroundProfilePhoto.onUseInitials}
+          onShuffleStar={playgroundProfilePhoto.onShuffleStar}
         />
       ) : null}
 

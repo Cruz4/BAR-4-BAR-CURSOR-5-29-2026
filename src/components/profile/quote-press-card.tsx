@@ -6,6 +6,9 @@
 
 import React, { forwardRef, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useImprintMotionGate } from '@/hooks/use-imprint-motion-gate';
+import { useImprintPressPlus } from '@/hooks/use-imprint-press-plus';
+import { isPlusLayerKind, type QuotePressPlusLayer } from '@/lib/profile/quote-press-plus-layers';
+import { renderPlusLayerBackdrop } from '@/lib/profile/quote-press-plus-backdrop';
 import { ensureImprintKeyframesInjected } from '@/lib/profile/imprint-keyframes';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,9 @@ const GRAIN_URI =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' seed='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E\")";
 
 function LayerBackdrop({ layer }: { layer: QuotePressLayer }) {
+  if (isPlusLayerKind(layer.kind)) {
+    return renderPlusLayerBackdrop(layer as QuotePressPlusLayer);
+  }
   switch (layer.kind) {
     case 'gradientWash':
       return (
@@ -530,7 +536,11 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
   const [fontsReady, setFontsReady] = useState(false);
   const [quoteFontSize, setQuoteFontSize] = useState<string | null>(null);
   const { ref: motionRef, motionPaused } = useImprintMotionGate<HTMLDivElement>();
-  const tokens = useMemo(() => quotePressTokens(text, config), [text, config]);
+  const imprintPressPlus = useImprintPressPlus();
+  const tokens = useMemo(
+    () => quotePressTokens(text, config, { imprintPressPlus }),
+    [text, config, imprintPressPlus]
+  );
 
   useEffect(() => {
     ensureImprintKeyframesInjected();
@@ -664,6 +674,39 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
               />
             ))}
           </div>
+        ) : null}
+        {tokens.ornament === 'stamp' ? (
+          <div
+            className="relative mt-3 inline-flex rounded border border-dashed px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest opacity-70"
+            style={{ borderColor: tokens.accentColor, color: tokens.accentColor }}
+            aria-hidden
+          >
+            Imprint
+          </div>
+        ) : null}
+        {tokens.ornament === 'glyph' ? (
+          <p className="relative mt-2 text-center text-lg opacity-50" style={{ color: tokens.accentColor }} aria-hidden>
+            ✦
+          </p>
+        ) : null}
+        {tokens.ornament === 'brackets' ? (
+          <p className="relative mt-2 text-center font-mono text-xs opacity-60" style={{ color: tokens.accentColor }} aria-hidden>
+            [ {tokens.serial} ]
+          </p>
+        ) : null}
+        {tokens.ornament === 'dots' ? (
+          <div className="relative mt-3 flex justify-center gap-1.5 opacity-60" aria-hidden>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: tokens.accentColor }} />
+            ))}
+          </div>
+        ) : null}
+        {tokens.ornament === 'frame' ? (
+          <div
+            className="pointer-events-none absolute inset-2 rounded-[inherit] border opacity-35"
+            style={{ borderColor: tokens.accentColor }}
+            aria-hidden
+          />
         ) : null}
 
         {showSignature ? (

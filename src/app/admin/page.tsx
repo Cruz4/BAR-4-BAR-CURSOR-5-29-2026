@@ -59,6 +59,7 @@ import { AdminInviteGateCard } from '@/components/admin-invite-gate-card';
 import { AdminArtistHomeProspectsCard } from '@/components/admin-artist-home-prospects-card';
 import { AdminSceneLayoutCard } from '@/components/admin-scene-layout-card';
 import { AdminDiscoverHeatCard } from '@/components/admin-discover-heat-card';
+import { AdminImprintPressPlusCard } from '@/components/admin-imprint-press-plus-card';
 import { AdminProductSurfacesCard } from '@/components/admin-product-surfaces-card';
 import { AdminProPreviewAuditCard } from '@/components/admin-pro-preview-audit-card';
 import { AdminProductionGateCard } from '@/components/admin-production-gate-card';

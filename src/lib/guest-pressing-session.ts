@@ -2,10 +2,12 @@
  * Guest Pressing landing draft — sessionStorage handoff for claim-after-signup.
  */
 
+import { PROFILE_PHOTO_MAX_OUTPUT_BYTES } from '@/lib/cover-art';
 import type { PressingFaders } from '@/lib/profile/pressing';
 import { DEFAULT_FADERS, DEFAULT_PRESSING } from '@/lib/profile/pressing';
 import type { ModuleSize, ProfileModuleId } from '@/lib/profile/modules';
 import { MODULE_META, defaultModules } from '@/lib/profile/modules';
+import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 
 export const GUEST_PRESSING_KEY = 'b4b-guest-pressing-draft';
 const GUEST_PRESSING_CLAIM_LOCK = 'b4b-guest-pressing-claim-lock';
@@ -36,8 +38,20 @@ export type GuestPressingDraft = {
   /** S/M/L overrides for Artist Home sections. */
   moduleSizes: GuestModuleSizes;
   wallPosts: GuestWallDraftPost[];
+  profilePhotoMode?: 'initials' | 'custom';
+  profilePhotoDataUrl?: string;
+  starMarkUseStar?: boolean;
+  starMarkSeed?: number;
   savedAt: string;
 };
+
+const GUEST_PROFILE_PHOTO_MAX_LEN = PROFILE_PHOTO_MAX_OUTPUT_BYTES + 8_192;
+
+function normalizeGuestProfilePhotoDataUrl(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || !raw.startsWith('data:image/')) return undefined;
+  if (raw.length > GUEST_PROFILE_PHOTO_MAX_LEN) return undefined;
+  return raw;
+}
 
 /** Sections guests can resize on the landing preview. */
 export const GUEST_SIZEABLE_MODULES: ProfileModuleId[] = [
@@ -89,6 +103,9 @@ export function defaultGuestPressingDraft(): GuestPressingDraft {
     autoDrift: false,
     moduleSizes: defaultModuleSizes(),
     wallPosts: sampleWallPosts(),
+    profilePhotoMode: 'initials',
+    starMarkUseStar: false,
+    starMarkSeed: 0,
     savedAt: new Date().toISOString(),
   };
 }
@@ -155,8 +172,17 @@ export function persistGuestPressingDraft(draft: Omit<GuestPressingDraft, 'saved
       autoDrift: draft.autoDrift === true,
       moduleSizes: normalizeModuleSizes(draft.moduleSizes),
       wallPosts: normalizeWallPosts(draft.wallPosts),
+      profilePhotoMode: draft.profilePhotoMode === 'custom' ? 'custom' : 'initials',
+      ...(normalizeGuestProfilePhotoDataUrl(draft.profilePhotoDataUrl)
+        ? { profilePhotoDataUrl: normalizeGuestProfilePhotoDataUrl(draft.profilePhotoDataUrl) }
+        : {}),
+      starMarkUseStar: draft.starMarkUseStar === true,
+      starMarkSeed: normalizeVesperfoldSeed(draft.starMarkSeed ?? 0),
       savedAt: new Date().toISOString(),
     };
+    if (payload.profilePhotoMode !== 'custom') {
+      delete payload.profilePhotoDataUrl;
+    }
     sessionStorage.setItem(GUEST_PRESSING_KEY, JSON.stringify(payload));
   } catch {
     /* ignore */
@@ -194,6 +220,17 @@ export function readGuestPressingDraft(): GuestPressingDraft | null {
       autoDrift: parsed.autoDrift === true,
       moduleSizes: normalizeModuleSizes(parsed.moduleSizes),
       wallPosts: normalizeWallPosts(parsed.wallPosts),
+      profilePhotoMode:
+        parsed.profilePhotoMode === 'custom' &&
+        normalizeGuestProfilePhotoDataUrl(parsed.profilePhotoDataUrl)
+          ? 'custom'
+          : 'initials',
+      profilePhotoDataUrl:
+        parsed.profilePhotoMode === 'custom'
+          ? normalizeGuestProfilePhotoDataUrl(parsed.profilePhotoDataUrl)
+          : undefined,
+      starMarkUseStar: parsed.starMarkUseStar === true,
+      starMarkSeed: normalizeVesperfoldSeed(parsed.starMarkSeed ?? base.starMarkSeed ?? 0),
       savedAt: typeof parsed.savedAt === 'string' ? parsed.savedAt : base.savedAt,
     };
   } catch {

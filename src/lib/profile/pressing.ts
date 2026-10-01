@@ -27,7 +27,7 @@ export type PressingConfig = {
   autoDrift?: boolean;
 };
 
-export type CutStyle = 0 | 1 | 2 | 3 | 4 | 5;
+export type CutStyle = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 export type ApertureMode = 0 | 1 | 2 | 3 | 4;
 
 export type GrooveRing = {
@@ -883,6 +883,20 @@ export function dieCutClip(style: CutStyle): string {
       return 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 72%, 10px 68%, 10px 32%, 0 28%)';
     case 4:
       return 'polygon(8px 0, calc(100% - 8px) 0, 100% 14%, 100% 86%, calc(100% - 8px) 100%, 8px 100%, 0 86%, 0 14%)';
+    case 5:
+      return 'polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 14px 88%, 0 84%, 0 72%, 14px 68%, 14px 38%, 0 34%, 0 22%, 14px 18%)';
+    case 6:
+      return 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px))';
+    case 7:
+      return 'polygon(0 10px, 10px 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))';
+    case 8:
+      return 'polygon(0 0, 92% 0, 100% 12%, 100% 100%, 8% 100%, 0 88%)';
+    case 9:
+      return 'polygon(6% 0, 94% 0, 100% 8%, 100% 92%, 94% 100%, 6% 100%, 0 92%, 0 8%)';
+    case 10:
+      return 'polygon(0 0, 100% 0, 100% 78%, 88% 82%, 88% 100%, 0 100%)';
+    case 11:
+      return 'polygon(12% 0, 100% 0, 100% 100%, 0 100%, 0 22%, 12% 18%)';
     default:
       return 'polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 14px 88%, 0 84%, 0 72%, 14px 68%, 14px 38%, 0 34%, 0 22%, 14px 18%)';
   }

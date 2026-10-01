@@ -43,6 +43,7 @@ import {
   captureFeedScrollOnLinkClick,
   currentFeedScrollRouteKey,
 } from '@/lib/feed-scroll-restore';
+import { AppFeedChrome } from '@/components/site-chrome';
 
 const LIST_SECTION_ID = 'discover-list';
 

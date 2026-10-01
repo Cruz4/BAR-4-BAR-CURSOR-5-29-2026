@@ -27,7 +27,10 @@ export type PressingAction =
   | 'claim'
   | 'try_sheet'
   | 'how_it_works'
-  | 'signup_link';
+  | 'signup_link'
+  | 'photo_upload'
+  | 'photo_initials'
+  | 'photo_star';
 
 function readActions(): PressingAction[] {
   if (typeof window === 'undefined') return [];

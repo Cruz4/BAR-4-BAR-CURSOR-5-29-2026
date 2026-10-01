@@ -23,6 +23,7 @@ import {
 } from '@/lib/profile/artist-home-client';
 import { createPost } from '@/lib/profile/social-client';
 import { patchGamificationSettings } from '@/lib/gamification-client';
+import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client/firebase';
 
@@ -105,6 +106,24 @@ export function GuestPressingClaimBootstrap() {
           });
         }
         await saveArtistHomeConfigClient(config);
+
+        try {
+          const profilePatch: Parameters<typeof patchGamificationSettings>[0] = {};
+          if (draft.profilePhotoMode === 'custom' && draft.profilePhotoDataUrl?.trim()) {
+            profilePatch.profilePhotoMode = 'custom';
+            profilePatch.profilePhotoUrl = draft.profilePhotoDataUrl.trim();
+          } else {
+            profilePatch.profilePhotoMode = 'initials';
+            profilePatch.profilePhotoUrl = null;
+          }
+          if (draft.starMarkUseStar) {
+            profilePatch.starMarkUseStar = true;
+            profilePatch.starMarkSeed = normalizeVesperfoldSeed(draft.starMarkSeed ?? 0);
+          }
+          await patchGamificationSettings(profilePatch);
+        } catch {
+          /* photo / star optional — pressing still claimed */
+        }
 
         const wallPosts = claimableWallPosts(draft);
         const ownerName =

@@ -122,6 +122,7 @@ import {
 import { FreeTierExpectationsBanner } from '@/components/free-tier-expectations-banner';
 import { canExportVault, EXPORT_PRO_TOAST, IMPORT_PRO_TOAST } from '@/lib/tier-limits';
 import { StudioGuidedTour } from '@/components/studio-guided-tour';
+import { AppFeedChrome } from '@/components/site-chrome';
 import {
   VAULT_PAGE_TOUR_STEPS,
   markVaultTutorialComplete,
@@ -1492,6 +1493,8 @@ export function AlbumList() {
             </Button>
           </div>
         )}
+
+        <AppFeedChrome className="mx-auto mt-12 max-w-5xl px-2" />
       </div>
 
       <CreateItemDialog

@@ -25,6 +25,7 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { ArtistHome } from '@/components/profile/artist-home';
+import { AppFeedChrome } from '@/components/site-chrome';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import {
   defaultArtistHomeConfig,
@@ -50,6 +51,8 @@ import {
   trackPressingTrySheet,
 } from '@/lib/guest-pressing-analytics';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { normalizeVesperfoldSeed } from '@/lib/profile/vesperfold';
+import type { PlaygroundProfilePhoto } from '@/components/profile/artist-home';
 import { parseEmbedUrl } from '@/lib/profile/embeds';
 import {
   NEOMAIYA_SOL,
@@ -96,6 +99,7 @@ function draftToConfig(draft: GuestPressingDraft): ArtistHomeConfig {
     },
     modules: base.modules.map((m) => {
       if (m.id === 'openLock') return { ...m, enabled: false };
+      if (m.id === 'dropShelf') return { ...m, enabled: false };
       const size = draft.moduleSizes[m.id] || m.size;
       if (m.id === 'barOfWeek') return { ...m, enabled: true, size };
       if (m.id === 'wall') return { ...m, enabled: true, size };
@@ -112,6 +116,10 @@ function draftToProfile(draft: GuestPressingDraft): PublicProfileData {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
       .slice(0, 32) || 'your-name';
+  const customPhoto =
+    draft.profilePhotoMode === 'custom' && draft.profilePhotoDataUrl?.trim()
+      ? draft.profilePhotoDataUrl.trim()
+      : '';
   return {
     displayName: draft.displayName.trim() || 'Your Name',
     rankLabel: 'Open Mic',
@@ -122,7 +130,10 @@ function draftToProfile(draft: GuestPressingDraft): PublicProfileData {
     albumCoverUrls: [],
     badges: [],
     unlockedAchievements: {},
-    profilePhotoMode: 'initials',
+    profilePhotoMode: customPhoto ? 'custom' : 'initials',
+    profilePhotoUrl: customPhoto || undefined,
+    starMarkUseStar: draft.starMarkUseStar === true,
+    starMarkSeed: draft.starMarkSeed ?? 0,
     slug,
     userId: 'guest-playground',
   };
@@ -381,6 +392,30 @@ function GuestPressingLandingInner() {
     ];
   }, [jordieUserId, jordieSlug, jordieDisplayName]);
 
+  const playgroundProfilePhoto = useMemo<PlaygroundProfilePhoto>(
+    () => ({
+      onCustomPhoto: (dataUrl) => {
+        trackPressingAction('photo_upload');
+        update({ profilePhotoMode: 'custom', profilePhotoDataUrl: dataUrl });
+      },
+      onUseInitials: () => {
+        trackPressingAction('photo_initials');
+        update({ profilePhotoMode: 'initials', profilePhotoDataUrl: undefined });
+      },
+      onShuffleStar: () => {
+        trackPressingAction('photo_star');
+        setDraft((prev) => ({
+          ...prev,
+          starMarkUseStar: true,
+          starMarkSeed: normalizeVesperfoldSeed(
+            (Date.now() ^ ((prev.starMarkSeed ?? 0) * 997)) >>> 0
+          ),
+        }));
+      },
+    }),
+    [update]
+  );
+
   const playgroundBarOfWeek = useMemo(
     () => ({
       text: draft.barOfWeek || '',
@@ -553,7 +588,7 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(28vh,12.5rem)] pt-[4.85rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
+      <div className="pb-[min(22vh,9.5rem)] pt-[4.85rem] sm:pb-[min(26vh,11rem)] sm:pt-[7.25rem]">
         <ArtistHome
           profile={profile}
           config={config}
@@ -563,16 +598,20 @@ function GuestPressingLandingInner() {
           playgroundFriends={playgroundFriends}
           playgroundGuestbook={playgroundGuestbook}
           playgroundBarOfWeek={playgroundBarOfWeek}
+          playgroundProfilePhoto={playgroundProfilePhoto}
           studioHomeHref="/welcome"
           studioHomeLabel="About AKAsheet"
         />
+        <div className="mx-auto max-w-[1200px] px-3 pt-6 sm:px-6">
+          <AppFeedChrome />
+        </div>
       </div>
 
       {/* Live Pressing dock — type here, page updates underneath */}
       <div className="fixed inset-x-0 bottom-0 z-[190] border-t border-white/10 bg-black/80 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
-        <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-4">
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-2 sm:gap-2">
-            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[10px] sm:tracking-[0.22em]">
+        <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-2.5">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-1.5 sm:gap-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[10px] sm:tracking-[0.2em]">
               <span className="sm:hidden">The Pressing</span>
               <span className="hidden sm:inline">Customize your profile — The Pressing</span>
             </p>
@@ -602,7 +641,7 @@ function GuestPressingLandingInner() {
               >
                 <Wind className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="sm:hidden">Mix</span>
-                <span className="hidden sm:inline">Mix & sizes</span>
+                <span className="hidden sm:inline">Mix &amp; sizes</span>
                 <ChevronUp className={cn('h-3 w-3 transition-transform sm:h-3.5 sm:w-3.5', mixOpen ? '' : 'rotate-180')} />
               </Button>
               <Button
@@ -741,8 +780,7 @@ function GuestPressingLandingInner() {
             </div>
           ) : null}
 
-          {/* Phone: name full width, then pressing + claim. Desktop: three-column grid. */}
-          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
+          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,10.5rem)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
             <div className="min-w-0 space-y-0.5 sm:space-y-1">
               <label
                 htmlFor="guest-name"
@@ -755,8 +793,7 @@ function GuestPressingLandingInner() {
                 value={draft.displayName}
                 onChange={(e) => update({ displayName: e.target.value.slice(0, 80) })}
                 placeholder="Your name"
-                aria-label="Your name on the page"
-                className="h-9 w-full border-white/15 bg-black/50 text-sm sm:h-10"
+                className="h-9 w-full border-white/15 bg-black/50 text-sm sm:h-9"
               />
             </div>
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:contents">
@@ -772,12 +809,12 @@ function GuestPressingLandingInner() {
                   id="guest-seed"
                   value={draft.seedText}
                   onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
-                  rows={2}
+                  rows={1}
                   placeholder="Type here to skin your page…"
                   aria-label="The Pressing — skins this page"
                   className={cn(
                     'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
-                    'min-h-[2.75rem] py-2 sm:min-h-[2.75rem] sm:py-2',
+                    'min-h-9 max-h-20 py-2 sm:max-h-9 sm:overflow-y-auto',
                     pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
                   )}
                 />
@@ -785,7 +822,7 @@ function GuestPressingLandingInner() {
               <Button
                 asChild
                 size="sm"
-                className="h-9 shrink-0 gap-1 self-end px-3 text-xs font-bold sm:h-[2.75rem] sm:gap-2 sm:px-4 sm:text-sm"
+                className="h-9 shrink-0 gap-1 self-end px-3 text-xs font-bold sm:h-9 sm:gap-2 sm:px-4"
                 onClick={onClaim}
               >
                 <LandingSignupLink intent="claim_artist_home">
@@ -798,11 +835,7 @@ function GuestPressingLandingInner() {
             </div>
           </div>
           <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
-            This preview is your public music home—completely free for artists, creators, and Music Fans. Type above for The Pressing. Click Bar of the Week on
-            the page to edit it. Mix & sizes still has faders and S/M/L. Claim keeps your look.
-            {firstDropsOn
-              ? ' Creators can sell releases; Music Fans can feature purchased music.'
-              : ''}
+            Type in The Pressing to skin the preview. Mix &amp; sizes opens faders and section scale. Claim keeps your look.
           </p>
         </div>
       </div>

@@ -57,7 +57,14 @@ async function copyText(value: string): Promise<boolean> {
   return false;
 }
 
-export function ReferAFriendSection({ className }: { className?: string }) {
+export function ReferAFriendSection({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  /** Tighter single-row layout for Scene footers. */
+  compact?: boolean;
+}) {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [info, setInfo] = useState<ReferralInfo | null>(null);
@@ -126,6 +133,20 @@ export function ReferAFriendSection({ className }: { className?: string }) {
   };
 
   if (!user || authLoading || loading) {
+    if (compact) {
+      return (
+        <div
+          id="refer-a-friend"
+          className={cn(
+            'rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2.5',
+            className
+          )}
+          aria-busy="true"
+        >
+          <Skeleton className="h-8 w-full rounded-md" />
+        </div>
+      );
+    }
     return (
       <Card
         id="refer-a-friend"
@@ -161,6 +182,57 @@ export function ReferAFriendSection({ className }: { className?: string }) {
 
   const remaining = info?.remaining ?? MAX_REFERRAL_REWARDS;
   const exhausted = remaining <= 0;
+
+  if (compact) {
+    return (
+      <div
+        id="refer-a-friend"
+        className={cn(
+          'rounded-lg border border-primary/20 bg-gradient-to-r from-primary/[0.05] via-card/30 to-violet-500/[0.04] px-3 py-2.5',
+          className
+        )}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Gift className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <div className="min-w-0">
+              <p className="font-headline text-xs font-bold uppercase tracking-tight">Refer a friend</p>
+              <p className="truncate text-[10px] text-muted-foreground font-code">
+                {exhausted
+                  ? 'Max referral bonus earned — thanks!'
+                  : `Share Ink · ${remaining} reward${remaining === 1 ? '' : 's'} left`}
+              </p>
+            </div>
+            <Badge variant="outline" className="hidden shrink-0 border-primary/30 text-primary font-mono text-[9px] sm:inline-flex">
+              {info?.referralCount ?? 0}/{MAX_REFERRAL_REWARDS}
+            </Badge>
+          </div>
+          {!exhausted && info?.referralLink ? (
+            <div className="flex gap-1.5 sm:max-w-[min(100%,22rem)] sm:flex-1">
+              <Input
+                readOnly
+                value={info.referralLink}
+                className="h-8 min-w-0 flex-1 bg-black/40 border-white/10 font-code text-[10px]"
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void copyLink()}
+                className="h-8 shrink-0 gap-1 px-2.5 text-[9px] font-bold uppercase"
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'OK' : 'Copy'}
+              </Button>
+            </div>
+          ) : error && !info?.referralLink ? (
+            <Button type="button" variant="outline" size="sm" className="h-8 text-[10px]" onClick={() => void loadReferral()}>
+              Retry
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card id="refer-a-friend" className={cn('border-primary/20 bg-gradient-to-br from-primary/[0.06] via-card/40 to-violet-500/[0.05] overflow-hidden', className)}>

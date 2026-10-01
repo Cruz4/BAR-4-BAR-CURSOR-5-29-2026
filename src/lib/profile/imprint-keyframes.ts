@@ -63,6 +63,26 @@ export const IMPRINT_KEYFRAMES_CSS = `
   15% { opacity: 0.85; }
   100% { transform: translateY(-120%); opacity: 0; }
 }
+@keyframes qp-plus-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes qp-plus-sweep {
+  0%, 100% { transform: translateX(-18%) skewX(-6deg); opacity: 0.2; }
+  50% { transform: translateX(18%) skewX(6deg); opacity: 0.55; }
+}
+@keyframes qp-plus-shimmer {
+  0%, 100% { opacity: 0.15; filter: hue-rotate(0deg); }
+  50% { opacity: 0.45; filter: hue-rotate(24deg); }
+}
+@keyframes qp-plus-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6%, -5%) scale(1.08); }
+}
+@keyframes qp-plus-breathe {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50% { opacity: 0.38; transform: scale(1.04); }
+}
 @media (prefers-reduced-motion: reduce) {
   .qp-anim { animation: none !important; }
 }
