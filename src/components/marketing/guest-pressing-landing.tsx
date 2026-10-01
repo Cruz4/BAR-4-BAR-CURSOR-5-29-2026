@@ -514,27 +514,27 @@ function GuestPressingLandingInner() {
       </header>
 
       {/* Profile framing strip */}
-      <div className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-1.5 backdrop-blur-md sm:top-16 sm:px-6 sm:py-2">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <p className="min-w-0 flex-1 text-[11px] leading-snug text-zinc-200 sm:text-xs">
+      <div className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-1 backdrop-blur-md sm:top-16 sm:px-6 sm:py-2">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
+          <p className="min-w-0 flex-1 text-[10px] leading-snug text-zinc-200 sm:text-xs">
             <span className="font-bold text-primary">Live preview</span>
-            <span className="text-zinc-400"> — this is your free AKAsheet profile page.</span>
-            {' '}
+            <span className="text-zinc-400"> — your free profile page.</span>
             <span className="hidden text-zinc-300 sm:inline">
+              {' '}
               Try The Pressing at the bottom to customize the skin.
               {firstDropsOn ? ' Creators can sell releases; Music Fans can feature purchased music.' : ''}
             </span>
           </p>
-          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Link
               href="/welcome"
-              className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline"
+              className="hidden text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline sm:inline"
             >
               About
             </Link>
             <Link
               href="/pricing"
-              className="text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline sm:hidden"
+              className="hidden text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:text-primary hover:underline sm:inline"
             >
               Pricing
             </Link>
@@ -553,7 +553,7 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(30vh,13.5rem)] pt-[6.5rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
+      <div className="pb-[min(28vh,12.5rem)] pt-[4.85rem] sm:pb-[min(42vh,22rem)] sm:pt-[7.25rem]">
         <ArtistHome
           profile={profile}
           config={config}
@@ -741,12 +741,12 @@ function GuestPressingLandingInner() {
             </div>
           ) : null}
 
-          {/* Phone: name + pressing + claim in one tight strip. Desktop: original grid. */}
-          <div className="grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)_auto] items-end gap-1.5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:gap-3">
+          {/* Phone: name full width, then pressing + claim. Desktop: three-column grid. */}
+          <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
             <div className="min-w-0 space-y-0.5 sm:space-y-1">
               <label
                 htmlFor="guest-name"
-                className="hidden text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:block"
+                className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground sm:text-[10px]"
               >
                 Your name on the page
               </label>
@@ -756,44 +756,46 @@ function GuestPressingLandingInner() {
                 onChange={(e) => update({ displayName: e.target.value.slice(0, 80) })}
                 placeholder="Your name"
                 aria-label="Your name on the page"
-                className="h-8 border-white/15 bg-black/50 text-sm sm:h-10"
+                className="h-9 w-full border-white/15 bg-black/50 text-sm sm:h-10"
               />
             </div>
-            <div className="min-w-0 space-y-0.5 sm:space-y-1">
-              <label
-                htmlFor="guest-seed"
-                className="hidden text-[10px] font-bold uppercase tracking-widest text-primary/90 sm:block"
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:contents">
+              <div className="min-w-0 space-y-0.5 sm:space-y-1">
+                <label
+                  htmlFor="guest-seed"
+                  className="text-[9px] font-bold uppercase tracking-widest text-primary/90 sm:text-[10px]"
+                >
+                  The Pressing
+                </label>
+                <Textarea
+                  ref={seedRef}
+                  id="guest-seed"
+                  value={draft.seedText}
+                  onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
+                  rows={2}
+                  placeholder="Type here to skin your page…"
+                  aria-label="The Pressing — skins this page"
+                  className={cn(
+                    'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
+                    'min-h-[2.75rem] py-2 sm:min-h-[2.75rem] sm:py-2',
+                    pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
+                  )}
+                />
+              </div>
+              <Button
+                asChild
+                size="sm"
+                className="h-9 shrink-0 gap-1 self-end px-3 text-xs font-bold sm:h-[2.75rem] sm:gap-2 sm:px-4 sm:text-sm"
+                onClick={onClaim}
               >
-                The Pressing — skins this page
-              </label>
-              <Textarea
-                ref={seedRef}
-                id="guest-seed"
-                value={draft.seedText}
-                onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
-                rows={2}
-                placeholder="Change this text to watch your page change....."
-                aria-label="The Pressing — skins this page"
-                className={cn(
-                  'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
-                  'h-[3.25rem] min-h-[3.25rem] max-h-[3.25rem] overflow-hidden py-1.5 sm:h-auto sm:min-h-[2.75rem] sm:max-h-none sm:overflow-visible sm:py-2',
-                  pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
-                )}
-              />
+                <LandingSignupLink intent="claim_artist_home">
+                  <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:hidden">Claim</span>
+                  <span className="hidden sm:inline">Claim free</span>
+                  <ArrowRight className="hidden h-4 w-4 sm:inline" />
+                </LandingSignupLink>
+              </Button>
             </div>
-            <Button
-              asChild
-              size="sm"
-              className="h-8 shrink-0 gap-1 px-2.5 text-xs font-bold sm:h-[2.75rem] sm:gap-2 sm:px-4 sm:text-sm"
-              onClick={onClaim}
-            >
-              <LandingSignupLink intent="claim_artist_home">
-                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="sm:hidden">Claim</span>
-                <span className="hidden sm:inline">Claim free</span>
-                <ArrowRight className="hidden h-4 w-4 sm:inline" />
-              </LandingSignupLink>
-            </Button>
           </div>
           <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
             This preview is your public music home—completely free for artists, creators, and Music Fans. Type above for The Pressing. Click Bar of the Week on

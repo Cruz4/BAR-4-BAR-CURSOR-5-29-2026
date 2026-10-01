@@ -132,6 +132,7 @@ export function ArtistHome({
   studioHomeHref = '/',
   studioHomeLabel = 'AKAsheet',
 }: ArtistHomeProps) {
+  const guestSandbox = previewMode && Boolean(playgroundWall);
   const { user } = useAuth();
   const { enabled: lockOn } = useLockFeature();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
@@ -381,6 +382,23 @@ export function ArtistHome({
             width: 78%;
           }
         }
+        @media (max-width: 639px) {
+          .ph-guest-sandbox-hero {
+            margin-top: 0.5rem !important;
+            gap: 0.85rem !important;
+          }
+          .ph-guest-sandbox-hero .ph-guest-sandbox-copy {
+            order: 1;
+          }
+          .ph-guest-sandbox-hero .ph-guest-sandbox-photo {
+            order: 2;
+            max-width: 11.5rem;
+            margin-inline: auto;
+          }
+          .ph-guest-sandbox-photo-btn {
+            clip-path: none !important;
+          }
+        }
       `}</style>
 
       <LivingPressField
@@ -389,9 +407,19 @@ export function ArtistHome({
         onTokensChange={onTokensChange}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-3 sm:px-6 sm:pt-10">
+      <div
+        className={cn(
+          'relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-3 sm:px-6 sm:pt-10',
+          guestSandbox && 'max-sm:px-3 max-sm:pt-1'
+        )}
+      >
         {/* Sheet header */}
-        <div className="flex items-center gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-3 sm:gap-2 sm:pb-4">
+        <div
+          className={cn(
+            'flex items-center gap-1.5 border-b border-dashed border-[var(--ph-border)] pb-3 sm:gap-2 sm:pb-4',
+            guestSandbox && 'max-sm:pb-2'
+          )}
+        >
           <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-3">
             {studioHomeHref === '/' && !previewMode && !playgroundWall ? (
               <ArtistHomeBackButton label="Back" profileSlug={profile.slug} />
@@ -466,10 +494,16 @@ export function ArtistHome({
         <section
           className={cn(
             'ph-hero-grid mt-8 grid gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 lg:grid-cols-12',
-            previewMode ? 'lg:items-center' : 'lg:items-end'
+            previewMode ? 'lg:items-center' : 'lg:items-end',
+            guestSandbox && 'ph-guest-sandbox-hero max-sm:mt-2 max-sm:flex max-sm:flex-col max-sm:gap-3'
           )}
         >
-          <div className="min-w-0 space-y-5 lg:col-span-7">
+          <div
+            className={cn(
+              'ph-guest-sandbox-copy min-w-0 space-y-5 lg:col-span-7',
+              guestSandbox && 'max-sm:space-y-3'
+            )}
+          >
             {config.featured.tagline || (isOwner && profile.slug && !previewMode) ? (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 {config.featured.tagline ? (
@@ -644,7 +678,12 @@ export function ArtistHome({
               <p className="max-w-xl text-sm leading-relaxed text-[var(--ph-muted)]">{config.featured.bio}</p>
             )}
 
-            <div className="w-full max-w-md min-w-0 space-y-3">
+            <div
+              className={cn(
+                'w-full max-w-md min-w-0 space-y-3',
+                guestSandbox && 'max-sm:hidden'
+              )}
+            >
               <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
                 {[
                   { label: 'Total XP', value: totalXp.toLocaleString(), icon: Zap },
@@ -699,8 +738,18 @@ export function ArtistHome({
             </div>
           </div>
 
-          <div className="flex min-w-0 justify-center overflow-visible lg:col-span-5 lg:justify-end">
-            <div className="relative w-full max-w-[20rem] animate-in fade-in zoom-in-95 duration-500 sm:max-w-96">
+          <div
+            className={cn(
+              'ph-guest-sandbox-photo flex min-w-0 justify-center overflow-visible lg:col-span-5 lg:justify-end',
+              guestSandbox && 'max-sm:w-full'
+            )}
+          >
+            <div
+              className={cn(
+                'relative w-full max-w-[20rem] animate-in fade-in zoom-in-95 duration-500 sm:max-w-96',
+                guestSandbox && 'max-sm:max-w-[11.5rem]'
+              )}
+            >
               {tokens.alive && (
                 <div
                   aria-hidden
@@ -721,8 +770,15 @@ export function ArtistHome({
                 type="button"
                 onClick={() => setPhotoOpen(true)}
                 aria-label={`View ${profile.displayName}'s profile photo`}
-                className="relative aspect-square w-full max-w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]"
-                style={{ clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }}
+                className={cn(
+                  'ph-guest-sandbox-photo-btn relative aspect-square w-full max-w-full cursor-zoom-in overflow-hidden border border-[var(--ph-border)] shadow-[0_24px_80px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ph-accent,#7dd3fc)]',
+                  guestSandbox && 'max-sm:overflow-visible'
+                )}
+                style={
+                  guestSandbox
+                    ? undefined
+                    : { clipPath: dieCutClip(((tokens.cutStyle + 1) % 6) as 0 | 1 | 2 | 3 | 4 | 5) }
+                }
               >
                 {useCustomPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -752,9 +808,19 @@ export function ArtistHome({
                 )}
               </button>
               {previewMode && !isOwner ? (
-                <div className="relative z-20 mt-3 space-y-1.5 text-center">
+                <div
+                  className={cn(
+                    'relative z-20 mt-3 space-y-1.5 text-center',
+                    guestSandbox && 'max-sm:mt-2 max-sm:space-y-1'
+                  )}
+                >
                   <ProfileSocialExampleBadges />
-                  <p className="text-[10px] leading-snug text-[var(--ph-muted)]">
+                  <p
+                    className={cn(
+                      'text-[10px] leading-snug text-[var(--ph-muted)]',
+                      guestSandbox && 'max-sm:text-[9px]'
+                    )}
+                  >
                     (example socials — upload or change your picture once you sign in)
                   </p>
                 </div>
