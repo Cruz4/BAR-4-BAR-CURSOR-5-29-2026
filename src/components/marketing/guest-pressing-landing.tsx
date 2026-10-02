@@ -70,6 +70,9 @@ import {
   prefetchGuestTrySheetWhenIdle,
 } from '@/lib/prefetch-guest-try-sheet';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useLockBodyScrollWhileFocused } from '@/hooks/use-lock-body-scroll-while-focused';
+import { useVisualViewportKeyboardInset } from '@/hooks/use-visual-viewport-keyboard-inset';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
 
@@ -175,6 +178,10 @@ function GuestPressingLandingInner() {
   const [jordieUserId, setJordieUserId] = useState<string | undefined>(undefined);
   const [jordieDisplayName, setJordieDisplayName] = useState<string>(JORDIE_CRUZ.displayName);
   const seedRef = useRef<HTMLTextAreaElement>(null);
+  const pressingDockRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+  const keyboardInset = useVisualViewportKeyboardInset();
+  useLockBodyScrollWhileFocused(pressingDockRef, isMobile);
 
   const warmTrySheet = useCallback(() => {
     prefetchGuestTrySheetNow((href) => router.prefetch(href));
@@ -588,7 +595,7 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(22vh,9.5rem)] pt-[4.85rem] sm:pb-[min(26vh,11rem)] sm:pt-[7.25rem]">
+      <div className="pb-[min(28vh,12.5rem)] pt-[4.85rem] sm:pb-[min(26vh,11rem)] sm:pt-[7.25rem]">
         <ArtistHome
           profile={profile}
           config={config}
@@ -608,7 +615,18 @@ function GuestPressingLandingInner() {
       </div>
 
       {/* Live Pressing dock — type here, page updates underneath */}
-      <div className="fixed inset-x-0 bottom-0 z-[190] border-t border-white/10 bg-black/80 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div
+        ref={pressingDockRef}
+        className="fixed inset-x-0 z-[190] border-t border-white/10 bg-black/80 backdrop-blur-xl max-sm:max-h-[min(100dvh,100%)] max-sm:overflow-y-auto max-sm:overscroll-contain"
+        style={{
+          bottom: keyboardInset > 0 ? keyboardInset : 0,
+          paddingBottom:
+            keyboardInset > 0 ? 0 : 'max(0px, env(safe-area-inset-bottom, 0px))',
+          ...(isMobile && keyboardInset > 0
+            ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 3.5rem)` }
+            : {}),
+        }}
+      >
         <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-2.5">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-1.5 sm:gap-2">
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[10px] sm:tracking-[0.2em]">
@@ -809,12 +827,14 @@ function GuestPressingLandingInner() {
                   id="guest-seed"
                   value={draft.seedText}
                   onChange={(e) => update({ seedText: e.target.value.slice(0, 280) })}
-                  rows={1}
+                  rows={isMobile ? 2 : 1}
                   placeholder="Type here to skin your page…"
                   aria-label="The Pressing — skins this page"
                   className={cn(
                     'resize-none border-white/15 bg-black/50 text-sm leading-snug transition-shadow',
-                    'min-h-9 max-h-20 py-2 sm:max-h-9 sm:overflow-y-auto',
+                    isMobile
+                      ? 'min-h-[3rem] max-h-[4rem] overflow-y-auto py-1.5'
+                      : 'min-h-9 max-h-9 overflow-y-auto py-2',
                     pressingPulse && 'ring-2 ring-primary/70 shadow-[0_0_24px_rgba(59,130,246,0.35)]'
                   )}
                 />

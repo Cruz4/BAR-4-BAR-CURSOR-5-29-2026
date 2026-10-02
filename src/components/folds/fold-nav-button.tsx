@@ -12,7 +12,6 @@ import { FoldReadToggle } from '@/components/folds/fold-read-toggle';
 import { InboxBulkReadToggle } from '@/components/inbox-bulk-read-toggle';
 import { useFoldsFeature } from '@/hooks/use-folds-feature';
 import { useAuth } from '@/hooks/use-auth';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { peerIdOf, unreadFor, type FoldDoc } from '@/lib/folds/types';
 import { peerReadLastOutgoing } from '@/lib/folds/read-receipts';
 import { cn } from '@/lib/utils';
@@ -37,7 +36,6 @@ export function getRecentFolds(folds: FoldDoc[], me: string, limit = PREVIEW_LIM
 export function FoldNavButton() {
   const router = useRouter();
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const { folds, unread, waiting, ready, markAllFoldsRead, markAllFoldsUnread } = useFoldInbox();
   const { enabled } = useFoldsFeature();
   const [open, setOpen] = useState(false);
@@ -99,10 +97,8 @@ export function FoldNavButton() {
         side="bottom"
         collisionPadding={8}
         className={cn(
-          'p-0 bg-[#120e0a] border-2 border-amber-500/25 shadow-2xl overflow-hidden',
-          isMobile
-            ? 'w-[min(18rem,calc(100vw-4.5rem))]'
-            : 'w-[min(22rem,calc(100vw-1.25rem))]'
+          'header-nav-popover-content p-0 bg-[#120e0a] border-2 border-amber-500/25 shadow-2xl overflow-hidden',
+          'w-[min(22rem,calc(100vw-1.25rem))]'
         )}
       >
         <div className="flex items-center justify-between gap-2 border-b border-amber-500/15 bg-amber-500/5 px-3 py-2.5">

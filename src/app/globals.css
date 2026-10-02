@@ -2837,3 +2837,21 @@
     animation: none;
   }
 }
+
+/* Header Msgs / Activity popovers: anchor to screen right on phone (triggers sit left of ink + avatar). */
+@media (max-width: 767px) {
+  [data-radix-popper-content-wrapper]:has(.header-nav-popover-content) {
+    position: fixed !important;
+    right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+    left: auto !important;
+    top: calc(3.5rem + 4px) !important;
+    transform: none !important;
+    width: min(20rem, calc(100vw - 1rem)) !important;
+    min-width: 0 !important;
+  }
+
+  .header-nav-popover-content {
+    width: 100% !important;
+    max-width: none;
+  }
+}
