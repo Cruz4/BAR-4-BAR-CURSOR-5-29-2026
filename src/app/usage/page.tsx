@@ -27,7 +27,6 @@ import {
     Info,
     Trash2,
     Mail,
-    Coffee,
     LifeBuoy,
     Banknote,
 } from 'lucide-react';
@@ -872,15 +871,22 @@ function UsagePageContent() {
                           <a href={SUPPORT_MAILTO} className="text-primary hover:underline">{SUPPORT_EMAIL}</a>.
                           We typically respond within a few business days.
                         </p>
+                        <p className="text-xs opacity-80">
+                          Optional{' '}
+                          <a
+                            href={BUY_ME_COFFEE_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-primary hover:underline"
+                          >
+                            tip jar
+                          </a>
+                          .
+                        </p>
                         <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-1">
                             <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase gap-2" asChild>
                                 <a href={SUPPORT_MAILTO}>
                                   <Mail className="h-4 w-4" /> Email Support
-                                </a>
-                            </Button>
-                            <Button variant="outline" className="h-11 px-5 text-xs font-bold uppercase gap-2" asChild>
-                                <a href={BUY_ME_COFFEE_URL} target="_blank" rel="noopener noreferrer">
-                                  <Coffee className="h-4 w-4" /> Buy Me A Coffee
                                 </a>
                             </Button>
                         </div>

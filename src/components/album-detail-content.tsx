@@ -806,6 +806,8 @@ function LooseTrackCard({
   onMoveTrack,
   onDelete,
   tierLocked = false,
+  trackingOn = false,
+  onPressStageChange,
 }: {
   track: Track;
   index: number;
@@ -814,12 +816,15 @@ function LooseTrackCard({
   onMoveTrack: (trackId: string, targetAlbumId: string) => void;
   onDelete: () => void;
   tierLocked?: boolean;
+  trackingOn?: boolean;
+  onPressStageChange?: (pressStage: Track['pressStage']) => void;
 }) {
   const barCount = countRhymeBars(track.sections);
   const sectionCount = track.sections?.length ?? 0;
 
   return (
-    <div className="group relative flex min-w-0 items-start gap-3 overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card via-card/95 to-primary/[0.045] px-3 py-3 transition-all hover:border-primary/35 hover:bg-primary/[0.055] hover:shadow-[0_12px_32px_rgba(59,130,246,0.1)] sm:gap-4 sm:px-4 dark:border-white/10 dark:from-black/55 dark:via-black/40 dark:to-primary/[0.08]">
+    <div className="group relative flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card via-card/95 to-primary/[0.045] px-3 py-3 transition-all hover:border-primary/35 hover:bg-primary/[0.055] hover:shadow-[0_12px_32px_rgba(59,130,246,0.1)] sm:flex-row sm:items-center sm:gap-4 sm:px-4 dark:border-white/10 dark:from-black/55 dark:via-black/40 dark:to-primary/[0.08]">
+      <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 font-code text-[11px] font-bold tabular-nums text-primary/80">
         {String(index + 1).padStart(2, '0')}
       </span>
@@ -846,11 +851,23 @@ function LooseTrackCard({
           </span>
         </div>
       </div>
+      </div>
+
+      {trackingOn && onPressStageChange ? (
+        <div className="w-full min-w-0 pl-12 sm:w-48 sm:shrink-0 sm:pl-0">
+          <PressStageControl
+            compact
+            stage={track.pressStage}
+            disabled={tierLocked}
+            onChange={onPressStageChange}
+          />
+        </div>
+      ) : null}
 
       {!tierLocked ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground opacity-75 hover:bg-primary/10 hover:text-primary group-hover:opacity-100" aria-label={`Manage ${track.title}`}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 self-end rounded-lg text-muted-foreground opacity-75 hover:bg-primary/10 hover:text-primary group-hover:opacity-100 sm:self-center" aria-label={`Manage ${track.title}`}>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -1389,7 +1406,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     {isUnassignedVault ? <CassetteTape className="h-6 w-6 sm:h-8 sm:w-8 text-primary" /> : <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />}
                                 </div>
                                 <div className="min-w-0">
-                                    <CardTitle className="break-words font-headline text-lg uppercase tracking-tighter sm:text-xl md:text-2xl lg:text-3xl">{isUnassignedVault ? 'Idea Vault' : 'Tracklist'}</CardTitle>
+                                    <CardTitle className="break-words font-headline text-lg uppercase tracking-tighter sm:text-xl md:text-2xl lg:text-3xl">Tracklist</CardTitle>
                                     <p className="mt-0.5 break-words text-xs font-bold uppercase tracking-widest text-muted-foreground">Asset Reordering &amp; Management</p>
                                 </div>
                             </div>
@@ -1401,16 +1418,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 >
                                     <PlusCircle className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add Track
                                 </Button>
-                                {!isUnassignedVault && (
-                                  <Button
-                                    variant="outline"
-                                    onClick={openBlankSheets}
-                                    disabled={!canAddTrack}
-                                    className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-sky-500/30 rounded-xl bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 md:w-auto md:flex-none md:px-4"
-                                  >
-                                    <NotebookPen className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add sheets
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="outline"
+                                  onClick={openBlankSheets}
+                                  disabled={!canAddTrack}
+                                  className="h-9 w-full min-w-0 px-3 font-bold text-[10px] uppercase tracking-widest border-sky-500/30 rounded-xl bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 md:w-auto md:flex-none md:px-4"
+                                >
+                                  <NotebookPen className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Add sheets
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1425,7 +1440,7 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 >
                                     <FileDown className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" /> Export
                                 </Button>
-                                {!isUnassignedVault && firstDropsOn ? (
+                                {firstDropsOn ? (
                                   <>
                                     <Button
                                       variant="outline"
@@ -1444,9 +1459,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       }
                                     >
                                       <Disc3 className="mr-1.5 sm:mr-2 h-4 w-4 shrink-0" />{' '}
-                                      {releaseStatusOf({ ...album, tracks: album.tracks }) === 'live'
-                                        ? 'Manage album release'
-                                        : 'Release album'}
+                                      {isUnassignedVault
+                                        ? 'Release album'
+                                        : releaseStatusOf({ ...album, tracks: album.tracks }) === 'live'
+                                          ? 'Manage album release'
+                                          : 'Release album'}
                                     </Button>
                                     <Button
                                       variant="outline"
@@ -1551,12 +1568,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-3 border-b border-border px-4 sm:px-6 md:px-8 py-4 dark:border-white/5">
+                            <AlbumVaultReleasePanel album={album} />
+                            {album.tracks?.length > 0 ? (
                             <div className="relative w-full">
                               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                               <Input
                                 value={looseSearch}
                                 onChange={(e) => setLooseSearch(e.target.value)}
-                                placeholder='Search loose tracks… title, genre, mood'
+                                placeholder="Search sheets… title, genre, mood, stage"
                                 className="h-10 border-border bg-muted/40 pl-10 pr-10 font-code text-xs font-bold dark:border-white/10"
                               />
                               {looseSearch ? (
@@ -1572,13 +1591,16 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                 </Button>
                               ) : null}
                             </div>
+                            ) : null}
                             <div className="flex flex-wrap items-center gap-2">
+                              {album.tracks?.length > 0 ? (
+                                <>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 gap-2 border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider dark:border-white/10"
+                                    className="h-9 gap-2 border-border bg-muted/40 text-xs font-bold uppercase tracking-wider dark:border-white/10"
                                   >
                                     <ArrowUpDown className="h-3.5 w-3.5" />
                                     Sort · {looseSort === 'newest' ? 'Newest' : looseSort === 'oldest' ? 'Oldest' : 'A–Z'}
@@ -1622,9 +1644,24 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                   ))}
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                                </>
+                              ) : null}
+                              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 px-3 py-1.5">
+                                <Label htmlFor="loose-press-tracking" className="text-xs font-bold uppercase tracking-wider text-sky-200">
+                                  Press / Release tracking
+                                </Label>
+                                <Switch
+                                  id="loose-press-tracking"
+                                  checked={trackingOn}
+                                  disabled={albumTierLocked}
+                                  onCheckedChange={(next) => handleAlbumUpdate({ pressTrackingEnabled: next })}
+                                />
+                              </div>
+                              {album.tracks?.length > 0 ? (
                               <Badge variant="outline" className="ml-auto border-sky-500/30 font-mono text-sky-400">
                                 {displayedLooseTracks.length} shown
                               </Badge>
+                              ) : null}
                             </div>
                           </div>
                         )}
@@ -1643,6 +1680,8 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                       onMoveTrack={handleMoveToAlbum}
                                       onDelete={() => setTrackToDelete(track)}
                                       tierLocked={!editableTrackIds.has(track.id)}
+                                      trackingOn={trackingOn}
+                                      onPressStageChange={(pressStage) => updateTrack(album.id, track.id, { pressStage })}
                                     />
                                   ))}
                                   {isPro && (
@@ -1812,16 +1851,14 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
                                     <div className="py-20 text-center flex flex-col items-center gap-6 opacity-30">
                                         <CassetteTape className="h-16 w-16" />
                                         <p className="font-code text-sm uppercase tracking-[0.4em]">No tracks in this blueprint</p>
-                                        {!isUnassignedVault ? (
-                                          <div className="flex flex-wrap items-center justify-center gap-2 opacity-100">
-                                            <Button onClick={openCreateTrack} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
-                                              <PlusCircle className="mr-1.5 h-4 w-4" /> Add Track
-                                            </Button>
-                                            <Button variant="outline" onClick={openBlankSheets} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
-                                              <NotebookPen className="mr-1.5 h-4 w-4" /> Add sheets
-                                            </Button>
-                                          </div>
-                                        ) : null}
+                                        <div className="flex flex-wrap items-center justify-center gap-2 opacity-100">
+                                          <Button onClick={openCreateTrack} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
+                                            <PlusCircle className="mr-1.5 h-4 w-4" /> Add Track
+                                          </Button>
+                                          <Button variant="outline" onClick={openBlankSheets} disabled={!canAddTrack} className="h-9 font-bold text-[10px] uppercase">
+                                            <NotebookPen className="mr-1.5 h-4 w-4" /> Add sheets
+                                          </Button>
+                                        </div>
                                     </div>
                                 )}
                         </CardContent>
@@ -2012,13 +2049,11 @@ export function AlbumDetailContent({ albumId }: { albumId: string }) {
           albums={albums}
         />
       )}
-      {!isUnassignedVault && (
-        <AddBlankSheetsDialog
-          open={blankSheetsOpen}
-          onOpenChange={setBlankSheetsOpen}
-          albumId={albumId}
-        />
-      )}
+      <AddBlankSheetsDialog
+        open={blankSheetsOpen}
+        onOpenChange={setBlankSheetsOpen}
+        albumId={albumId}
+      />
       
       <ExportDialog 
         open={exportDialogOpen} 

@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<ReleaseStatus, string> = {
 };
 
 export function AlbumVaultReleasePanel({ album, className }: { album: Album; className?: string }) {
+  const isLooseVault = album.id === 'unassigned';
   const albumRecord = { ...album, tracks: album.tracks };
   const releaseId = releaseShareIdOf(albumRecord);
   const status = releaseStatusOf(albumRecord);
@@ -26,7 +27,7 @@ export function AlbumVaultReleasePanel({ album, className }: { album: Album; cla
   const openAlbumDesk = () => {
     openFirstDropLathe({
       albumId: album.id,
-      mode: 'album',
+      mode: isLooseVault ? 'song' : 'album',
       ...(releaseId ? { shareId: releaseId } : {}),
     });
   };
@@ -35,11 +36,12 @@ export function AlbumVaultReleasePanel({ album, className }: { album: Album; cla
     <div className={cn('space-y-3', className)}>
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-200/90 sm:text-sm">
-          Album drop &amp; release
+          {isLooseVault ? 'Loose drop &amp; release' : 'Album drop &amp; release'}
         </p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          Music releases and Lyrics DNA Drops are separate. Update pricing, audio, lyric snapshots, or take either
-          offline — without leaving this album.
+          {isLooseVault
+            ? 'Press singles from your Idea Vault or open the release desk for any loose track. Multi-track album bundles live on a real album blueprint.'
+            : 'Music releases and Lyrics DNA Drops are separate. Update pricing, audio, lyric snapshots, or take either offline — without leaving this album.'}
         </p>
       </div>
 
@@ -63,9 +65,13 @@ export function AlbumVaultReleasePanel({ album, className }: { album: Album; cla
           )}
         </div>
         <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          {audioTrackCount > 0
-            ? `${audioTrackCount} track${audioTrackCount === 1 ? '' : 's'} with audio on this album.`
-            : 'Upload recordings on the release desk to press this album live.'}
+          {isLooseVault
+            ? audioTrackCount > 0
+              ? `${audioTrackCount} loose track${audioTrackCount === 1 ? '' : 's'} with audio ready to sell.`
+              : 'Upload recordings on the release desk to press a single live.'
+            : audioTrackCount > 0
+              ? `${audioTrackCount} track${audioTrackCount === 1 ? '' : 's'} with audio on this album.`
+              : 'Upload recordings on the release desk to press this album live.'}
         </p>
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           {releaseId && status === 'live' ? (
@@ -83,7 +89,15 @@ export function AlbumVaultReleasePanel({ album, className }: { album: Album; cla
             onClick={openAlbumDesk}
           >
             <Settings2 className="h-3 w-3" />
-            {status === 'live' ? 'Update release' : hasReleaseWork ? 'Open release desk' : 'New album release'}
+            {isLooseVault
+              ? hasReleaseWork
+                ? 'Open release desk'
+                : 'Release from loose shelf'
+              : status === 'live'
+                ? 'Update release'
+                : hasReleaseWork
+                  ? 'Open release desk'
+                  : 'New album release'}
           </Button>
           <Button
             type="button"
