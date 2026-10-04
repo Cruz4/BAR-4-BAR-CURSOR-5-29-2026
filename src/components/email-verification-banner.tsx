@@ -6,7 +6,7 @@ import { auth } from '@/lib/firebase/client/firebase';
 import { sendSignupVerificationEmail } from '@/lib/email-verification-client';
 import { syncUserUsageBootstrap } from '@/lib/init-user-usage-client';
 import { useAuth } from '@/hooks/use-auth';
-import { useUsage } from '@/context/usage-context';
+import { useOptionalUsage } from '@/context/usage-context';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { PRO_FEATURE_PREVIEW_DAYS, SIGNUP_INK } from '@/lib/subscription';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 export function EmailVerificationBanner({ className }: { className?: string }) {
   const { user } = useAuth();
-  const { inkBalance, loading } = useUsage();
+  const { inkBalance, loading } = useOptionalUsage();
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
 

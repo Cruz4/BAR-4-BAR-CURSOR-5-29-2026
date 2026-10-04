@@ -9,12 +9,10 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ChevronUp, Globe, Music, PenLine, Sparkles, Wind } from 'lucide-react';
+import { ArrowRight, Globe, Music, PenLine, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -25,24 +23,20 @@ import {
 import { BrandLockup } from '@/components/brand-lockup';
 import { LandingSignInLink, LandingSignupLink } from '@/components/marketing/landing-signup-link';
 import { ArtistHome } from '@/components/profile/artist-home';
+import { QuotePressFontLoader } from '@/components/profile/quote-press-font-loader';
 import { AppFeedChrome } from '@/components/site-chrome';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import {
   defaultArtistHomeConfig,
   type ArtistHomeConfig,
 } from '@/lib/profile/modules';
-import type { PressingFaders } from '@/lib/profile/pressing';
 import {
   defaultGuestPressingDraft,
   persistGuestPressingDraft,
   readGuestPressingDraft,
-  GUEST_SIZEABLE_MODULES,
-  moduleSizeLabel,
   type GuestPressingDraft,
   type GuestWallDraftPost,
 } from '@/lib/guest-pressing-session';
-import type { ModuleSize } from '@/lib/profile/modules';
-import { MODULE_META } from '@/lib/profile/modules';
 import {
   bindPressingLeaveTracking,
   startPressingSandboxSession,
@@ -71,17 +65,9 @@ import {
 } from '@/lib/prefetch-guest-try-sheet';
 import { useFirstDropsFeature } from '@/hooks/use-first-drops-feature';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useLockBodyScrollWhileFocused } from '@/hooks/use-lock-body-scroll-while-focused';
-import { useVisualViewportKeyboardInset } from '@/hooks/use-visual-viewport-keyboard-inset';
+import { useVisualViewportMetrics } from '@/hooks/use-visual-viewport-keyboard-inset';
 
 const PRESSING_TIP_KEY = 'b4b-guest-pressing-tip-seen';
-
-const FADER_META: Array<{ key: keyof PressingFaders; label: string }> = [
-  { key: 'heat', label: 'Color' },
-  { key: 'grain', label: 'Texture' },
-  { key: 'pace', label: 'Motion' },
-  { key: 'ink', label: 'Depth' },
-];
 
 function draftToConfig(draft: GuestPressingDraft): ArtistHomeConfig {
   const base = defaultArtistHomeConfig();
@@ -167,7 +153,6 @@ function GuestPressingLandingInner() {
   const router = useRouter();
   const { enabled: firstDropsOn } = useFirstDropsFeature();
   const [draft, setDraft] = useState<GuestPressingDraft>(() => defaultGuestPressingDraft());
-  const [mixOpen, setMixOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [pressingPulse, setPressingPulse] = useState(false);
@@ -178,10 +163,8 @@ function GuestPressingLandingInner() {
   const [jordieUserId, setJordieUserId] = useState<string | undefined>(undefined);
   const [jordieDisplayName, setJordieDisplayName] = useState<string>(JORDIE_CRUZ.displayName);
   const seedRef = useRef<HTMLTextAreaElement>(null);
-  const pressingDockRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const keyboardInset = useVisualViewportKeyboardInset();
-  useLockBodyScrollWhileFocused(pressingDockRef, isMobile);
+  const { keyboardInset, visualHeight } = useVisualViewportMetrics();
 
   const warmTrySheet = useCallback(() => {
     prefetchGuestTrySheetNow((href) => router.prefetch(href));
@@ -437,7 +420,18 @@ function GuestPressingLandingInner() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden selection:bg-primary/30">
+    <div
+      className={cn(
+        'relative min-h-screen overflow-x-hidden selection:bg-primary/30',
+        'max-sm:flex max-sm:h-full max-sm:min-h-0 max-sm:flex-col max-sm:overflow-hidden'
+      )}
+      style={
+        isMobile && visualHeight > 0
+          ? { height: visualHeight, maxHeight: visualHeight }
+          : undefined
+      }
+    >
+      <QuotePressFontLoader />
       <Dialog
         open={tipOpen}
         onOpenChange={(open) => {
@@ -594,8 +588,14 @@ function GuestPressingLandingInner() {
         </div>
       </div>
 
-      {/* Full Artist Home — same composition as a real profile */}
-      <div className="pb-[min(28vh,12.5rem)] pt-[4.85rem] sm:pb-[min(26vh,11rem)] sm:pt-[7.25rem]">
+      {/* Full Artist Home — preview scrolls; dock stays in the column on phone */}
+      <div
+        className={cn(
+          'pt-[4.85rem] sm:pt-[7.25rem]',
+          'max-sm:min-h-0 max-sm:flex-1 max-sm:overflow-y-auto max-sm:overscroll-contain',
+          'sm:pb-[min(26vh,11rem)]'
+        )}
+      >
         <ArtistHome
           profile={profile}
           config={config}
@@ -614,18 +614,23 @@ function GuestPressingLandingInner() {
         </div>
       </div>
 
-      {/* Live Pressing dock — type here, page updates underneath */}
+      {/* Live Pressing dock — in-flow on phone (above keyboard); fixed on larger screens */}
       <div
-        ref={pressingDockRef}
-        className="fixed inset-x-0 z-[190] border-t border-white/10 bg-black/80 backdrop-blur-xl max-sm:max-h-[min(100dvh,100%)] max-sm:overflow-y-auto max-sm:overscroll-contain"
-        style={{
-          bottom: keyboardInset > 0 ? keyboardInset : 0,
-          paddingBottom:
-            keyboardInset > 0 ? 0 : 'max(0px, env(safe-area-inset-bottom, 0px))',
-          ...(isMobile && keyboardInset > 0
-            ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 3.5rem)` }
-            : {}),
-        }}
+        className={cn(
+          'z-[190] shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-xl',
+          'max-sm:relative max-sm:max-h-[min(52dvh,100%)] max-sm:overflow-y-auto max-sm:overscroll-contain',
+          'max-sm:pb-[max(0px,env(safe-area-inset-bottom,0px))]',
+          'sm:fixed sm:inset-x-0 sm:bottom-0 sm:pb-[max(0px,env(safe-area-inset-bottom,0px))]'
+        )}
+        style={
+          isMobile
+            ? undefined
+            : {
+                bottom: keyboardInset > 0 ? keyboardInset : 0,
+                paddingBottom:
+                  keyboardInset > 0 ? 0 : 'max(0px, env(safe-area-inset-bottom, 0px))',
+              }
+        }
       >
         <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-2.5">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-1.5 sm:gap-2">
@@ -648,21 +653,6 @@ function GuestPressingLandingInner() {
                 Tip
               </Button>
               <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-6 gap-0.5 px-1.5 text-[9px] font-bold uppercase tracking-wider sm:h-7 sm:gap-1 sm:px-2 sm:text-[10px]"
-                onClick={() => {
-                  trackPressingAction('mix');
-                  setMixOpen((o) => !o);
-                }}
-              >
-                <Wind className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="sm:hidden">Mix</span>
-                <span className="hidden sm:inline">Mix &amp; sizes</span>
-                <ChevronUp className={cn('h-3 w-3 transition-transform sm:h-3.5 sm:w-3.5', mixOpen ? '' : 'rotate-180')} />
-              </Button>
-              <Button
                 asChild
                 size="sm"
                 variant="outline"
@@ -681,122 +671,6 @@ function GuestPressingLandingInner() {
               </Button>
             </div>
           </div>
-
-          {mixOpen ? (
-            <div className="mb-2 max-h-[min(36vh,16rem)] space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-black/40 p-2 sm:mb-3 sm:max-h-[min(42vh,22rem)] sm:space-y-3 sm:p-3">
-              <div className="grid gap-2 sm:grid-cols-2 sm:gap-3">
-                <div className="space-y-1 sm:space-y-1.5">
-                  <label htmlFor="guest-tagline" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Tagline
-                  </label>
-                  <Input
-                    id="guest-tagline"
-                    value={draft.tagline || ''}
-                    onChange={(e) => update({ tagline: e.target.value.slice(0, 120) })}
-                    placeholder="One line under your name"
-                    className="h-8 border-white/15 bg-black/40 sm:h-9"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 sm:py-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Alive</p>
-                    <p className="text-[11px] text-muted-foreground">Page breathes with the bar.</p>
-                  </div>
-                  <Switch checked={draft.alive} onCheckedChange={(checked) => update({ alive: checked })} />
-                </div>
-              </div>
-
-              <div className="space-y-1 sm:space-y-1.5">
-                <label htmlFor="guest-bar-week" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Bar of the Week
-                </label>
-                <Textarea
-                  id="guest-bar-week"
-                  value={draft.barOfWeek || ''}
-                  onChange={(e) => update({ barOfWeek: e.target.value.slice(0, 280) })}
-                  rows={2}
-                  placeholder="A featured bar for this week (separate from The Pressing)…"
-                  className="min-h-[2.25rem] resize-none border-white/15 bg-black/40 text-sm sm:min-h-[2.5rem]"
-                />
-                <p className="hidden text-[10px] text-zinc-500 sm:block">
-                  Shows as its own section on the page. Clear the text to hide it.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Mix faders
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {FADER_META.map(({ key, label }) => (
-                    <div key={key} className="space-y-1">
-                      <div className="flex justify-between text-[11px]">
-                        <span>{label}</span>
-                        <span className="font-code tabular-nums text-muted-foreground">{draft.faders[key]}</span>
-                      </div>
-                      <Slider
-                        value={[draft.faders[key]]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        onValueChange={([v]) =>
-                          update({
-                            faders: { ...draft.faders, [key]: v ?? draft.faders[key] },
-                          })
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2 border-t border-white/10 pt-2 sm:pt-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Section sizes (S / M / L)
-                </p>
-                <p className="hidden text-[10px] text-zinc-500 sm:block">
-                  Resize the four sections visible in this preview and watch the layout reflow live.
-                </p>
-                <ul className="space-y-1.5 sm:space-y-2">
-                  {GUEST_SIZEABLE_MODULES.map((id) => {
-                    const size =
-                      draft.moduleSizes[id] || MODULE_META[id]?.defaultSize || 'M';
-                    return (
-                      <li
-                        key={id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-white/10 bg-black/30 px-2 py-1.5 sm:px-2.5 sm:py-2"
-                      >
-                        <span className="text-[11px] font-medium text-zinc-200">
-                          {moduleSizeLabel(id)}
-                        </span>
-                        <div className="flex gap-1">
-                          {(['S', 'M', 'L'] as ModuleSize[]).map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() =>
-                                update({
-                                  moduleSizes: { ...draft.moduleSizes, [id]: s },
-                                })
-                              }
-                              className={cn(
-                                'h-7 min-w-[1.75rem] rounded px-2 text-[10px] font-bold tabular-nums transition-colors',
-                                size === s
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200'
-                              )}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-          ) : null}
 
           <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,10.5rem)_minmax(0,1fr)_auto] sm:items-end sm:gap-3">
             <div className="min-w-0 space-y-0.5 sm:space-y-1">
@@ -855,7 +729,7 @@ function GuestPressingLandingInner() {
             </div>
           </div>
           <p className="mt-2 hidden text-[11px] text-muted-foreground sm:block">
-            Type in The Pressing to skin the preview. Mix &amp; sizes opens faders and section scale. Claim keeps your look.
+            Type in The Pressing to skin the preview. Claim keeps your look.
           </p>
         </div>
       </div>

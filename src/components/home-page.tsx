@@ -1,13 +1,53 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { AlbumList } from '@/components/album-list';
-import { SceneHome } from '@/components/scene/scene-home';
-import { GuestPressingLanding } from '@/components/marketing/guest-pressing-landing';
-import { GuestPressingClaimBootstrap } from '@/components/profile/guest-pressing-claim-bootstrap';
-import { ArtistHomeProspectClaimBootstrap } from '@/components/profile/artist-home-prospect-claim-bootstrap';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/hooks/use-auth';
 import { SCENE_HOME_ENABLED } from '@/lib/scene-home';
+
+const homeRouteFallback = (
+  <div className="min-h-screen bg-background" aria-busy="true" />
+);
+
+const GuestPressingLanding = dynamic(
+  () =>
+    import('@/components/marketing/guest-pressing-landing').then((m) => ({
+      default: m.GuestPressingLanding,
+    })),
+  { loading: () => homeRouteFallback }
+);
+
+const SceneHome = dynamic(
+  () =>
+    import('@/components/scene/scene-home').then((m) => ({
+      default: m.SceneHome,
+    })),
+  { loading: () => homeRouteFallback }
+);
+
+const AlbumList = dynamic(
+  () =>
+    import('@/components/album-list').then((m) => ({
+      default: m.AlbumList,
+    })),
+  { loading: () => homeRouteFallback }
+);
+
+const GuestPressingClaimBootstrap = dynamic(
+  () =>
+    import('@/components/profile/guest-pressing-claim-bootstrap').then((m) => ({
+      default: m.GuestPressingClaimBootstrap,
+    })),
+  { ssr: false }
+);
+
+const ArtistHomeProspectClaimBootstrap = dynamic(
+  () =>
+    import('@/components/profile/artist-home-prospect-claim-bootstrap').then((m) => ({
+      default: m.ArtistHomeProspectClaimBootstrap,
+    })),
+  { ssr: false }
+);
 
 type HomePageProps = {
   /** Kept for callers; finish-the-bar / try sheet no longer steal guest `/`. */
@@ -22,7 +62,7 @@ export function HomePage(_props: HomePageProps = {}) {
         {!SCENE_HOME_ENABLED ? <GuestPressingClaimBootstrap /> : null}
         <ArtistHomeProspectClaimBootstrap />
         {SCENE_HOME_ENABLED ? (
-          <Suspense fallback={<div className="min-h-screen bg-background" aria-busy="true" />}>
+          <Suspense fallback={homeRouteFallback}>
             <SceneHome />
           </Suspense>
         ) : (
@@ -32,12 +72,10 @@ export function HomePage(_props: HomePageProps = {}) {
     );
   }
   if (loading) {
-    return <div className="min-h-screen bg-background" aria-busy="true" />;
+    return homeRouteFallback;
   }
   return (
-    <Suspense
-      fallback={<div className="min-h-screen bg-background" aria-busy="true" />}
-    >
+    <Suspense fallback={homeRouteFallback}>
       <GuestPressingLanding />
     </Suspense>
   );

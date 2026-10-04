@@ -5,12 +5,10 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { Header } from '@/components/header';
 import { AuthProvider } from '@/context/auth-context';
-import { DataProvider } from '@/context/data-context';
 import { ThemeProvider } from '@/context/theme-provider';
-import { UIStateProvider } from '@/context/ui-state-context';
-import { UsageProvider } from '@/context/usage-context';
 import { GamificationProvider } from '@/context/gamification-context';
-import { ArtistHomeEngagementProvider } from '@/context/artist-home-engagement-context';
+import { UIStateProvider } from '@/context/ui-state-context';
+import { StudioProvidersGate } from '@/components/studio-providers-gate';
 import { AchievementUnlockCelebration } from '@/components/gamification/achievement-unlock-celebration';
 import { ProgressCelebration } from '@/components/gamification/progress-celebration';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
@@ -25,8 +23,6 @@ import { StudioPrivacyIntroDialog } from './studio-privacy-intro-dialog';
 import { ActivityPushIntroDialog } from './activity/activity-push-intro-dialog';
 import { ActivityPushDeviceSync } from './activity/activity-push-device-sync';
 import { ActivityBadgeSync } from './activity/activity-badge-sync';
-import { FoldInboxProvider } from '@/components/folds/fold-inbox-provider';
-import { ActivityAlertsProvider } from '@/context/activity-alerts-context';
 import { CookieConsent } from './cookie-consent';
 import { PwaInstallPrompt } from './pwa-install-prompt';
 import { OfflineBanner } from './offline-banner';
@@ -98,6 +94,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === '/login';
   const isWelcomePage = pathname === '/welcome';
   const isPublicHome = pathname === '/' && !user;
+  const isGuestPressingLanding = isPublicHome;
   const isMarketingShell = isLoginPage || isPublicHome || isWelcomePage;
   const isPerformPage = pathname.endsWith('/perform');
   const isSharePage = pathname.startsWith('/share/') || pathname.startsWith('/song/');
@@ -127,20 +124,29 @@ function AppShell({ children }: { children: React.ReactNode }) {
     !isMarketingCapture &&
     (!isPublicProfilePage || Boolean(user));
   const showBottomNowPlaying = showDropNowPlaying && !showAppHeader;
-  // Public home / login / profile / share need document scroll — overflow-hidden
-  // traps the Pressing landing and makes the brand mark feel dead.
+  // Guest pressing landing scrolls inside its own pane (preview + in-flow dock on phone).
   const allowPageScroll =
-    isMarketingShell || isPublicProfilePage || isProfileCustomizePage || isSharePage || isPublicPostPage || isMarketingCapture || isLibraryPage || isEarningsPage || isInsightsPage || isSupportersPage || (isMsgsPage && !isMsgsThreadPage) || isFriendsPage || isActivityPage || isAlbumPage;
+    isLoginPage ||
+    isWelcomePage ||
+    isPublicProfilePage ||
+    isProfileCustomizePage ||
+    isSharePage ||
+    isPublicPostPage ||
+    isMarketingCapture ||
+    isLibraryPage ||
+    isEarningsPage ||
+    isInsightsPage ||
+    isSupportersPage ||
+    (isMsgsPage && !isMsgsThreadPage) ||
+    isFriendsPage ||
+    isActivityPage ||
+    isAlbumPage;
 
   return (
     <InviteGateGuard>
-      <DataProvider>
-        <UsageProvider>
-          <GamificationProvider>
-          <ArtistHomeEngagementProvider>
-            <UIStateProvider>
-              <ActivityAlertsProvider>
-              <FoldInboxProvider>
+      <GamificationProvider>
+        <UIStateProvider>
+        <StudioProvidersGate>
               <AdSenseRouteLoader />
               <FirebaseErrorListener />
               <MarketingAttributionCapture />
@@ -160,7 +166,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     ? 'overflow-x-clip overflow-y-visible'
                     : allowPageScroll
                       ? 'overflow-x-hidden overflow-y-auto'
-                      : 'overflow-hidden',
+                      : isGuestPressingLanding
+                        ? 'overflow-hidden max-sm:h-[100dvh] max-sm:max-h-[100dvh]'
+                        : 'overflow-hidden',
                   showBottomNowPlaying && 'pb-[4.75rem]'
                 )}
               >
@@ -175,7 +183,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
                       ? 'overflow-x-clip overflow-y-visible'
                       : allowPageScroll
                         ? 'overflow-x-hidden overflow-y-auto'
-                        : 'overflow-hidden'
+                        : isGuestPressingLanding
+                          ? 'min-h-0 flex-1 overflow-hidden max-sm:h-full'
+                          : 'overflow-hidden'
                   )}
                 >
                   {children}
@@ -200,13 +210,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <Toaster />
               <AchievementUnlockCelebration />
               <ProgressCelebration />
-              </FoldInboxProvider>
-              </ActivityAlertsProvider>
-            </UIStateProvider>
-          </ArtistHomeEngagementProvider>
-          </GamificationProvider>
-        </UsageProvider>
-      </DataProvider>
+        </StudioProvidersGate>
+        </UIStateProvider>
+      </GamificationProvider>
     </InviteGateGuard>
   );
 }

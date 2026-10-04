@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets } from 'lucide-react';
-import { useUsage } from '@/context/usage-context';
+import { useOptionalUsage } from '@/context/usage-context';
 import { DNASynthesisLoader, type ActiveRules } from '@/components/dna-synthesis-loader';
 import { INK_ACTION_LABELS } from '@/lib/ink-labels';
 
@@ -50,7 +50,7 @@ type InkNotification = {
 };
 
 export function FloatingInkSpent() {
-    const { lastSpent } = useUsage();
+    const { lastSpent } = useOptionalUsage();
     const [notifications, setNotifications] = useState<InkNotification[]>([]);
     const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 

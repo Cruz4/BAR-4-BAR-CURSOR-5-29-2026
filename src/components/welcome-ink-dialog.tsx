@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/use-auth';
-import { useUsage } from '@/context/usage-context';
+import { useOptionalUsage } from '@/context/usage-context';
 import { FREE_MONTHLY_RESIDENCY_INK } from '@/lib/subscription';
 import { expectedSignupResidencyInk, isEligibleForFreeMonthlyGrant } from '@/lib/ink-grants';
 import { getProCheckoutCtaLine, getVisitorResidencyPoolCapLine } from '@/lib/studio-tiers';
@@ -39,7 +39,7 @@ type GrantLine = {
 export function WelcomeInkDialog() {
   const pathname = usePathname();
   const { user, authReady, loading: authLoading } = useAuth();
-  const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading: usageLoading } = useUsage();
+  const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance, loading: usageLoading } = useOptionalUsage();
   const [open, setOpen] = useState(false);
   const scheduledRef = useRef(false);
 

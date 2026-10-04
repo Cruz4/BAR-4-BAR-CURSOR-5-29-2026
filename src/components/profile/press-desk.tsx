@@ -71,6 +71,7 @@ import {
   type PressingFaders,
 } from '@/lib/profile/pressing';
 import { LivingPressField } from '@/components/profile/living-press-field';
+import { QuotePressFontLoader } from '@/components/profile/quote-press-font-loader';
 import {
   MODULE_META,
   defaultModules,
@@ -1460,6 +1461,7 @@ export function PressDesk({ prospectId }: { prospectId?: string } = {}) {
 
   return (
     <div className="w-full px-4 pb-32 pt-8">
+      <QuotePressFontLoader />
       <div className="relative min-[1830px]:grid min-[1830px]:grid-cols-[minmax(0,1fr)_46rem_minmax(0,1fr)] min-[1830px]:items-start">
         <div className="mx-auto w-full max-w-[46rem] min-w-0 space-y-5 min-[1830px]:col-start-2 min-[1830px]:row-start-1">
       <header className="space-y-3">

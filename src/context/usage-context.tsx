@@ -58,6 +58,27 @@ export const useUsage = () => {
     return context;
 }
 
+const OPTIONAL_USAGE_STUB: UsageContextType = {
+  usageHistory: [],
+  inkBalance: 0,
+  residencyBalance: 0,
+  trialInkBalance: 0,
+  purchasedBalance: 0,
+  loading: true,
+  lastSpent: null,
+  mousePos: { x: 0, y: 0 },
+  addUsageLog: () => undefined,
+  deductInk: () => false,
+  refundInk: () => undefined,
+  addInk: () => undefined,
+  registerAiContext: () => undefined,
+};
+
+/** Safe on marketing-light routes before the studio provider chunk mounts. */
+export function useOptionalUsage(): UsageContextType {
+  return useContext(UsageContext) ?? OPTIONAL_USAGE_STUB;
+}
+
 export const UsageProvider = ({ children }: { children: ReactNode }) => {
   const { user, authReady } = useAuth();
   const { toast } = useToast();

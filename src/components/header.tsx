@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { useState, useEffect } from 'react';
 import { useUIState } from '@/hooks/use-ui-state';
 import { cn } from '@/lib/utils';
-import { useUsage } from '@/context/usage-context';
+import { useOptionalUsage } from '@/context/usage-context';
 import { StudioLoader } from '@/components/studio-loader';
 import { BugReportDialog } from './bug-report-dialog';
 import { Badge } from './ui/badge';
@@ -66,7 +66,7 @@ export function Header() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState<'paths' | 'start-here'>('start-here');
   const { isGenerating, generatingMessage } = useUIState();
-  const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useUsage();
+  const { inkBalance, residencyBalance, trialInkBalance, purchasedBalance } = useOptionalUsage();
   const { total: blockAlerts } = useSocialAlerts();
   const { unread: foldUnread } = useFoldInbox();
   const { enabled: foldsOn } = useFoldsFeature();

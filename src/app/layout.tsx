@@ -33,7 +33,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Root App Router layout: this stylesheet is global, despite the legacy pages/_document lint rule. */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&family=Architects+Daughter&family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=DM+Serif+Display&family=Permanent+Marker&family=Syne:wght@400;700;800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Anton&family=Caveat:wght@400;700&family=Outfit:wght@400;600;700&family=Bungee&family=Rubik:wght@400;600;700&family=Fjalla+One&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Kanit:wght@400;600;700&family=Righteous&family=Lora:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;600;700&family=Pacifico&family=Teko:wght@400;600;700&family=Raleway:wght@400;600;700&family=Abril+Fatface&family=Shadows+Into+Light&family=Bangers&family=Comfortaa:wght@400;600;700&family=Cinzel:wght@400;600;700&family=Satisfy&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" />
         <link rel="icon" href={`${SEO.faviconPath}?v=aka23`} type="image/svg+xml" />

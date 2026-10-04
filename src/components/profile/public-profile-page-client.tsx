@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StudioLoader } from '@/components/studio-loader';
 import { ArtistHome } from '@/components/profile/artist-home';
+import { QuotePressFontLoader } from '@/components/profile/quote-press-font-loader';
 import type { PublicProfileData } from '@/components/profile/public-profile-showcase';
 import { trackShareCardEvent } from '@/lib/gamification-client';
 import { recordProfileViewClient } from '@/lib/profile-view-client';
@@ -234,6 +235,7 @@ export function PublicProfilePageClient({
 
   return (
     <>
+      <QuotePressFontLoader />
       <ArtistHomeProspectClaimBootstrap />
       {isUnclaimedProspect ? (
         <div className="container mx-auto max-w-6xl px-4 pt-6">
