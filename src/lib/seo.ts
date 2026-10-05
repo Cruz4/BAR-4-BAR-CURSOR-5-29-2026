@@ -6,6 +6,7 @@ import {
   APP_SLOGAN,
   FAVICON_PATH,
   LOGO_PATH,
+  OG_SHARE_PATH,
   SUPPORT_EMAIL,
 } from '@/lib/brand';
 
@@ -53,10 +54,12 @@ export const SEO = {
     'real-time songwriting',
   ],
   url: getPublicAppUrl(),
-  /** Tab, PWA, Google site icon, and social preview (AKAsheet logo). */
+  /** Browser tab and Google site icon. Link previews use shareImagePath. */
   faviconPath: FAVICON_PATH,
   faviconIcoPath: FAVICON_PATH,
   ogImagePath: LOGO_PATH,
+  /** Open Graph / Twitter card image. Not the in-app or PWA logo. */
+  shareImagePath: OG_SHARE_PATH,
   /** Installed Brave/Chrome desktop PWA taskbar — transparent Logo.png only. */
   appIconPath: LOGO_PATH,
   twitterHandle: undefined as string | undefined,
@@ -174,9 +177,9 @@ export function pageMetadata(options: {
       description: options.description,
       images: [
         {
-          url: SEO.ogImagePath,
-          width: 512,
-          height: 512,
+          url: SEO.shareImagePath,
+          width: 1024,
+          height: 1024,
           alt: `${SEO.siteName} logo`,
         },
       ],
@@ -185,7 +188,7 @@ export function pageMetadata(options: {
       card: 'summary_large_image',
       title: ogTitle,
       description: options.description,
-      images: [SEO.ogImagePath],
+      images: [SEO.shareImagePath],
       ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
     },
   };

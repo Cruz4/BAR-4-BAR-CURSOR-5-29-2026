@@ -19,6 +19,8 @@ export const LEGACY_APP_ORIGIN = `https://${LEGACY_APP_DOMAIN}`;
 export const LEGACY_APP_WWW_ORIGIN = `https://www.${LEGACY_APP_DOMAIN}`;
 
 export const LOGO_PATH = '/Logo.png';
+/** Link unfurl only (iMessage, Slack, X, Discord). Solid blue field so the preview is not transparent. */
+export const OG_SHARE_PATH = '/akasheet-og.png';
 /**
  * Installed Brave/Chrome desktop PWA + Windows taskbar.
  * Transparent Logo mark (same look as Logo.png) — never app-icon navy square or android burger.

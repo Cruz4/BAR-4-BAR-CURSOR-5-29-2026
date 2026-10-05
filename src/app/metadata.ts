@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     description: SEO.description,
     images: [
       {
-        url: absoluteUrl(SEO.ogImagePath),
+        url: absoluteUrl(SEO.shareImagePath),
         width: 1024,
         height: 1024,
         alt: `${SEO.siteName} logo`,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SEO.titleLong,
     description: SEO.description,
-    images: [absoluteUrl(SEO.ogImagePath)],
+    images: [absoluteUrl(SEO.shareImagePath)],
     ...(SEO.twitterHandle ? { site: SEO.twitterHandle } : {}),
   },
   icons: {
