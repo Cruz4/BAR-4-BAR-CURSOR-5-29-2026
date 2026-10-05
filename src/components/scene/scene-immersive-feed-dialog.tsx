@@ -178,16 +178,37 @@ function feedSnapIndex(scroller: HTMLDivElement, count: number): number {
   return Math.max(0, Math.min(count - 1, Math.round(scroller.scrollTop / height)));
 }
 
-/** Post body — only nested-scroll when content overflows; otherwise feed snap gets vertical swipes. */
+function slideScrollEdges(el: HTMLDivElement) {
+  const atTop = el.scrollTop <= 2;
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 3;
+  return { atTop, atBottom };
+}
+
+/** Snap feed scroller after a chained touch so the next slide does not feel stuck. */
+function snapFeedScroller(feed: HTMLDivElement, count: number) {
+  const height = feed.clientHeight || 1;
+  const maxIndex = Math.max(0, count - 1);
+  const index = Math.max(0, Math.min(maxIndex, Math.round(feed.scrollTop / height)));
+  feed.scrollTo({ top: index * height, behavior: 'smooth' });
+}
+
+/** Post body — nested scroll only when content overflows; chain vertical swipes to the feed at edges. */
 function ImmersiveSlideContent({
   maxHeight,
+  feedScrollerRef,
+  feedItemCount,
   children,
 }: {
   maxHeight: string;
+  feedScrollerRef: React.RefObject<HTMLDivElement | null>;
+  feedItemCount: number;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollable, setScrollable] = useState(false);
+  const scrollableRef = useRef(scrollable);
+  scrollableRef.current = scrollable;
+  const chainedPullRef = useRef(0);
 
   const measure = useCallback(() => {
     const el = ref.current;
@@ -208,12 +229,86 @@ function ImmersiveSlideContent({
     return () => ro.disconnect();
   }, [measure, children]);
 
+  useEffect(() => {
+    const el = ref.current;
+    const feed = feedScrollerRef.current;
+    if (!el || !feed) return;
+
+    let lastY = 0;
+    let chaining = false;
+
+    const onTouchStart = (event: TouchEvent) => {
+      chainedPullRef.current = 0;
+      chaining = false;
+      lastY = event.touches[0]?.clientY ?? 0;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!scrollableRef.current) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const y = touch.clientY;
+      const delta = lastY - y;
+      lastY = y;
+      if (Math.abs(delta) < 0.5) return;
+
+      const { atTop, atBottom } = slideScrollEdges(el);
+      const feedEl = feedScrollerRef.current;
+      if (!feedEl) return;
+
+      const pullNext = delta > 0 && atBottom;
+      const pullPrev = delta < 0 && atTop;
+      if (!pullNext && !pullPrev) {
+        chaining = false;
+        return;
+      }
+
+      chaining = true;
+      chainedPullRef.current += Math.abs(delta);
+      const before = feedEl.scrollTop;
+      feedEl.scrollTop += delta;
+      if (feedEl.scrollTop !== before) {
+        event.preventDefault();
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (!chaining) return;
+      const feedEl = feedScrollerRef.current;
+      if (!feedEl) return;
+      const { atBottom } = slideScrollEdges(el);
+      if (atBottom && chainedPullRef.current > 28) {
+        const height = feedEl.clientHeight || 1;
+        const idx = feedSnapIndex(feedEl, feedItemCount);
+        if (idx < feedItemCount - 1) {
+          feedEl.scrollTo({ top: (idx + 1) * height, behavior: 'smooth' });
+          return;
+        }
+      }
+      if (chainedPullRef.current > 8) {
+        snapFeedScroller(feedEl, feedItemCount);
+      }
+      chainedPullRef.current = 0;
+      chaining = false;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [feedItemCount, feedScrollerRef]);
+
   const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     if (!scrollable) return;
     const el = ref.current;
     if (!el) return;
-    const atTop = el.scrollTop <= 0;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    const { atTop, atBottom } = slideScrollEdges(el);
     if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) return;
     event.stopPropagation();
   };
@@ -225,7 +320,7 @@ function ImmersiveSlideContent({
       className={cn(
         'relative z-10 h-fit w-full max-w-[44rem]',
         scrollable
-          ? 'overflow-y-auto overscroll-y-auto [scrollbar-width:thin]'
+          ? 'touch-pan-y overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]'
           : 'overflow-visible'
       )}
       style={{ maxHeight }}
@@ -569,6 +664,8 @@ export function SceneImmersiveFeedDialog({
               <>
               <ImmersiveSlideContent
                 maxHeight={`calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))`}
+                feedScrollerRef={scrollerRef}
+                feedItemCount={items.length}
               >
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
