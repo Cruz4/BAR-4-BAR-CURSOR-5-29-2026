@@ -28,7 +28,8 @@ import {
 
 type FeedMode = ScenePortalFeed;
 
-const SLIDE_PAINT_WINDOW = 1;
+/** Keep neighbors mounted so a fast flick is not an empty slide waiting to render. */
+const SLIDE_PAINT_WINDOW = 4;
 
 type SlideMeta = {
   key: string;
@@ -172,32 +173,58 @@ function FeedBubble({ meta, active, onClick }: { meta: SlideMeta; active: boolea
   );
 }
 
-/** Integer snap page — stable because every slide is exactly one scroller-tall. */
-function feedSnapIndex(scroller: HTMLDivElement, count: number): number {
-  const height = scroller.clientHeight || 1;
-  return Math.max(0, Math.min(count - 1, Math.round(scroller.scrollTop / height)));
+/** Which slide the viewport is on. Equal slides stay on the original midpoint snap. */
+function feedActiveIndex(
+  scroller: HTMLDivElement,
+  slides: readonly (HTMLElement | null)[],
+  count: number
+): number {
+  if (count <= 0) return 0;
+  const hasTall = slides.some((el) => el?.dataset.tall === '1');
+  if (!hasTall) {
+    const height = scroller.clientHeight || 1;
+    return Math.max(0, Math.min(count - 1, Math.round(scroller.scrollTop / height)));
+  }
+  const probe = scroller.scrollTop + 8;
+  let idx = 0;
+  for (let i = 0; i < count; i += 1) {
+    const el = slides[i];
+    if (el && el.offsetTop <= probe) idx = i;
+  }
+  return Math.max(0, Math.min(count - 1, idx));
 }
 
-/** Post body — only nested-scroll when content overflows; otherwise feed snap gets vertical swipes. */
+/** True while a tall post fills the viewport — snap must stay off or it yanks back to the top. */
+function viewportInsideTall(scroller: HTMLDivElement, slides: readonly (HTMLElement | null)[]): boolean {
+  const top = scroller.scrollTop;
+  const bottom = top + scroller.clientHeight;
+  for (const el of slides) {
+    if (!el || el.dataset.tall !== '1') continue;
+    const start = el.offsetTop;
+    const end = start + el.offsetHeight;
+    if (top > start + 20 && bottom < end - 20) return true;
+  }
+  return false;
+}
+
 function ImmersiveSlideContent({
-  maxHeight,
+  available,
+  onTall,
   children,
 }: {
-  maxHeight: string;
+  available: number;
+  onTall: (tall: boolean) => void;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [scrollable, setScrollable] = useState(false);
+  const onTallRef = useRef(onTall);
+  onTallRef.current = onTall;
 
   const measure = useCallback(() => {
     const el = ref.current;
-    if (!el) return;
-    const prevOverflow = el.style.overflow;
-    el.style.overflow = 'hidden';
-    const needsScroll = el.scrollHeight > el.clientHeight + 2;
-    el.style.overflow = prevOverflow;
-    setScrollable((prev) => (prev === needsScroll ? prev : needsScroll));
-  }, []);
+    if (!el || available <= 0) return;
+    onTallRef.current(el.scrollHeight > available + 16);
+  }, [available]);
 
   useEffect(() => {
     const el = ref.current;
@@ -208,31 +235,7 @@ function ImmersiveSlideContent({
     return () => ro.disconnect();
   }, [measure, children]);
 
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    if (!scrollable) return;
-    const el = ref.current;
-    if (!el) return;
-    const atTop = el.scrollTop <= 0;
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-    if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) return;
-    event.stopPropagation();
-  };
-
-  return (
-    <div
-      ref={ref}
-      onWheel={handleWheel}
-      className={cn(
-        'relative z-10 h-fit w-full max-w-[44rem]',
-        scrollable
-          ? 'overflow-y-auto overscroll-y-auto [scrollbar-width:thin]'
-          : 'overflow-visible'
-      )}
-      style={{ maxHeight }}
-    >
-      {children}
-    </div>
-  );
+  return <div ref={ref} className="relative z-10 w-full max-w-[44rem]">{children}</div>;
 }
 
 function FeedBackdrop({
@@ -289,6 +292,7 @@ export function SceneImmersiveFeedDialog({
   const { user } = useAuth();
   const open = mode !== null;
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const slideRefs = useRef<(HTMLElement | null)[]>([]);
   const bubbleRowRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const bubbleRefs = useRef<Array<HTMLSpanElement | null>>([]);
@@ -299,6 +303,7 @@ export function SceneImmersiveFeedDialog({
   const itemsLengthRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [headerPx, setHeaderPx] = useState(118);
+  const [tallByKey, setTallByKey] = useState<Record<string, boolean>>({});
 
   type FeedSlideItem =
     | { meta: SlideMeta; post: ProfilePost }
@@ -407,14 +412,24 @@ export function SceneImmersiveFeedDialog({
   const scrollTo = (index: number) => {
     const next = Math.max(0, Math.min(items.length - 1, index));
     const scroller = scrollerRef.current;
+    const slide = slideRefs.current[next];
     if (!scroller) return;
     applyActiveIndex(next);
-    scroller.scrollTo({ top: next * scroller.clientHeight, behavior: 'smooth' });
+    scroller.scrollTo({
+      top: slide ? slide.offsetTop : next * scroller.clientHeight,
+      behavior: 'smooth',
+    });
     scheduleBubbleCenter();
   };
 
   const syncScrollPosition = (scroller: HTMLDivElement) => {
-    pendingIndexRef.current = feedSnapIndex(scroller, itemsLengthRef.current);
+    const insideTall = viewportInsideTall(scroller, slideRefs.current);
+    const snapMode = insideTall ? 'off' : 'on';
+    if (scroller.dataset.snapMode !== snapMode) {
+      scroller.dataset.snapMode = snapMode;
+      scroller.style.scrollSnapType = insideTall ? 'none' : '';
+    }
+    pendingIndexRef.current = feedActiveIndex(scroller, slideRefs.current, itemsLengthRef.current);
     if (scrollFrameRef.current !== null) return;
     scrollFrameRef.current = requestAnimationFrame(() => {
       const next = Math.max(0, Math.min(itemsLengthRef.current - 1, pendingIndexRef.current));
@@ -454,6 +469,8 @@ export function SceneImmersiveFeedDialog({
   const current = items[activeIndex]?.meta;
   const title = mode === 'block' ? 'Your Block' : 'Discover the Scene';
   const feedLoading = mode === 'block' ? blockLoading : mode === 'discover' ? discoverLoading : false;
+  const slideAvailable = Math.max(240, (typeof window !== 'undefined' ? window.innerHeight : 800) - headerPx - 132);
+
   const paintedSlides = useMemo(() => {
     const keep = new Set<number>();
     for (let i = activeIndex - SLIDE_PAINT_WINDOW; i <= activeIndex + SLIDE_PAINT_WINDOW; i += 1) {
@@ -557,18 +574,31 @@ export function SceneImmersiveFeedDialog({
         >
           {items.length ? items.map((item, index) => {
             const paint = paintedSlides.has(index);
+            const tall = Boolean(tallByKey[item.meta.key]);
             return (
             <section
               key={item.meta.key}
+              ref={(node) => {
+                slideRefs.current[index] = node;
+              }}
               data-feed-index={index}
-              className="relative flex h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))]"
+              data-tall={tall ? '1' : '0'}
+              className={cn(
+                'relative flex shrink-0 snap-start snap-always pb-[max(7.4rem,calc(env(safe-area-inset-bottom)+6rem))] pl-3 pr-14 sm:px-16 sm:pb-[max(8.25rem,calc(env(safe-area-inset-bottom)+6rem))]',
+                tall
+                  ? 'h-auto min-h-[100dvh] flex-col items-center justify-start overflow-visible'
+                  : 'h-[100dvh] items-center justify-center overflow-hidden'
+              )}
               style={{ paddingTop: headerPx }}
               aria-label={`${title}: ${item.meta.name}`}
             >
               {paint ? (
               <>
               <ImmersiveSlideContent
-                maxHeight={`calc(100dvh - ${headerPx}px - max(7.4rem, calc(env(safe-area-inset-bottom) + 6rem)))`}
+                available={slideAvailable}
+                onTall={(next) => {
+                  setTallByKey((prev) => (prev[item.meta.key] === next ? prev : { ...prev, [item.meta.key]: next }));
+                }}
               >
                 <div className="mb-2 flex min-w-0 items-center gap-2 px-1 pr-14 sm:pr-1">
                   {item.meta.href ? (
@@ -620,7 +650,11 @@ export function SceneImmersiveFeedDialog({
                 </div>
               </ImmersiveSlideContent>
 
-              <div className="absolute right-2 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 sm:right-5">
+              <div className={cn(
+                'z-30 flex -translate-y-1/2 flex-col gap-2',
+                tall && index === activeIndex ? 'fixed right-2 top-1/2 sm:right-5' : 'absolute right-2 top-1/2 sm:right-5',
+                tall && index !== activeIndex && 'hidden'
+              )}>
                 <button
                   type="button"
                   onClick={() => scrollTo(index - 1)}
