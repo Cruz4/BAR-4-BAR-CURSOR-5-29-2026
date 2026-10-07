@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import {
   domNodeToFeedImageDataUrl,
   downloadDomNodePng,
@@ -59,7 +60,7 @@ export function ChallengeGoalFoilDialog({
           `🎯 ${SCALE_LABELS[challenge.scale]} goal complete: ${challenge.label}`,
           challenge.description.trim(),
           challenge.tier !== 'standard' ? TIER_LABELS[challenge.tier] : '',
-          '#akasheet',
+          SHARE_HASHTAG,
         ]
           .filter(Boolean)
           .join('\n'),

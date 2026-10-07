@@ -52,6 +52,10 @@ import {
 } from '@/lib/profile/social-client';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import {
+  ComposerAttachedMediaPreview,
+  composerHasAttachedMedia,
+} from '@/components/profile/composer-attached-media-preview';
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
@@ -406,6 +410,9 @@ export function PostCard({
     useState<PostPollResultsVisibility>('after_vote');
   const reverbQuoteRef = useRef<HTMLTextAreaElement | null>(null);
   const [imprintRoot, setImprintRoot] = useState<HTMLDivElement | null>(null);
+  const handleImprintRoot = useCallback((node: HTMLDivElement | null) => {
+    setImprintRoot((prev) => (prev === node ? prev : node));
+  }, []);
   const [imprintSaveCount, setImprintSaveCount] = useState(post.imprintSaveCount || 0);
   const insertReverbEmoji = useEmojiInserter(reverbQuote, setReverbQuote, reverbQuoteRef);
   const wallCaptionRaw =
@@ -567,6 +574,15 @@ export function PostCard({
         reverbPollOpen ||
         reverbImprintOn
     );
+  const reverbMediaAttached = composerHasAttachedMedia(reverbImage, reverbClip, reverbVoice);
+  const clearReverbImage = () => {
+    revokePostImagePreview(reverbImage);
+    setReverbImage(null);
+  };
+  const clearReverbClip = () => {
+    revokeWallClipPreview(reverbClip);
+    setReverbClip(null);
+  };
 
   const resetReverbComposer = () => {
     setReverbQuote('');
@@ -1004,7 +1020,7 @@ export function PostCard({
       ) : post.quotePress && post.text ? (
         <div className="mt-3">
           <QuotePressCard
-            ref={setImprintRoot}
+            ref={handleImprintRoot}
             text={post.text}
             config={post.quotePress}
             withMentions
@@ -1349,7 +1365,6 @@ export function PostCard({
             </MentionField>
             {reverbImprintOn && reverbQuote.trim() ? (
               <div className="space-y-2">
-                <QuotePressCard text={reverbQuote} config={reverbActiveImprintConfig} withMentions />
                 <QuotePressComposerPanel
                   onShuffle={() => void shuffleReverbImprint()}
                   shuffleRemaining={reverbShuffleRemaining}
@@ -1377,6 +1392,7 @@ export function PostCard({
                     void persistReverbImprintSlots(reverbImprintSlots.filter((s) => s.id !== slotId));
                   }}
                 />
+                <QuotePressCard text={reverbQuote} config={reverbActiveImprintConfig} withMentions />
               </div>
             ) : null}
             {reverbPollOpen ? (
@@ -1393,9 +1409,31 @@ export function PostCard({
                 disabled={busy}
               />
             ) : null}
+            <ComposerAttachedMediaPreview
+              variant="post"
+              image={reverbImage}
+              clip={reverbClip}
+              voice={reverbVoice}
+              captionText={reverbQuote}
+              disabled={busy}
+              onRemoveImage={clearReverbImage}
+              onRemoveClip={clearReverbClip}
+              onRemoveVoice={() => setReverbVoice(null)}
+            />
             <div className="flex min-w-0 flex-wrap items-center gap-1">
-              <div className={cn('shrink-0', reverbVoice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
-                <VoiceNoteComposer clip={reverbVoice} onClipChange={setReverbVoice} disabled={busy} compact />
+              <div
+                className={cn(
+                  'shrink-0',
+                  reverbVoice && !reverbMediaAttached && 'min-w-0 max-w-full basis-full sm:basis-auto'
+                )}
+              >
+                <VoiceNoteComposer
+                  clip={reverbVoice}
+                  onClipChange={setReverbVoice}
+                  disabled={busy}
+                  compact
+                  hidePreview={reverbMediaAttached}
+                />
               </div>
               <div className="shrink-0">
                 <ImageAttachComposer
@@ -1405,6 +1443,7 @@ export function PostCard({
                   onClipChange={setReverbClip}
                   disabled={busy}
                   compact
+                  hidePreview={reverbMediaAttached}
                   onError={(message) =>
                     toast({
                       variant: 'destructive',

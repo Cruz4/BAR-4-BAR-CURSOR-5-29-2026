@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Check, Copy, Facebook, Mail, MessageCircle, Share2 } from 'lucide-react';
 import type { ProfilePost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import { publicScenePostHref } from '@/lib/activity/href';
 
 type PostShareDialogProps = {
@@ -44,7 +45,7 @@ function buildPostShareText(post: ProfilePost, shareUrl: string): string {
   const line = snippet
     ? `"${snippet}${snippet.length >= 160 ? '…' : ''}" — ${who} on AKAsheet`
     : `${who} dropped something on AKAsheet`;
-  return `${line}\n${shareUrl}\n#akasheet`;
+  return `${line}\n${shareUrl}\n${SHARE_HASHTAG}`;
 }
 
 export function PostShareDialog({ open, onOpenChange, post }: PostShareDialogProps) {

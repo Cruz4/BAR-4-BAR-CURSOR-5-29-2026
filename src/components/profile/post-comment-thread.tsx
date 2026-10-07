@@ -10,6 +10,10 @@ import { cn } from '@/lib/utils';
 import { ArtistHomeLink } from '@/components/profile/artist-home-link';
 import { ExpandableImage } from '@/components/profile/expandable-image';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import {
+  ComposerAttachedMediaPreview,
+  composerHasAttachedMedia,
+} from '@/components/profile/composer-attached-media-preview';
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { VoiceNotePlayer } from '@/components/profile/voice-note-player';
@@ -137,6 +141,15 @@ export function PostCommentThread({
   const pollReady = !pollOpen || (Boolean(draft.trim()) && pollOptions.every((option) => option.trim()));
   const composerReady =
     pollReady && Boolean(draft.trim() || voice || image || clip || (pollOpen && draft.trim()));
+  const mediaAttached = composerHasAttachedMedia(image, clip, voice);
+  const clearAttachedImage = () => {
+    revokePostImagePreview(image);
+    setImage(null);
+  };
+  const clearAttachedClip = () => {
+    revokeWallClipPreview(clip);
+    setClip(null);
+  };
   const isAdmin = Boolean(
     user && (user.role === 'admin' || isMasterAdminEmail(user.email))
   );
@@ -421,8 +434,14 @@ export function PostCommentThread({
           ) : null}
           <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {postId ? (
-              <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
-                <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+              <div className={cn('shrink-0', voice && !mediaAttached && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
+                <VoiceNoteComposer
+                  clip={voice}
+                  onClipChange={setVoice}
+                  disabled={busy}
+                  compact
+                  hidePreview={mediaAttached}
+                />
               </div>
             ) : null}
             <div className="shrink-0">
@@ -433,6 +452,7 @@ export function PostCommentThread({
                 onClipChange={setClip}
                 disabled={busy}
                 compact
+                hidePreview={mediaAttached}
                 onError={(message) =>
                   toast({
                     variant: 'destructive',
@@ -484,7 +504,6 @@ export function PostCommentThread({
           </div>
           {imprintOn && draft.trim() ? (
             <div className="space-y-2">
-              <QuotePressCard text={draft} config={activeImprintConfig} withMentions compact />
               <QuotePressComposerPanel
                 onShuffle={() => void shuffleImprint()}
                 shuffleRemaining={shuffleRemaining}
@@ -514,6 +533,7 @@ export function PostCommentThread({
                   void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
                 }}
               />
+              <QuotePressCard text={draft} config={activeImprintConfig} withMentions compact />
             </div>
           ) : null}
           {pollOpen ? (
@@ -581,6 +601,16 @@ export function PostCommentThread({
             </Button>
           </div>
           <ComposerLinkPreview text={draft} className="max-w-md" />
+          <ComposerAttachedMediaPreview
+            variant="comment"
+            image={image}
+            clip={clip}
+            voice={voice}
+            disabled={busy}
+            onRemoveImage={clearAttachedImage}
+            onRemoveClip={clearAttachedClip}
+            onRemoveVoice={() => setVoice(null)}
+          />
         </div>
       ) : (
         <p className="text-xs text-[var(--ph-muted,rgba(255,255,255,0.5))]">

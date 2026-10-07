@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useProductSurfaces } from '@/hooks/use-product-surfaces';
 import { trackShareCardEvent } from '@/lib/gamification-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import { ShareStudioDialog } from '@/components/share-studio/share-studio-dialog';
 import {
   Check,
@@ -62,7 +63,7 @@ function RedditIcon({ className }: { className?: string }) {
 }
 
 export function buildProfileShareText(displayName: string, rankLabel: string, profileUrl: string) {
-  return `${displayName} · ${rankLabel} on AKAsheet\n${profileUrl}\n#akasheet`;
+  return `${displayName} · ${rankLabel} on AKAsheet\n${profileUrl}\n${SHARE_HASHTAG}`;
 }
 
 export function ProfileShareDialog({ open, onOpenChange, profile }: ProfileShareDialogProps) {

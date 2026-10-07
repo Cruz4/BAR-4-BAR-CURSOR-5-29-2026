@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { profileHref } from '@/lib/profile/profile-slug';
 import { linesToRhymeBars } from '@/lib/lyrics-units';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import {
   domNodeToFeedImageDataUrl,
   downloadDomNodePng,
@@ -258,7 +259,7 @@ export function StudioProgressBoard() {
           `🎤 Studio Standing — ${displayName}`,
           `${rankLabel} · ${summary.xp.toLocaleString()} XP · ${summary.currentStreak}d streak`,
           `${achievementCount}/${ACHIEVEMENTS.length} trophies · ${linesToRhymeBars(summary.lifetimeBarsWritten).toLocaleString()} bars written`,
-          '#akasheet',
+          SHARE_HASHTAG,
         ].join('\n'),
         imageUrl,
         ownerName: displayName,

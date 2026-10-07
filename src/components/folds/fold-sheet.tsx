@@ -653,7 +653,6 @@ export function FoldSheet({ foldId }: { foldId: string }) {
           ) : null}
           {imprintOn && text.trim() ? (
             <div className="mb-2 space-y-2">
-              <QuotePressCard text={text} config={activeImprintConfig} compact withMentions />
               <QuotePressComposerPanel
                 onShuffle={() => void shuffleImprint()}
                 shuffleRemaining={shuffleRemaining}
@@ -681,6 +680,7 @@ export function FoldSheet({ foldId }: { foldId: string }) {
                   void persistImprintSlots(imprintSlots.filter((slot) => slot.id !== slotId));
                 }}
               />
+              <QuotePressCard text={text} config={activeImprintConfig} compact withMentions />
             </div>
           ) : null}
           {pollOpen ? (

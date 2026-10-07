@@ -32,7 +32,7 @@ import {
   type PressingTokens,
 } from '@/lib/profile/pressing';
 import { LivingPressField } from '@/components/profile/living-press-field';
-import type { ArtistHomeConfig } from '@/lib/profile/modules';
+import { MODULE_META, type ArtistHomeConfig, type ProfileModuleId } from '@/lib/profile/modules';
 import {
   BarOfWeekModule,
   DropShelfModule,
@@ -73,6 +73,18 @@ import type { ProfilePost } from '@/lib/profile/social-client';
 import { DoorKnockHomeListener } from '@/components/profile/door-knock-home-listener';
 import { GuestSandboxPhotoSheet } from '@/components/profile/guest-sandbox-photo-sheet';
 import { ProfileReachStrip } from '@/components/reach/profile-reach-strip';
+import {
+  ArtistHomeSectionRail,
+  type ArtistHomeSectionJump,
+} from '@/components/profile/artist-home-section-rail';
+import {
+  ArtistHomeModulePresenceProvider,
+  useArtistHomeModulePresenceMap,
+} from '@/components/profile/artist-home-module-presence';
+import {
+  artistHomeModuleOnPage,
+  artistHomeModuleVisibility,
+} from '@/lib/profile/artist-home-module-visibility';
 
 export type PlaygroundProfilePhoto = {
   onCustomPhoto: (dataUrl: string) => void;
@@ -123,6 +135,183 @@ const MODULE_RENDERERS: Record<string, React.ComponentType<{ ctx: ModuleContext 
   friends: FriendsModule,
   guestbook: GuestbookModule,
 };
+
+type ArtistHomeModuleDeckProps = {
+  enabledModules: ArtistHomeConfig['modules'];
+  profile: PublicProfileData;
+  config: ArtistHomeConfig;
+  isOwner: boolean;
+  previewMode: boolean;
+  previewViewport: 'phone' | 'tablet' | 'desktop';
+  embeddedPreview: boolean;
+  viewerSlug?: string;
+  rankLabel: string;
+  liveDnaDrops: ModuleContext['liveDnaDrops'];
+  plateChrome: ModuleContext['plate'];
+  showFirstDropsStorefront: boolean;
+  firstDropsOn: boolean;
+  lockOn: boolean;
+  initialWallPosts?: PublicWallPostsPage | null;
+  initialImprintPosts: ProfilePost[];
+  playgroundWall?: ModuleContext['playgroundWall'];
+  playgroundFriends?: ModuleContext['playgroundFriends'];
+  playgroundGuestbook?: ModuleContext['playgroundGuestbook'];
+  playgroundBarOfWeek?: ModuleContext['playgroundBarOfWeek'];
+};
+
+function ArtistHomeModuleDeck({
+  enabledModules,
+  profile,
+  config,
+  isOwner,
+  previewMode,
+  previewViewport,
+  embeddedPreview,
+  viewerSlug,
+  rankLabel,
+  liveDnaDrops,
+  plateChrome,
+  showFirstDropsStorefront,
+  firstDropsOn,
+  lockOn,
+  initialWallPosts,
+  initialImprintPosts,
+  playgroundWall,
+  playgroundFriends,
+  playgroundGuestbook,
+  playgroundBarOfWeek,
+}: ArtistHomeModuleDeckProps) {
+  const presence = useArtistHomeModulePresenceMap();
+
+  const visibilityInput = useMemo(
+    () => ({
+      featured: config.featured,
+      badges: profile.badges,
+      liveDnaDrops: liveDnaDrops || [],
+      profileUserId: profile.userId || '',
+      firstDropsOn,
+      lockOn,
+      isOwner,
+      previewMode,
+      initialWallPosts,
+      initialImprintPosts,
+      hasPlaygroundWall: Boolean(playgroundWall),
+      hasPlaygroundFriends: Boolean(playgroundFriends),
+      hasPlaygroundGuestbook: Boolean(playgroundGuestbook),
+      hasPlaygroundBarOfWeek: Boolean(playgroundBarOfWeek),
+    }),
+    [
+      config.featured,
+      profile.badges,
+      profile.userId,
+      liveDnaDrops,
+      firstDropsOn,
+      lockOn,
+      isOwner,
+      previewMode,
+      initialWallPosts,
+      initialImprintPosts,
+      playgroundWall,
+      playgroundFriends,
+      playgroundGuestbook,
+      playgroundBarOfWeek,
+    ]
+  );
+
+  const sectionJumps = useMemo(() => {
+    const jumps: ArtistHomeSectionJump[] = [];
+    if (showFirstDropsStorefront) jumps.push({ id: 'first-drops', label: 'Releases' });
+    for (const setting of enabledModules) {
+      if (!MODULE_RENDERERS[setting.id]) continue;
+      const moduleId = setting.id as ProfileModuleId;
+      const mode = artistHomeModuleVisibility(moduleId, visibilityInput);
+      if (!artistHomeModuleOnPage(mode, setting.id, presence)) continue;
+      const meta = MODULE_META[moduleId];
+      jumps.push({
+        id: `artist-home-${setting.id}`,
+        label: meta?.label ?? setting.id,
+      });
+    }
+    return jumps;
+  }, [enabledModules, showFirstDropsStorefront, visibilityInput, presence]);
+
+  const railAnchorId = sectionJumps.some((section) => section.id === 'artist-home-wall')
+    ? 'artist-home-wall'
+    : 'artist-home-deck';
+
+  return (
+    <div data-artist-home-rail-scope className="relative mt-12 overflow-visible">
+      <div id="artist-home-deck" className="ph-module-deck columns-1 gap-5 lg:columns-2 lg:gap-5">
+        {enabledModules.map((setting, i) => {
+          const Renderer = MODULE_RENDERERS[setting.id];
+          if (!Renderer) return null;
+          const moduleId = setting.id as ProfileModuleId;
+          const mode = artistHomeModuleVisibility(moduleId, visibilityInput);
+          const onPage = artistHomeModuleOnPage(mode, setting.id, presence);
+          const ctx: ModuleContext = {
+            profileUserId: profile.userId || '',
+            profileName: profile.displayName,
+            profileSlug: profile.slug,
+            activityFromPath: profile.slug
+              ? profileHref(profile.slug) ?? `/${profile.slug}`
+              : undefined,
+            isOwner,
+            previewMode,
+            viewerSlug,
+            featured: config.featured,
+            badges: profile.badges,
+            unlockedAchievements: profile.unlockedAchievements,
+            rankLabel,
+            xp: profile.xp,
+            currentStreak: profile.currentStreak,
+            liveDnaDrops,
+            plate: plateChrome,
+            moduleIndex: i,
+            size: setting.size,
+            ...(playgroundWall ? { playgroundWall } : {}),
+            ...(initialWallPosts ? { initialWallPosts } : {}),
+            ...(previewMode
+              ? { initialImprintPosts }
+              : initialImprintPosts.length
+                ? { initialImprintPosts }
+                : {}),
+            ...(playgroundFriends ? { playgroundFriends } : {}),
+            ...(playgroundGuestbook ? { playgroundGuestbook } : {}),
+            ...(playgroundBarOfWeek ? { playgroundBarOfWeek } : {}),
+          };
+          if (mode === 'hide') return null;
+          const fullBleed =
+            setting.size === 'L' || (setting.id === 'proofWall' && setting.size === 'M');
+          return (
+            <div
+              key={setting.id}
+              id={onPage ? `artist-home-${setting.id}` : undefined}
+              data-full-bleed={onPage && fullBleed ? 'true' : undefined}
+              data-module-size={setting.size}
+              className={cn(
+                onPage &&
+                  'ph-module-item scroll-mt-24 mb-5 break-inside-avoid rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-500',
+                !onPage && 'hidden',
+                onPage && fullBleed && 'lg:[column-span:all]'
+              )}
+              style={onPage ? { animationDelay: `${Math.min(i * 40, 200)}ms` } : undefined}
+              aria-hidden={!onPage ? true : undefined}
+            >
+              <Renderer ctx={ctx} />
+            </div>
+          );
+        })}
+      </div>
+      {!embeddedPreview && previewViewport === 'desktop' ? (
+        <ArtistHomeSectionRail
+          sections={sectionJumps}
+          anchorId={railAnchorId}
+          deckId="artist-home-deck"
+        />
+      ) : null}
+    </div>
+  );
+}
 
 export function ArtistHome({
   profile,
@@ -292,8 +481,9 @@ export function ArtistHome({
 
   return (
     <div
+      data-artist-home-sheet
       data-preview-viewport={previewMode ? previewViewport : undefined}
-      className="relative min-h-screen overflow-x-hidden pb-24 text-[var(--ph-text)]"
+      className="relative min-h-screen overflow-x-clip overflow-y-visible pb-24 text-[var(--ph-text)]"
       style={{ ...(cssVars as React.CSSProperties), backgroundColor: 'var(--ph-bg)' }}
     >
       <style>{`
@@ -303,6 +493,25 @@ export function ArtistHome({
         }
         @media (prefers-reduced-motion: reduce) {
           .ph-hero-breath { animation: none !important; }
+        }
+        @keyframes ph-rail-section-flash {
+          0% { box-shadow: 0 0 0 0 rgb(var(--ph-rail-flash-rgb, 125 211 252) / 0); }
+          20% {
+            box-shadow:
+              0 0 0 3px rgb(var(--ph-rail-flash-rgb, 125 211 252) / 0.65),
+              0 0 36px rgb(var(--ph-rail-flash-rgb, 125 211 252) / 0.45);
+          }
+          100% { box-shadow: 0 0 0 0 rgb(var(--ph-rail-flash-rgb, 125 211 252) / 0); }
+        }
+        [data-artist-home-rail-focus] {
+          animation: ph-rail-section-flash 1.75s ease-out;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-artist-home-rail-focus] {
+            animation: none;
+            outline: 2px solid rgba(125, 211, 252, 0.75);
+            outline-offset: 3px;
+          }
         }
         .ph-artist-name {
           hyphens: none;
@@ -421,7 +630,7 @@ export function ArtistHome({
 
       <div
         className={cn(
-          'relative z-10 mx-auto w-full max-w-[1200px] px-4 pt-3 sm:px-6 sm:pt-10',
+          'relative z-10 mx-auto w-full max-w-[1200px] overflow-visible px-4 pt-3 sm:px-6 sm:pt-10',
           'max-sm:px-3 max-sm:pt-1'
         )}
       >
@@ -852,60 +1061,30 @@ export function ArtistHome({
           <FirstDropsStorefront drops={liveDnaDrops} isOwner={isOwner} />
         ) : null}
 
-        {/* Module deck — original width, masonry so S/M don't leave holes */}
-        <div className="ph-module-deck mt-12 columns-1 gap-5 lg:columns-2 lg:gap-5">
-          {enabledModules.map((setting, i) => {
-            const Renderer = MODULE_RENDERERS[setting.id];
-            if (!Renderer) return null;
-            const ctx: ModuleContext = {
-              profileUserId: profile.userId || '',
-              profileName: profile.displayName,
-              profileSlug: profile.slug,
-              activityFromPath: profile.slug
-                ? profileHref(profile.slug) ?? `/${profile.slug}`
-                : undefined,
-              isOwner,
-              previewMode,
-              viewerSlug,
-              featured: config.featured,
-              badges: profile.badges,
-              unlockedAchievements: profile.unlockedAchievements,
-              rankLabel,
-              xp: profile.xp,
-              currentStreak: profile.currentStreak,
-              liveDnaDrops,
-              plate: plateChrome,
-              moduleIndex: i,
-              size: setting.size,
-              ...(playgroundWall ? { playgroundWall } : {}),
-              ...(initialWallPosts ? { initialWallPosts } : {}),
-              ...(previewMode
-                ? { initialImprintPosts }
-                : initialImprintPosts.length
-                  ? { initialImprintPosts }
-                  : {}),
-              ...(playgroundFriends ? { playgroundFriends } : {}),
-              ...(playgroundGuestbook ? { playgroundGuestbook } : {}),
-              ...(playgroundBarOfWeek ? { playgroundBarOfWeek } : {}),
-            };
-            const fullBleed =
-              setting.size === 'L' || (setting.id === 'proofWall' && setting.size === 'M');
-            return (
-              <div
-                key={setting.id}
-                data-full-bleed={fullBleed ? 'true' : undefined}
-                data-module-size={setting.size}
-                className={cn(
-                  'ph-module-item mb-5 break-inside-avoid animate-in fade-in slide-in-from-bottom-2 duration-500',
-                  fullBleed && 'lg:[column-span:all]'
-                )}
-                style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}
-              >
-                <Renderer ctx={ctx} />
-              </div>
-            );
-          })}
-        </div>
+        <ArtistHomeModulePresenceProvider>
+          <ArtistHomeModuleDeck
+            enabledModules={enabledModules}
+            profile={profile}
+            config={config}
+            isOwner={isOwner}
+            previewMode={previewMode}
+            previewViewport={previewViewport}
+            embeddedPreview={embeddedPreview}
+            viewerSlug={viewerSlug}
+            rankLabel={rankLabel}
+            liveDnaDrops={liveDnaDrops}
+            plateChrome={plateChrome}
+            showFirstDropsStorefront={showFirstDropsStorefront}
+            firstDropsOn={firstDropsOn}
+            lockOn={lockOn}
+            initialWallPosts={initialWallPosts}
+            initialImprintPosts={initialImprintPosts}
+            playgroundWall={playgroundWall}
+            playgroundFriends={playgroundFriends}
+            playgroundGuestbook={playgroundGuestbook}
+            playgroundBarOfWeek={playgroundBarOfWeek}
+          />
+        </ArtistHomeModulePresenceProvider>
 
         <footer className="mt-16 flex flex-col items-center gap-3 border-t border-dashed border-[var(--ph-border)] pt-8 text-center">
           <p className="font-code text-[9px] uppercase tracking-[0.35em] text-[var(--ph-muted)]">

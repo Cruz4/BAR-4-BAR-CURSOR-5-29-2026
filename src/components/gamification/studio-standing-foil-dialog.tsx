@@ -24,6 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import {
   domNodeToFeedImageDataUrl,
   downloadDomNodePng,
@@ -85,7 +86,7 @@ export function StudioStandingFoilDialog({
           `🎤 Studio Standing — ${stats.displayName}`,
           `${stats.rankLabel} · ${stats.xp.toLocaleString()} XP · ${stats.streak}d streak`,
           `${stats.badgeCount}/${totalBadges} trophies · ${linesToRhymeBars(written).toLocaleString()} bars written`,
-          '#akasheet',
+          SHARE_HASHTAG,
         ].join('\n'),
         imageUrl,
         ownerName: stats.displayName,

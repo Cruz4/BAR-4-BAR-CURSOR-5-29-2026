@@ -11,7 +11,7 @@ The **app code** already uses these names. This file is everything **you still h
 | Site | https://akasheet.com |
 | Support inbox | **akasheet.support@gmail.com** |
 | Transactional from | **AKAsheet &lt;noreply@akasheet.com&gt;** |
-| Hashtag | **#akasheet** |
+| Hashtag | **#AKAsheet** |
 | Slogan | AKAsheet: Put Your World Within Reach |
 | Firebase project (do **not** rename) | `lyricai-studio-otgxn` |
 

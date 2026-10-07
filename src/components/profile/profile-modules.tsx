@@ -6,7 +6,7 @@
  * artist's world on AKAsheet.ink (share pages, DNA drops, the studio itself).
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -45,6 +45,10 @@ import { firstInlineHref } from '@/lib/profile/inline-links';
 import { PostCard } from '@/components/profile/post-card';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import {
+  ComposerAttachedMediaPreview,
+  composerHasAttachedMedia,
+} from '@/components/profile/composer-attached-media-preview';
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { PressPlate, type PressPlateChrome } from '@/components/profile/press-plate';
 import { PublicAchievementFoil } from '@/components/profile/public-achievement-foil';
@@ -64,6 +68,12 @@ import {
   type GuestbookEntry,
   type ProfilePost,
 } from '@/lib/profile/social-client';
+import {
+  mergeRecentOwnWallPosts,
+  mergeWallPostFeed,
+  WALL_POST_FEED_EVENT,
+  type WallPostFeedDetail,
+} from '@/lib/scene/wall-post-feed-events';
 import { type RecordedVoiceClip } from '@/lib/profile/voice-notes';
 import {
   POST_IMAGE_GUEST_MAX_BYTES,
@@ -89,6 +99,7 @@ import { isProOrTrial } from '@/lib/subscription';
 import type { PostPollResultsVisibility } from '@/lib/profile/post-polls';
 import type { PublicWallPostsPage } from '@/lib/server/public-post';
 import { activityPostHash, parseActivityPostHash, scrollActivityPostTarget } from '@/lib/activity/post-deep-link';
+import { useArtistHomeModulePresence } from '@/components/profile/artist-home-module-presence';
 
 export type ModuleContext = {
   profileUserId: string;
@@ -504,20 +515,14 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
   }, [locks, featuredId]);
 
   const rows = ordered;
+  const hasLocks = loaded && rows.length > 0;
+  useArtistHomeModulePresence('openLock', hasLocks);
+  if (loaded && rows.length === 0) return null;
 
   return (
     <ModuleShell icon={Lock} title="Finish this bar" ctx={ctx}>
       {!loaded ? (
         <p className="text-sm text-muted-foreground">Loading open lines…</p>
-      ) : rows.length === 0 ? (
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">No open line right now.</p>
-          {ctx.isOwner ? (
-            <Button asChild variant="outline" size="sm" className="font-bold uppercase">
-              <Link href="/lock/desk">Publish one →</Link>
-            </Button>
-          ) : null}
-        </div>
       ) : (
         <ul className="space-y-2.5">
           {rows.map((lock) => {
@@ -576,14 +581,12 @@ export function OpenLockModule({ ctx }: { ctx: ModuleContext }) {
 
 export function DropShelfModule({ ctx }: { ctx: ModuleContext }) {
   const dnaDrops = selectDropShelfDna(ctx.liveDnaDrops || [], ctx.featured.dropShelfShareIds);
+  useArtistHomeModulePresence('dropShelf', dnaDrops.length > 0);
+  if (!dnaDrops.length) return null;
 
   return (
     <ModuleShell icon={Dna} title="Live Lyrics DNA Drops" ctx={ctx}>
-      {dnaDrops.length ? (
-        <LiveDnaDropsGroupedList drops={dnaDrops} layout="shelf" hideFirstDropStrip />
-      ) : (
-        <p className="text-sm text-muted-foreground">No live Lyrics DNA Drops yet</p>
-      )}
+      <LiveDnaDropsGroupedList drops={dnaDrops} layout="shelf" hideFirstDropStrip />
     </ModuleShell>
   );
 }
@@ -612,6 +615,9 @@ function ImprintShelfCard({
 }) {
   const [imprintRoot, setImprintRoot] = useState<HTMLElement | null>(null);
   const [saveCount, setSaveCount] = useState(post.imprintSaveCount || 0);
+  const handleImprintRoot = useCallback((node: HTMLDivElement | null) => {
+    setImprintRoot((prev) => (prev === node ? prev : node));
+  }, []);
 
   useEffect(() => {
     setSaveCount(post.imprintSaveCount || 0);
@@ -621,7 +627,7 @@ function ImprintShelfCard({
     <div id={activityPostHash(post.id)} className="min-w-0">
       <ImprintScaleFit density={density}>
         <QuotePressCard
-          ref={setImprintRoot}
+          ref={handleImprintRoot}
           text={post.text}
           config={post.quotePress!}
           withMentions
@@ -699,6 +705,8 @@ export function ImprintShelfModule({ ctx }: { ctx: ModuleContext }) {
     };
   }, [ctx.profileSlug, idKey, hasInitial, ctx.initialImprintPosts, previewPosts, ctx.previewMode]);
 
+  const imprintVisible = Boolean(ids?.length) && (!loaded || posts.length > 0);
+  useArtistHomeModulePresence('imprintShelf', imprintVisible);
   if (!ids?.length) return null;
   if (loaded && !posts.length) return null;
 
@@ -841,8 +849,12 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const isPro = isProOrTrial(user);
   const playground = ctx.playgroundWall;
   const initialWall = ctx.initialWallPosts;
-  const [posts, setPosts] = useState<ProfilePost[]>(
-    playground?.posts || initialWall?.posts || []
+  const [posts, setPosts] = useState<ProfilePost[]>(() =>
+    mergeRecentOwnWallPosts(
+      ctx.profileUserId,
+      playground?.posts || initialWall?.posts || [],
+      playground ? 0 : initialWall?.page || 0
+    )
   );
   const [loaded, setLoaded] = useState(Boolean(playground || initialWall));
   const [text, setText] = useState('');
@@ -855,13 +867,25 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(initialWall?.page || 0);
   const [wallPageCount, setWallPageCount] = useState(initialWall?.pageCount || 1);
-  const [wallTotal, setWallTotal] = useState(
-    playground?.posts.length || initialWall?.total || 0
-  );
+  const [wallTotal, setWallTotal] = useState(() => {
+    const seed = playground?.posts || initialWall?.posts || [];
+    const base = playground?.posts.length || initialWall?.total || 0;
+    const merged = mergeRecentOwnWallPosts(
+      ctx.profileUserId,
+      seed,
+      playground ? 0 : initialWall?.page || 0
+    );
+    return base + Math.max(0, merged.length - seed.length);
+  });
   const textRef = useRef<HTMLTextAreaElement>(null);
   const imprintPreviewRef = useRef<HTMLDivElement | null>(null);
   const wallPostsTopRef = useRef<HTMLDivElement>(null);
   const wallScrollAfterPageRef = useRef(false);
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const loadWallPageRef = useRef<(nextPage: number) => Promise<void>>(async () => {});
   const insertEmoji = useEmojiInserter(text, setText, textRef);
   const {
     imprintOn,
@@ -902,10 +926,17 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
 
     const hydrateFromInitial = () => {
       if (!initialWall?.posts.length) return false;
-      setPosts(initialWall.posts);
+      const merged = mergeRecentOwnWallPosts(
+        ctx.profileUserId,
+        initialWall.posts,
+        initialWall.page
+      );
+      setPosts(merged);
       setPage(initialWall.page);
       setWallPageCount(initialWall.pageCount);
-      setWallTotal(initialWall.total);
+      setWallTotal(
+        initialWall.total + Math.max(0, merged.length - initialWall.posts.length)
+      );
       setLoaded(true);
       return true;
     };
@@ -929,10 +960,12 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           next = [extra, ...next.filter((post) => post.id !== extra.id)];
         }
       }
-      setPosts(next);
-      setPage(Math.max(0, page));
+      const safePage = Math.max(0, page);
+      const merged = mergeRecentOwnWallPosts(ctx.profileUserId, next, safePage);
+      setPosts(merged);
+      setPage(safePage);
       setWallPageCount(Math.max(1, pageCount));
-      setWallTotal(Math.max(0, total));
+      setWallTotal(Math.max(0, total + Math.max(0, merged.length - next.length)));
     };
 
     const loadFromApi = async (withTarget: boolean) => {
@@ -1004,6 +1037,15 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
   const signedInOwner = Boolean(ctx.isOwner && user);
   const canCompose = Boolean(playground) || Boolean(signedInOwner);
   const pollReady = !pollOpen || (Boolean(text.trim()) && pollOptions.every((option) => option.trim()));
+  const mediaAttached = composerHasAttachedMedia(image, clip, voice);
+  const clearAttachedImage = () => {
+    revokePostImagePreview(image);
+    setImage(null);
+  };
+  const clearAttachedClip = () => {
+    revokeWallClipPreview(clip);
+    setClip(null);
+  };
 
   const pageCount = playground
     ? Math.max(1, Math.ceil(posts.length / WALL_PAGE_SIZE) || 1)
@@ -1050,15 +1092,64 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
         total?: number;
       };
       if (!res.ok) throw new Error('Wall unavailable');
-      setPosts(Array.isArray(data.posts) ? data.posts : []);
-      setPage(Math.max(0, Number(data.page) || 0));
+      const rows = Array.isArray(data.posts) ? data.posts : [];
+      const nextPage = Math.max(0, Number(data.page) || 0);
+      const merged = mergeRecentOwnWallPosts(ctx.profileUserId, rows, nextPage);
+      setPosts(merged);
+      setPage(nextPage);
       setWallPageCount(Math.max(1, Number(data.pageCount) || 1));
-      setWallTotal(Math.max(0, Number(data.total) || 0));
+      setWallTotal(
+        Math.max(0, (Number(data.total) || 0) + Math.max(0, merged.length - rows.length))
+      );
     } catch {
       wallScrollAfterPageRef.current = false;
       toast({ variant: 'destructive', title: 'Could not load that wall page' });
     }
   };
+
+  loadWallPageRef.current = loadWallPage;
+
+  useEffect(() => {
+    if (playground) return;
+    const reveal = (postId: string) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.getElementById(`post-${postId}`)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        });
+      });
+    };
+    const onFeed = (ev: Event) => {
+      const detail = (ev as CustomEvent<WallPostFeedDetail>).detail;
+      if (!detail) return;
+      if (detail.kind === 'deleted') {
+        if (!postsRef.current.some((row) => row.id === detail.postId)) return;
+        const next = postsRef.current.filter((row) => row.id !== detail.postId);
+        postsRef.current = next;
+        setPosts(next);
+        setWallTotal((value) => Math.max(0, value - 1));
+        return;
+      }
+      if (detail.post.ownerId !== ctx.profileUserId) return;
+      if (pageRef.current !== 0) {
+        const postId = detail.post.id;
+        void loadWallPageRef.current(0).then(() => reveal(postId));
+        return;
+      }
+      const exists = postsRef.current.some((row) => row.id === detail.post.id);
+      const next = mergeWallPostFeed(postsRef.current, detail.post);
+      postsRef.current = next;
+      setPosts(next);
+      if (!exists) {
+        setWallTotal((value) => value + 1);
+        reveal(detail.post.id);
+      }
+    };
+    window.addEventListener(WALL_POST_FEED_EVENT, onFeed);
+    return () => window.removeEventListener(WALL_POST_FEED_EVENT, onFeed);
+  }, [ctx.profileUserId, playground]);
 
   const submit = async () => {
     if (playground) {
@@ -1107,8 +1198,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
       if (post.quotePress) {
         void queueAutoImprintSyndication({ post });
       }
-      setPosts((prev) => [post, ...prev]);
-      setWallTotal((value) => value + 1);
+      setPosts((prev) => mergeWallPostFeed(prev, post));
       setText('');
       setVoice(null);
       revokePostImagePreview(image);
@@ -1131,6 +1221,13 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
     }
   };
 
+  const wallVisible =
+    canCompose ||
+    posts.length > 0 ||
+    Boolean(focusPostId) ||
+    (!loaded &&
+      ((initialWall?.total ?? 0) > 0 || (initialWall?.posts?.length ?? 0) > 0));
+  useArtistHomeModulePresence('wall', wallVisible);
   if (!canCompose && loaded && posts.length === 0 && !focusPostId) return null;
 
   return (
@@ -1170,12 +1267,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           <ComposerLinkPreview text={text} />
           {!playground && imprintOn && text.trim() ? (
             <div className="space-y-2">
-              <QuotePressCard
-                ref={imprintPreviewRef}
-                text={text}
-                config={activeImprintConfig}
-                creatorSlug={ctx.profileSlug}
-              />
               <QuotePressComposerPanel
                 onShuffle={() => void shuffleImprint()}
                 shuffleRemaining={shuffleRemaining}
@@ -1203,6 +1294,12 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                   void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
                 }}
               />
+              <QuotePressCard
+                ref={imprintPreviewRef}
+                text={text}
+                config={activeImprintConfig}
+                creatorSlug={ctx.profileSlug}
+              />
             </div>
           ) : null}
           {!playground && pollOpen ? (
@@ -1219,6 +1316,17 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
               disabled={busy}
             />
           ) : null}
+          <ComposerAttachedMediaPreview
+            variant="post"
+            image={image}
+            clip={playground ? null : clip}
+            voice={playground ? null : voice}
+            captionText={text}
+            disabled={busy}
+            onRemoveImage={clearAttachedImage}
+            onRemoveClip={playground ? undefined : clearAttachedClip}
+            onRemoveVoice={playground ? undefined : () => setVoice(null)}
+          />
           {playground ? (
             <p className="text-[10px] text-[var(--ph-muted,rgba(255,255,255,0.5))]">
               Demo wall — text, photos, and links stay here until you claim your free profile.
@@ -1227,7 +1335,13 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
           <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
             {!playground ? (
               <div className={cn('shrink-0', voice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
-                <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+                <VoiceNoteComposer
+                  clip={voice}
+                  onClipChange={setVoice}
+                  disabled={busy}
+                  compact
+                  hidePreview={mediaAttached}
+                />
               </div>
             ) : null}
             <div className="shrink-0">
@@ -1238,6 +1352,7 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                 onClipChange={playground ? undefined : setClip}
                 disabled={busy}
                 compact
+                hidePreview={mediaAttached}
                 maxBytes={playground ? POST_IMAGE_GUEST_MAX_BYTES : undefined}
                 onError={(message) =>
                   toast({
@@ -1333,7 +1448,6 @@ export function WallModule({ ctx }: { ctx: ModuleContext }) {
                   ? undefined
                   : (id) => {
                       setPosts((prev) => prev.filter((p) => p.id !== id));
-                      setWallTotal((value) => Math.max(0, value - 1));
                     }
               }
             />
@@ -1458,6 +1572,7 @@ export function FriendsModule({ ctx }: { ctx: ModuleContext }) {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
 
+  useArtistHomeModulePresence('friends', friends.length > 0);
   if (loaded && friends.length === 0) return null;
 
   return (
@@ -1564,16 +1679,20 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
   const [entries, setEntries] = useState<GuestbookEntry[]>(playground || []);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(Boolean(playground));
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      setLoaded(Boolean(playground));
       try {
         const raw = playground ?? (await fetchGuestbook(ctx.profileUserId));
         const enriched = await enrichGuestbookEntries(raw);
         if (!cancelled) setEntries(enriched);
       } catch {
         if (!cancelled && playground) setEntries(playground);
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
     };
     void load();
@@ -1581,6 +1700,10 @@ export function GuestbookModule({ ctx }: { ctx: ModuleContext }) {
       cancelled = true;
     };
   }, [ctx.profileUserId, playground]);
+
+  const guestbookVisible = Boolean(playground) || entries.length > 0 || !ctx.isOwner;
+  useArtistHomeModulePresence('guestbook', guestbookVisible);
+  if (ctx.isOwner && !playground && loaded && entries.length === 0) return null;
 
   const canSignIdentity = !playground && Boolean(user && user.id !== ctx.profileUserId);
   const canSign = canSignIdentity && !profileLoading;

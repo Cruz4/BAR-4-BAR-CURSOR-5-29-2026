@@ -4,7 +4,15 @@
  * The Imprint — live quote card renderer.
  */
 
-import React, { forwardRef, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useImprintMotionGate } from '@/hooks/use-imprint-motion-gate';
 import { useImprintPressPlus } from '@/hooks/use-imprint-press-plus';
 import { isPlusLayerKind, type QuotePressPlusLayer } from '@/lib/profile/quote-press-plus-layers';
@@ -537,6 +545,8 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
   const [fontsReady, setFontsReady] = useState(false);
   const [quoteFontSize, setQuoteFontSize] = useState<string | null>(null);
   const { ref: motionRef, motionPaused } = useImprintMotionGate<HTMLDivElement>();
+  const forwardedRefRef = useRef(forwardedRef);
+  forwardedRefRef.current = forwardedRef;
   const imprintPressPlus = useImprintPressPlus();
   const tokens = useMemo(
     () => quotePressTokens(text, config, { imprintPressPlus }),
@@ -574,11 +584,12 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
     return () => observer.disconnect();
   }, [text, config, tokens.fontSizeClamp, fontsReady]);
 
-  const setRefs = (node: HTMLDivElement | null) => {
+  const setRefs = useCallback((node: HTMLDivElement | null) => {
     motionRef.current = node;
-    if (typeof forwardedRef === 'function') forwardedRef(node);
-    else if (forwardedRef) forwardedRef.current = node;
-  };
+    const ref = forwardedRefRef.current;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [motionRef]);
 
   const quoteLayer = tokens.layers.find((l) => l.kind === 'quoteMarks');
   const divider = tokens.layers.find((l) => l.kind === 'divider');

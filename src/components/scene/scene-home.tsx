@@ -18,6 +18,10 @@ import { LiveArtistStarAvatar } from '@/components/profile/artist-star-avatar';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ComposerLinkPreview } from '@/components/profile/inline-link-preview';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import {
+  ComposerAttachedMediaPreview,
+  composerHasAttachedMedia,
+} from '@/components/profile/composer-attached-media-preview';
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { ReferAFriendSection } from '@/components/refer-a-friend-section';
@@ -274,10 +278,25 @@ function SceneComposer({
   };
 
   const imprintPreviewActive = imprintOn && Boolean(text.trim());
+  const mediaAttached = composerHasAttachedMedia(image, clip, voice);
+  const clearAttachedImage = () => {
+    revokePostImagePreview(image);
+    setImage(null);
+  };
+  const clearAttachedClip = () => {
+    revokeWallClipPreview(clip);
+    setClip(null);
+  };
 
   const composerAttachTools = (
     <>
-      <VoiceNoteComposer clip={voice} onClipChange={setVoice} disabled={busy} compact />
+      <VoiceNoteComposer
+        clip={voice}
+        onClipChange={setVoice}
+        disabled={busy}
+        compact
+        hidePreview={mediaAttached}
+      />
         <ImageAttachComposer
           image={image}
           onImageChange={setImage}
@@ -285,6 +304,7 @@ function SceneComposer({
           onClipChange={setClip}
           disabled={busy}
           compact
+          hidePreview={mediaAttached}
           onError={(message) =>
             toast({ variant: 'destructive', title: 'Could not attach photo', description: message })
           }
@@ -373,12 +393,6 @@ function SceneComposer({
       <ComposerLinkPreview text={text} />
       {imprintPreviewActive ? (
         <div className="space-y-2">
-          <QuotePressCard
-            ref={imprintPreviewRef}
-            text={text}
-            config={activeImprintConfig}
-            creatorSlug={profileSlug}
-          />
           <QuotePressComposerPanel
             onShuffle={() => void shuffleImprint()}
             shuffleRemaining={shuffleRemaining}
@@ -404,6 +418,12 @@ function SceneComposer({
               void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
             }}
           />
+          <QuotePressCard
+            ref={imprintPreviewRef}
+            text={text}
+            config={activeImprintConfig}
+            creatorSlug={profileSlug}
+          />
         </div>
       ) : null}
       {pollOpen ? (
@@ -420,6 +440,17 @@ function SceneComposer({
           disabled={busy}
         />
       ) : null}
+      <ComposerAttachedMediaPreview
+        variant="post"
+        image={image}
+        clip={clip}
+        voice={voice}
+        captionText={text}
+        disabled={busy}
+        onRemoveImage={clearAttachedImage}
+        onRemoveClip={clearAttachedClip}
+        onRemoveVoice={() => setVoice(null)}
+      />
       {composerActionRow}
     </div>
   );

@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Copy, Download, Eye, Lock, Radio } from 'lucide-react';
 
@@ -154,7 +155,7 @@ export function AchievementBadgeCell({
         `🏆 Unlocked ${achievement.title}`,
         achievement.description.trim(),
         rewards.length ? rewards.join(' · ') : '',
-        '#akasheet',
+        SHARE_HASHTAG,
       ]
         .filter(Boolean)
         .join('\n');

@@ -5,6 +5,7 @@ export const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '700'],
   display: 'swap',
+  adjustFontFallback: false,
   variable: '--font-inter',
 });
 
@@ -12,6 +13,7 @@ export const robotoSlab = Roboto_Slab({
   subsets: ['latin'],
   weight: ['400', '700'],
   display: 'swap',
+  adjustFontFallback: false,
   variable: '--font-roboto-slab',
   preload: false,
 });
@@ -20,6 +22,7 @@ export const ibmPlexMono = IBM_Plex_Mono({
   subsets: ['latin'],
   weight: ['400', '700'],
   display: 'swap',
+  adjustFontFallback: false,
   variable: '--font-plex-mono',
 });
 
@@ -27,6 +30,7 @@ export const notoColorEmoji = Noto_Color_Emoji({
   subsets: ['emoji'],
   weight: '400',
   display: 'swap',
+  adjustFontFallback: false,
   variable: '--font-noto-emoji',
   preload: false,
 });

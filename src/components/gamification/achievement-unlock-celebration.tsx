@@ -55,6 +55,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import {
   loadSeenAchievementIds,
   markAchievementsSeen,
@@ -86,7 +87,7 @@ function buildUnlockFeedText(item: CelebrationItem, def?: AchievementDef | null)
   if (item.xpReward > 0) rewards.push(`+${item.xpReward} XP`);
   if (item.inkReward > 0) rewards.push(`+${item.inkReward} Ink`);
   if (rewards.length) bits.push(rewards.join(' · '));
-  bits.push('#akasheet');
+  bits.push(SHARE_HASHTAG);
   return bits.join('\n');
 }
 

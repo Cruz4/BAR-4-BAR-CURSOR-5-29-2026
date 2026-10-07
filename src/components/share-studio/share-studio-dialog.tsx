@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import { auth } from '@/lib/firebase/client/firebase';
 import { cn } from '@/lib/utils';
 import {
@@ -71,7 +72,7 @@ export function ShareStudioDialog({
       )
     : fallbackUrl;
 
-  const composedText = shareText || `${title}\n${campaignUrl}\n#akasheet`;
+  const composedText = shareText || `${title}\n${campaignUrl}\n${SHARE_HASHTAG}`;
 
   useEffect(() => {
     if (!open || !user) {

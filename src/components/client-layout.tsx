@@ -112,11 +112,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isPublicProfilePage = isPublicArtistHomePath(pathname);
   const isMarketingCapture = pathname.startsWith('/marketing/capture');
   const isSettingsRoute = pathname === '/usage' || pathname.startsWith('/usage/') || pathname === '/admin';
-  // Authenticated Scene / Vault need document scroll so sticky rails can bind
-  // (same pattern as Edit Public Page). overflow-hidden on shell breaks sticky.
+  // Scene, Vault, and Artist Home section rail need document scroll so sticky
+  // binds to the viewport (nested overflow-y-auto on shell/main trails by a frame).
   const isStickyRailPage =
     Boolean(user) && (pathname === '/' || pathname === '/vault');
-  const stickyDocumentScroll = isProfileCustomizePage || isStickyRailPage;
+  const stickyDocumentScroll =
+    isProfileCustomizePage || isStickyRailPage || isPublicProfilePage;
   const showAppHeader =
     !isMarketingShell &&
     !isPerformPage &&

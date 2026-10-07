@@ -35,6 +35,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useGamification } from '@/context/gamification-context';
 import { useToast } from '@/hooks/use-toast';
 import { createPost } from '@/lib/profile/social-client';
+import { SHARE_HASHTAG } from '@/lib/brand';
 import { ChallengeGoalFoilCard } from '@/components/gamification/challenge-goal-foil-card';
 import { domNodeToFeedImageDataUrl } from '@/lib/gamification/feed-card-export';
 import {
@@ -279,7 +280,7 @@ export function ProgressCelebration() {
         text: [
           `🎯 ${SCALE_LABELS[activeChallenge.scale]} goal complete: ${activeChallenge.label}`,
           activeChallenge.description.trim(),
-          '#akasheet',
+          SHARE_HASHTAG,
         ].join('\n'),
         imageUrl,
         ownerName: displayName,

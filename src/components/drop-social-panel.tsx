@@ -36,6 +36,10 @@ import { Button } from '@/components/ui/button';
 import { MentionField } from '@/components/profile/mention-suggestions';
 import { VoiceNoteComposer } from '@/components/profile/voice-note-composer';
 import { ImageAttachComposer, attachPastedImage } from '@/components/profile/image-attach-composer';
+import {
+  ComposerAttachedMediaPreview,
+  composerHasAttachedMedia,
+} from '@/components/profile/composer-attached-media-preview';
 import { GifAttachButton } from '@/components/profile/gif-attach-button';
 import { EmojiPickerButton, useEmojiInserter } from '@/components/ui/emoji-picker-button';
 import { PollComposerFields } from '@/components/profile/poll-composer-fields';
@@ -134,6 +138,15 @@ export function DropSocialPanel({
   const quoteComposerReady =
     quotePollReady &&
     Boolean(quoteText.trim() || quoteVoice || quoteImage || quoteClip || quotePollOpen || imprintOn);
+  const quoteMediaAttached = composerHasAttachedMedia(quoteImage, quoteClip, quoteVoice);
+  const clearQuoteImage = () => {
+    revokePostImagePreview(quoteImage);
+    setQuoteImage(null);
+  };
+  const clearQuoteClip = () => {
+    revokeWallClipPreview(quoteClip);
+    setQuoteClip(null);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -486,7 +499,6 @@ export function DropSocialPanel({
             </MentionField>
             {imprintOn && quoteText.trim() ? (
               <div className="space-y-2">
-                <QuotePressCard text={quoteText} config={activeImprintConfig} withMentions />
                 <QuotePressComposerPanel
                   onShuffle={() => void shuffleImprint()}
                   shuffleRemaining={shuffleRemaining}
@@ -514,6 +526,7 @@ export function DropSocialPanel({
                     void persistImprintSlots(imprintSlots.filter((s) => s.id !== slotId));
                   }}
                 />
+                <QuotePressCard text={quoteText} config={activeImprintConfig} withMentions />
               </div>
             ) : null}
             {quotePollOpen ? (
@@ -530,9 +543,31 @@ export function DropSocialPanel({
                 disabled={busy}
               />
             ) : null}
+            <ComposerAttachedMediaPreview
+              variant="post"
+              image={quoteImage}
+              clip={quoteClip}
+              voice={quoteVoice}
+              captionText={quoteText}
+              disabled={busy}
+              onRemoveImage={clearQuoteImage}
+              onRemoveClip={clearQuoteClip}
+              onRemoveVoice={() => setQuoteVoice(null)}
+            />
             <div className="flex min-w-0 flex-wrap items-center gap-1">
-              <div className={cn('shrink-0', quoteVoice && 'min-w-0 max-w-full basis-full sm:basis-auto')}>
-                <VoiceNoteComposer clip={quoteVoice} onClipChange={setQuoteVoice} disabled={busy} compact />
+              <div
+                className={cn(
+                  'shrink-0',
+                  quoteVoice && !quoteMediaAttached && 'min-w-0 max-w-full basis-full sm:basis-auto'
+                )}
+              >
+                <VoiceNoteComposer
+                  clip={quoteVoice}
+                  onClipChange={setQuoteVoice}
+                  disabled={busy}
+                  compact
+                  hidePreview={quoteMediaAttached}
+                />
               </div>
               <div className="shrink-0">
                 <ImageAttachComposer
@@ -542,6 +577,7 @@ export function DropSocialPanel({
                   onClipChange={setQuoteClip}
                   disabled={busy}
                   compact
+                  hidePreview={quoteMediaAttached}
                   onError={(message) =>
                     toast({
                       variant: 'destructive',
