@@ -1,6 +1,6 @@
 /** System emoji stack — avoids display fonts that ship empty tofu glyphs for pictographs. */
 export const EMOJI_FONT_FAMILY =
-  '"Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+  'var(--font-noto-emoji), "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
 
 const EMOJI_GRAPHEME = /\p{Extended_Pictographic}/u;
 

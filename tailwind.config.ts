@@ -17,12 +17,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
+        sans: ['var(--font-inter)', 'sans-serif'],
+        body: ['var(--font-inter)', 'sans-serif'],
         headline: ['B4B_Font', 'serif'],
         tagline: ['YUSRB_font', 'sans-serif'],
-        code: ['IBM Plex Mono', 'monospace'],
-        mono: ['IBM Plex Mono', 'monospace'],
+        code: ['var(--font-plex-mono)', 'monospace'],
+        mono: ['var(--font-plex-mono)', 'monospace'],
         handwriting: ['"Architects Daughter"', 'cursive'],
       },
       colors: {

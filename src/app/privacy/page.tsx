@@ -106,7 +106,7 @@ export default function PrivacyPage() {
 
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-foreground uppercase tracking-wide">10. Children</h2>
-            <p>The Service is not directed to children under 13 (or 16 in the EU). We do not knowingly collect data from minors. You must be 18 or older to sell music releases or connect payouts.</p>
+            <p>The Service is not directed to children under 13 (or 16 in the EU). We do not knowingly collect personal information from children under 13. If we learn an account belongs to a child under 13, we will delete it. You must be 18 or older to sell music releases or connect payouts.</p>
           </section>
 
           <section className="space-y-3">

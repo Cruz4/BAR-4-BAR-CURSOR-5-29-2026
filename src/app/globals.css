@@ -98,7 +98,7 @@
   /* Lyrics sheet bar lines — keep mono; never inherit social composer emoji stack. */
   textarea[id^='bar-input-'],
   textarea.font-code {
-    font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+    font-family: var(--font-plex-mono), ui-monospace, monospace !important;
     font-variant-emoji: normal !important;
   }
 
@@ -112,7 +112,7 @@
      Emoji fonts stay in the stack so pictographs still fall back to color glyphs. */
   [data-composer-field] textarea,
   [data-composer-field] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']) {
-    font-family: Inter, 'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif;
+    font-family: var(--font-inter), 'Segoe UI Emoji', var(--font-noto-emoji), 'Apple Color Emoji', sans-serif;
     font-variant-emoji: normal;
     font-variant-numeric: normal;
     letter-spacing: normal;
@@ -274,7 +274,7 @@
 
 @layer utilities {
   .font-emoji {
-    font-family: Inter, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    font-family: var(--font-inter), var(--font-noto-emoji), 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
     font-variant-emoji: emoji;
   }
 

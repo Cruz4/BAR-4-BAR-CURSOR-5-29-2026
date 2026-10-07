@@ -190,7 +190,7 @@ export type QuotePressSlot = {
   label: string;
 };
 
-/** Curated families — Google Fonts load via QuotePressFontLoader + quote-press-google-fonts.ts */
+/** Curated families — self-hosted via QuotePressFontLoader. */
 export const QUOTE_PRESS_FONTS = [
   '"Bebas Neue", sans-serif',
   '"Playfair Display", serif',

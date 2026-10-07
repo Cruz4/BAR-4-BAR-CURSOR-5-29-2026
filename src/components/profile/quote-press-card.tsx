@@ -19,6 +19,7 @@ import {
   type QuotePressLayer,
   type QuotePressTokens,
 } from '@/lib/profile/quote-press';
+import { localQuotePressFontFamily } from '@/lib/fonts/quote-press-fonts';
 import { imprintDisplayText } from '@/lib/profile/imprint-word-break';
 import { EmojiFontText } from '@/components/profile/emoji-font-text';
 import { MentionText } from '@/components/profile/mention-text';
@@ -622,7 +623,7 @@ export const QuotePressCard = forwardRef<HTMLDivElement, QuotePressCardProps>(fu
           lang="en"
           className="relative z-[1] whitespace-pre-wrap"
           style={{
-            fontFamily: tokens.fontFamily,
+            fontFamily: localQuotePressFontFamily(tokens.fontFamily),
             fontWeight: tokens.fontWeight,
             fontStyle: tokens.fontStyle,
             letterSpacing: tokens.letterSpacing,

@@ -78,6 +78,26 @@ function isFreshAuthAccount(firebaseUser: { metadata?: { creationTime?: string }
   return Number.isFinite(ageMs) && ageMs >= 0 && ageMs < 2 * 60 * 60 * 1000;
 }
 
+const SIGNUP_AGE_CONFIRMED_KEY = 'b4b_signup_age_confirmed';
+
+function rememberSignupAgeConfirmation() {
+  try {
+    sessionStorage.setItem(SIGNUP_AGE_CONFIRMED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+function consumeSignupAgeConfirmation(): boolean {
+  try {
+    const confirmed = sessionStorage.getItem(SIGNUP_AGE_CONFIRMED_KEY) === '1';
+    sessionStorage.removeItem(SIGNUP_AGE_CONFIRMED_KEY);
+    return confirmed;
+  } catch {
+    return false;
+  }
+}
+
 function authLooksLikeNewUser(credential: UserCredential | null | undefined): boolean | null {
   if (!credential) return null;
   try {
@@ -101,6 +121,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const dropBuyIntent = searchParams.get('intent') === 'drop-buy';
   const guestTryIntent = searchParams.get('intent') === 'guest_try';
@@ -175,6 +196,7 @@ function LoginForm() {
       intentSignup?: boolean;
       signupMethod?: 'email' | 'google';
       authIsNewUser?: boolean | null;
+      ageConfirmed?: boolean;
     } = {}
   ) => {
     const signupMethod = options.signupMethod ?? 'google';
@@ -212,6 +234,7 @@ function LoginForm() {
                 subscriptionStatus: 'none',
                 subscriptionTier: 'none',
                 status: 'active',
+                ...(options.ageConfirmed ? { ageConfirmedAt: new Date().toISOString() } : {}),
               })
             );
           } else {
@@ -285,6 +308,7 @@ function LoginForm() {
           intentSignup: intent === 'signup',
           signupMethod: 'google',
           authIsNewUser: authLooksLikeNewUser(credential),
+          ageConfirmed: intent === 'signup' && consumeSignupAgeConfirmation(),
         });
         if (!isNew) {
           try {
@@ -309,18 +333,20 @@ function LoginForm() {
   }, [user, syncUserProfile, toast]);
 
   const handleGoogleSignIn = async () => {
-    if (authMode === 'signup' && !termsAccepted) {
-      toast({ variant: 'destructive', title: 'Terms Required', description: 'Please accept the Terms of Service and Privacy Policy to create an account.' });
+    if (authMode === 'signup' && (!ageConfirmed || !termsAccepted)) {
+      toast({ variant: 'destructive', title: 'Confirmation Required', description: 'Confirm you are 13 or older and accept the Terms of Service and Privacy Policy to create an account.' });
       return;
     }
     setIsProcessing(true);
     try {
+      if (authMode === 'signup') rememberSignupAgeConfirmation();
       const result = await startGoogleSignIn(auth, authMode);
       if (!result) return;
       const isNew = await syncUserProfile(result.user, {
         intentSignup: authMode === 'signup',
         signupMethod: 'google',
         authIsNewUser: authLooksLikeNewUser(result),
+        ageConfirmed: authMode === 'signup' && consumeSignupAgeConfirmation(),
       });
       if (!isNew) {
         try {
@@ -330,6 +356,7 @@ function LoginForm() {
         }
       }
     } catch (error: any) {
+      if (authMode === 'signup') consumeSignupAgeConfirmation();
       setIsProcessing(false);
       if (error.code !== 'auth/popup-closed-by-user') {
           toast({ variant: 'destructive', title: 'Sign-in Error', description: error.message });
@@ -340,8 +367,8 @@ function LoginForm() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-    if (authMode === 'signup' && !termsAccepted) {
-      toast({ variant: 'destructive', title: 'Terms Required', description: 'Please accept the Terms of Service and Privacy Policy to create an account.' });
+    if (authMode === 'signup' && (!ageConfirmed || !termsAccepted)) {
+      toast({ variant: 'destructive', title: 'Confirmation Required', description: 'Confirm you are 13 or older and accept the Terms of Service and Privacy Policy to create an account.' });
       return;
     }
     setIsProcessing(true);
@@ -353,6 +380,7 @@ function LoginForm() {
           intentSignup: true,
           signupMethod: 'email',
           authIsNewUser: true,
+          ageConfirmed: true,
         });
         try {
           await sendSignupVerificationEmail(userCredential.user, { force: true });
@@ -530,6 +558,24 @@ function LoginForm() {
                       </div>
                     )}
 
+                    {authMode === 'signup' && (
+                      <div className="space-y-2.5 mb-3">
+                        <div className="flex items-start gap-2.5">
+                          <Checkbox id="age" checked={ageConfirmed} onCheckedChange={(c) => setAgeConfirmed(!!c)} />
+                          <Label htmlFor="age" className="text-[10px] text-muted-foreground leading-relaxed cursor-pointer">
+                            I am 13 or older.
+                          </Label>
+                        </div>
+                        <div className="flex items-start gap-2.5">
+                          <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(c) => setTermsAccepted(!!c)} />
+                          <Label htmlFor="terms" className="text-[10px] text-muted-foreground leading-relaxed cursor-pointer">
+                            I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> (including AI use &amp; content policies) and{' '}
+                            <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                          </Label>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-2 mb-3">
                       <Button
                         variant="outline"
@@ -617,21 +663,11 @@ function LoginForm() {
                         </div>
                       </div>
 
-                      {authMode === 'signup' && (
-                        <div className="flex items-start gap-2.5 pt-0.5">
-                          <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(c) => setTermsAccepted(!!c)} />
-                          <Label htmlFor="terms" className="text-[10px] text-muted-foreground leading-relaxed cursor-pointer">
-                            I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> (including AI use &amp; content policies) and{' '}
-                            <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
-                          </Label>
-                        </div>
-                      )}
-
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <Button
                           type="submit"
                           className="w-full h-10 text-sm font-bold shadow-xl bg-primary hover:bg-primary/90 sm:col-span-2"
-                          disabled={isProcessing || (authMode === 'signup' && !termsAccepted)}
+                          disabled={isProcessing || (authMode === 'signup' && (!ageConfirmed || !termsAccepted))}
                         >
                           {isProcessing ? (
                             <StudioLoader size="sm" className="mr-2" />

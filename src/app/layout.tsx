@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import './globals.css';
+import { siteFontVariables } from '@/lib/fonts/site-fonts';
 import { ClientLayout } from '@/components/client-layout';
 export { metadata } from './metadata';
 import { buildStructuredDataGraph, SEO } from '@/lib/seo';
@@ -17,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={siteFontVariables} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -29,16 +30,6 @@ export default function RootLayout({
             __html: `(function(){var k='b4b_chunk_reload_at';function r(){var l=sessionStorage.getItem(k),n=Date.now();if(l&&n-Number(l)<1e4)return;sessionStorage.setItem(k,String(n));location.reload()}window.addEventListener('unhandledrejection',function(e){var m=String((e.reason&&e.reason.message)||e.reason||'');if(m.indexOf('ChunkLoadError')>-1||m.indexOf('Loading chunk')>-1){e.preventDefault();r()}});window.addEventListener('error',function(e){var m=String(e.message||'');if(m.indexOf('ChunkLoadError')>-1||m.indexOf('Loading chunk')>-1)r()})})();`,
           }}
         />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Root App Router layout: this stylesheet is global, despite the legacy pages/_document lint rule. */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet" />
         <link rel="icon" href={`${SEO.faviconPath}?v=aka23`} type="image/svg+xml" />
         <link rel="icon" href="/favicon-32.png?v=aka23" type="image/png" sizes="32x32" />
         <link rel="apple-touch-icon" href={`${SEO.appIconPath}?v=aka23`} />
