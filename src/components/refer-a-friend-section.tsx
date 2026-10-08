@@ -183,6 +183,10 @@ export function ReferAFriendSection({
   const remaining = info?.remaining ?? MAX_REFERRAL_REWARDS;
   const exhausted = remaining <= 0;
 
+  if (exhausted) {
+    return null;
+  }
+
   if (compact) {
     return (
       <div
@@ -198,16 +202,14 @@ export function ReferAFriendSection({
             <div className="min-w-0">
               <p className="font-headline text-xs font-bold uppercase tracking-tight">Refer a friend</p>
               <p className="truncate text-[10px] text-muted-foreground font-code">
-                {exhausted
-                  ? 'Max referral bonus earned — thanks!'
-                  : `Share Ink · ${remaining} reward${remaining === 1 ? '' : 's'} left`}
+                Share Ink · {remaining} reward{remaining === 1 ? '' : 's'} left
               </p>
             </div>
             <Badge variant="outline" className="hidden shrink-0 border-primary/30 text-primary font-mono text-[9px] sm:inline-flex">
               {info?.referralCount ?? 0}/{MAX_REFERRAL_REWARDS}
             </Badge>
           </div>
-          {!exhausted && info?.referralLink ? (
+          {info?.referralLink ? (
             <div className="flex gap-1.5 sm:max-w-[min(100%,22rem)] sm:flex-1">
               <Input
                 readOnly
@@ -255,11 +257,7 @@ export function ReferAFriendSection({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {exhausted ? (
-          <p className="text-xs text-muted-foreground font-code">
-            You&apos;ve earned the maximum referral bonus. Thanks for spreading the studio!
-          </p>
-        ) : error && !info?.referralLink ? (
+        {error && !info?.referralLink ? (
           <div className="space-y-2">
             <p className="text-xs text-destructive font-code">{error}</p>
             <Button type="button" variant="outline" size="sm" onClick={() => void loadReferral()}>
