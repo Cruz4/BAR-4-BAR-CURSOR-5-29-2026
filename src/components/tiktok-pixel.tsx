@@ -2,16 +2,29 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { isTikTokPixelEnabled, trackTikTokPageView } from '@/lib/tiktok-pixel';
+import {
+  COOKIE_CONSENT_CHANGED_EVENT,
+  ensureTikTokPixelLoaded,
+  hasMarketingCookieConsent,
+  isTikTokPixelEnabled,
+  trackTikTokPageView,
+} from '@/lib/tiktok-pixel';
 
-/** SPA route changes — base code is injected in root layout `<head>`. */
+/** SPA route changes — pixel loads only after cookie consent. */
 export function TikTokPixel() {
   const pathname = usePathname();
   const enabled = isTikTokPixelEnabled();
 
   useEffect(() => {
     if (!enabled) return;
-    trackTikTokPageView();
+    const send = () => {
+      if (!hasMarketingCookieConsent()) return;
+      ensureTikTokPixelLoaded();
+      trackTikTokPageView();
+    };
+    send();
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, send);
+    return () => window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, send);
   }, [pathname, enabled]);
 
   return null;

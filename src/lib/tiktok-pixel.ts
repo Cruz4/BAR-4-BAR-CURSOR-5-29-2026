@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  buildTikTokPixelBootstrap,
   COOKIE_CONSENT_STORAGE_KEY,
   getTikTokPixelId,
   isTikTokPixelEnabledForBuild,
@@ -52,13 +53,35 @@ export function dispatchCookieConsentChanged() {
 }
 
 /** No-op — base code loads from layout head; kept for cookie banner hook. */
+const TIKTOK_BOOTSTRAP_SCRIPT_ID = 'tiktok-pixel-bootstrap';
+
+/** Injects TikTok only after marketing cookie consent (no layout `<head>` load). */
+export function ensureTikTokPixelLoaded(): boolean {
+  if (!isTikTokPixelEnabled() || typeof window === 'undefined' || !hasMarketingCookieConsent()) {
+    return false;
+  }
+  if (!document.getElementById(TIKTOK_BOOTSTRAP_SCRIPT_ID)) {
+    const script = document.createElement('script');
+    script.id = TIKTOK_BOOTSTRAP_SCRIPT_ID;
+    script.text = buildTikTokPixelBootstrap(getTikTokPixelId());
+    document.head.appendChild(script);
+  }
+  window.ttq?.grantConsent?.();
+  return Boolean(window.ttq);
+}
+
 export function grantTikTokPixelConsent(): void {
-  if (!isTikTokPixelEnabled() || typeof window === 'undefined' || !window.ttq) return;
-  window.ttq.grantConsent?.();
+  if (!ensureTikTokPixelLoaded()) return;
+  trackTikTokPageView();
 }
 
 function canSendTikTokEvents(): boolean {
-  return isTikTokPixelEnabled() && typeof window !== 'undefined' && !!window.ttq;
+  return (
+    isTikTokPixelEnabled() &&
+    hasMarketingCookieConsent() &&
+    typeof window !== 'undefined' &&
+    !!window.ttq
+  );
 }
 
 export function trackTikTokPageView(): void {

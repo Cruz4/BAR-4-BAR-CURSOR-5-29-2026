@@ -5,12 +5,7 @@ import { siteFontVariables } from '@/lib/fonts/site-fonts';
 import { ClientLayout } from '@/components/client-layout';
 export { metadata } from './metadata';
 import { buildStructuredDataGraph, SEO } from '@/lib/seo';
-import {
-  buildTikTokPixelBootstrap,
-  getTikTokEventsScriptUrl,
-  getTikTokPixelId,
-  isTikTokPixelEnabledForBuild,
-} from '@/lib/tiktok-pixel-config';
+import { getTikTokEventsScriptUrl, getTikTokPixelId, isTikTokPixelEnabledForBuild } from '@/lib/tiktok-pixel-config';
 
 export default function RootLayout({
   children,
@@ -40,23 +35,13 @@ export default function RootLayout({
             dangerouslySetInnerHTML={{ __html: JSON.stringify(node) }}
           />
         ))}
+        {/* TikTok sdkid= hint for Events Manager; executable pixel loads after cookie consent. */}
         {isTikTokPixelEnabledForBuild() ? (
-          <>
-            {/* TikTok Pixel Code Start */}
-            <link rel="preconnect" href="https://analytics.tiktok.com" />
-            <script
-              id="tiktok-pixel"
-              dangerouslySetInnerHTML={{
-                __html: buildTikTokPixelBootstrap(getTikTokPixelId()),
-              }}
-            />
-            <script
-              async
-              id="tiktok-pixel-events"
-              src={getTikTokEventsScriptUrl(getTikTokPixelId())}
-            />
-            {/* TikTok Pixel Code End */}
-          </>
+          <link
+            rel="preconnect"
+            href="https://analytics.tiktok.com"
+            data-tiktok-pixel-hint={getTikTokEventsScriptUrl(getTikTokPixelId())}
+          />
         ) : null}
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background flex flex-col')} suppressHydrationWarning>
