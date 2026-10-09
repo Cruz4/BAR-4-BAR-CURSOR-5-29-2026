@@ -22,8 +22,14 @@ const MIN_GUTTER_PX = RAIL_WIDTH_PX + 28;
 const RAIL_SCOPE_SELECTOR = '[data-artist-home-rail-scope]';
 /** Match Scene nav dock (`scene-home.tsx`) under sticky app header. */
 const RAIL_STICK_CLASS = 'top-[5.25rem]';
+/** Guest pressing landing: fixed header + “Live preview” strip (matches preview column padding). */
+export const GUEST_PRESSING_RAIL_STICK_CLASS = 'top-[4.85rem] sm:top-[7.25rem]';
 
 function headerBottomPx(): number {
+  const guestFraming = document.querySelector<HTMLElement>('[data-guest-pressing-framing]');
+  if (guestFraming) {
+    return Math.max(72, Math.round(guestFraming.getBoundingClientRect().bottom));
+  }
   const header = document.querySelector<HTMLElement>('[data-app-header]');
   return Math.max(72, Math.round(header?.getBoundingClientRect().bottom ?? 84));
 }
@@ -59,10 +65,12 @@ export function ArtistHomeSectionRail({
   sections,
   anchorId,
   deckId,
+  stickTopClass = RAIL_STICK_CLASS,
 }: {
   sections: ArtistHomeSectionJump[];
   anchorId: string;
   deckId: string;
+  stickTopClass?: string;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const pinnedIdRef = useRef<string | null>(null);
@@ -199,7 +207,7 @@ export function ArtistHomeSectionRail({
         aria-label="On this page"
         className={cn(
           'pointer-events-auto sticky flex max-h-[calc(100vh-6rem)] flex-col gap-2 overflow-y-auto overscroll-contain pb-3',
-          RAIL_STICK_CLASS
+          stickTopClass
         )}
       >
         {sections.map((section) => {

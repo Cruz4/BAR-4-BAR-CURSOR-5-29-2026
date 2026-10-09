@@ -75,6 +75,7 @@ import { GuestSandboxPhotoSheet } from '@/components/profile/guest-sandbox-photo
 import { ProfileReachStrip } from '@/components/reach/profile-reach-strip';
 import {
   ArtistHomeSectionRail,
+  GUEST_PRESSING_RAIL_STICK_CLASS,
   type ArtistHomeSectionJump,
 } from '@/components/profile/artist-home-section-rail';
 import {
@@ -157,6 +158,7 @@ type ArtistHomeModuleDeckProps = {
   playgroundFriends?: ModuleContext['playgroundFriends'];
   playgroundGuestbook?: ModuleContext['playgroundGuestbook'];
   playgroundBarOfWeek?: ModuleContext['playgroundBarOfWeek'];
+  guestPressingSandbox?: boolean;
 };
 
 function ArtistHomeModuleDeck({
@@ -180,6 +182,7 @@ function ArtistHomeModuleDeck({
   playgroundFriends,
   playgroundGuestbook,
   playgroundBarOfWeek,
+  guestPressingSandbox = false,
 }: ArtistHomeModuleDeckProps) {
   const presence = useArtistHomeModulePresenceMap();
 
@@ -307,6 +310,7 @@ function ArtistHomeModuleDeck({
           sections={sectionJumps}
           anchorId={railAnchorId}
           deckId="artist-home-deck"
+          stickTopClass={guestPressingSandbox ? GUEST_PRESSING_RAIL_STICK_CLASS : undefined}
         />
       ) : null}
     </div>
@@ -1083,6 +1087,7 @@ export function ArtistHome({
             playgroundFriends={playgroundFriends}
             playgroundGuestbook={playgroundGuestbook}
             playgroundBarOfWeek={playgroundBarOfWeek}
+            guestPressingSandbox={guestSandbox}
           />
         </ArtistHomeModulePresenceProvider>
 

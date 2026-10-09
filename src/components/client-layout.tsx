@@ -14,6 +14,7 @@ import { ProgressCelebration } from '@/components/gamification/progress-celebrat
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { usePathname } from 'next/navigation';
 import { isPublicArtistHomePath } from '@/lib/profile/profile-slug';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { isTrackLyricSheetPath } from '@/lib/studio-theme';
 import { StudioTips } from './studio-tips';
 import { FloatingInkSpent } from './floating-ink-spent';
@@ -88,6 +89,7 @@ function useChunkLoadRecovery() {
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const dropPlayer = useOptionalDropPlayer();
   const showDropNowPlaying =
     Boolean(user && dropPlayer?.current) && !shouldHideDropNowPlayingBar(pathname);
@@ -117,7 +119,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const isStickyRailPage =
     Boolean(user) && (pathname === '/' || pathname === '/vault');
   const stickyDocumentScroll =
-    isProfileCustomizePage || isStickyRailPage || isPublicProfilePage;
+    isProfileCustomizePage ||
+    isStickyRailPage ||
+    isPublicProfilePage ||
+    (isGuestPressingLanding && !isMobile);
   const showAppHeader =
     !isMarketingShell &&
     !isPerformPage &&
@@ -125,7 +130,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     !isMarketingCapture &&
     (!isPublicProfilePage || Boolean(user));
   const showBottomNowPlaying = showDropNowPlaying && !showAppHeader;
-  // Guest pressing landing scrolls inside its own pane (preview + in-flow dock on phone).
+  // Guest pressing landing: phone scrolls inside its preview pane; desktop uses document scroll for sticky rail.
   const allowPageScroll =
     isLoginPage ||
     isWelcomePage ||

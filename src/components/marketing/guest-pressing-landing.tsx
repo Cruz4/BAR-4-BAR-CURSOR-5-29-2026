@@ -422,8 +422,9 @@ function GuestPressingLandingInner() {
   return (
     <div
       className={cn(
-        'relative min-h-screen overflow-x-hidden selection:bg-primary/30',
-        'max-sm:flex max-sm:h-full max-sm:min-h-0 max-sm:flex-col max-sm:overflow-hidden'
+        // overflow-x-hidden breaks position:sticky on the Artist Home section rail (computed overflow-y:auto).
+        'relative min-h-screen overflow-x-clip overflow-y-visible selection:bg-primary/30',
+        'max-sm:flex max-sm:h-full max-sm:min-h-0 max-sm:flex-col max-sm:overflow-x-hidden max-sm:overflow-hidden'
       )}
       style={
         isMobile && visualHeight > 0
@@ -550,7 +551,10 @@ function GuestPressingLandingInner() {
       </header>
 
       {/* Profile framing strip */}
-      <div className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-1 backdrop-blur-md sm:top-16 sm:px-6 sm:py-2">
+      <div
+        data-guest-pressing-framing
+        className="fixed left-0 right-0 top-14 z-[195] border-b border-primary/25 bg-primary/15 px-3 py-1 backdrop-blur-md sm:top-16 sm:px-6 sm:py-2"
+      >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-2 sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
           <p className="min-w-0 flex-1 text-[10px] leading-snug text-zinc-200 sm:text-xs">
             <span className="font-bold text-primary">Live preview</span>
