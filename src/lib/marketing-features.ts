@@ -46,11 +46,12 @@ export const MARKETING_FEATURE_BANDS: MarketingFeatureBand[] = [
     eyebrow: 'Public Music Home & The Scene',
     title: 'Your Page. Your Block.',
     description:
-      'Create a free public music home and join The Scene as an artist, creator, or Music Fan. Find friends and music that match your taste, with clear reasons behind every recommendation.',
+      'A shareable Artist Home with a Wall for posts, a guestbook, and friends — plus The Scene feed to discover bars, love posts, and follow artists and Music Fans who match your taste.',
     bullets: [
-      'Your page starts private. Go live only when you are ready, with your labels, genres, moods, influences, region, and collaboration status',
+      'The Wall: text, photos, and links on your public home — the same social surface your preview shows on the guest sandbox',
+      'Guestbook, friends, and public identity (genres, moods, region) — go live only when you are ready',
+      'The Scene feed surfaces posts and reverbs from your network; Inner Circle and Friends stay distinct from Msgs',
       'Feature an owned or purchased track: visitors hear your chosen 30 seconds, then buy or stream by entitlement',
-      'Follow, Inner Circle, and Friends stay distinct so support does not automatically open collaboration or Msgs',
     ],
     mediaSrc: '/AKA_artist_home_promo_poster.png',
     mediaType: 'image',

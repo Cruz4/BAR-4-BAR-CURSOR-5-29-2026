@@ -580,11 +580,11 @@ function LoginForm() {
                       <Button
                         variant="outline"
                         type="button"
-                        className="w-full h-10 text-sm font-bold bg-background border-border text-foreground hover:bg-muted/60 dark:bg-black/40 dark:border-white/10 dark:text-white dark:hover:bg-white/5"
+                        className="w-full h-10 text-sm font-bold bg-background border-border text-foreground hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:bg-black/40 dark:border-white/10 dark:text-white dark:hover:bg-white/5"
                         onClick={handleGoogleSignIn}
                         disabled={isProcessing}
                       >
-                        <svg className="mr-2 h-4 w-4 shrink-0" viewBox="0 0 488 512">
+                        <svg className="mr-2 h-4 w-4 shrink-0" viewBox="0 0 488 512" aria-hidden>
                           <path
                             fill="currentColor"
                             d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
@@ -610,7 +610,7 @@ function LoginForm() {
                               Artist Name
                             </Label>
                             <div className="relative">
-                              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
+                              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" aria-hidden />
                               <Input
                                 id="name"
                                 name="name"
@@ -628,7 +628,7 @@ function LoginForm() {
                             Email Address
                           </Label>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
+                            <Mail className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" aria-hidden />
                             <Input
                               id="email"
                               name="email"
@@ -647,7 +647,7 @@ function LoginForm() {
                             Password
                           </Label>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" />
+                            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-primary/60" aria-hidden />
                             <Input
                               id="password"
                               name="password"

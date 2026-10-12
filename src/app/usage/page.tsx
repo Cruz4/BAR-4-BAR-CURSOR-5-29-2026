@@ -617,10 +617,10 @@ function UsagePageContent() {
               </Card>
             )}
             {paidPro && user && (
-              <Card className="border-primary/20 bg-card/50">
+              <Card className="border-primary/20 bg-card/50" id="usage-billing">
                 <CardHeader className="pb-4">
                   <CardTitle className="font-headline text-xl flex items-center gap-2.5">
-                    <CreditCard className="text-primary h-5 w-5" />
+                    <CreditCard className="text-primary h-5 w-5" aria-hidden />
                     Billing &amp; Subscription
                   </CardTitle>
                   <CardDescription className="text-xs uppercase tracking-tight">
@@ -629,10 +629,11 @@ function UsagePageContent() {
                 </CardHeader>
                 <CardFooter className="pt-0">
                   <Button
-                    className="w-full sm:w-auto h-11 font-bold uppercase text-xs md:text-sm"
+                    className="w-full sm:w-auto h-11 font-bold uppercase text-xs md:text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     variant="outline"
                     disabled={isCheckingOut}
                     onClick={() => openBillingPortal(user.id, 'cloud')}
+                    aria-label="Manage Stripe account — update payment, invoices, or cancel subscription"
                   >
                     {isCheckingOut ? 'Opening Stripe…' : 'Manage Stripe Account'}
                   </Button>

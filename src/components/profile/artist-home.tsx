@@ -1000,7 +1000,11 @@ export function ArtistHome({
               >
                 {useCustomPhoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profile.profilePhotoUrl!} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={profile.profilePhotoUrl!}
+                    alt={`${profile.displayName?.trim() || 'Artist'} profile photo`}
+                    className="h-full w-full object-cover"
+                  />
                 ) : useInitialsHero ? (
                   <ProfileInitialsStar
                     displayName={profile.displayName}

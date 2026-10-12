@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Compass, PenLine, Radio, ShoppingBag } from 'lucide-react';
+import { Compass, MessageCircle, PenLine, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LegalFooter } from '@/components/legal-footer';
 import { LandingShowcase } from '@/components/marketing/landing-showcase';
@@ -83,26 +83,29 @@ export function PublicHomeLanding() {
                 </div>
 
                 <p className="mx-auto max-w-2xl text-sm font-medium leading-relaxed tracking-wide text-foreground/90 drop-shadow-lg dark:text-white md:text-lg lg:mx-0">
-                  Your free music home and songwriting studio. Meet artists and Music Fans on The Scene,
-                  then open The Vault when you&apos;re ready to turn an idea into bars.
+                  Your public music home and social feed in one place — post on your Wall, collect friends
+                  and guestbook love, and scroll The Scene to discover bars from artists and Music Fans.
+                  When it&apos;s time to write, open The Vault and build songs bar by bar.
                 </p>
 
                 <div className="grid gap-2 text-left sm:grid-cols-3" aria-label="How AKAsheet works">
-                  <div className="rounded-lg border border-sky-400/25 bg-sky-500/[0.08] p-3">
-                    <Compass className="mb-2 h-4 w-4 text-sky-300" />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Find your Scene</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Friends, discovery, and your public music home.</p>
+                  <div className="rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/[0.08] p-3">
+                    <MessageCircle className="mb-2 h-4 w-4 text-fuchsia-300" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-fuchsia-200">Wall &amp; feed</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Share bars on your Artist Home. Love, reply, and reverb in The Scene feed.
+                    </p>
                   </div>
                   <div className="rounded-lg border border-blue-400/25 bg-blue-500/[0.08] p-3">
                     <PenLine className="mb-2 h-4 w-4 text-blue-300" />
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200">Write your way</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Private by default. Build bar by bar with tools that learn your style.</p>
                   </div>
-                  <div className="rounded-lg border border-amber-400/25 bg-amber-500/[0.08] p-3">
-                    <ShoppingBag className="mb-2 h-4 w-4 text-amber-300" />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200">Release when ready</p>
+                  <div className="rounded-lg border border-sky-400/25 bg-sky-500/[0.08] p-3">
+                    <Compass className="mb-2 h-4 w-4 text-sky-300" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">Find your Scene</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                      {firstDropsOn ? 'Feature music or press a finished song for sale.' : 'Feature your music when you are ready.'}
+                      Follow friends, discover taste-matched posts, and grow your public home.
                     </p>
                   </div>
                 </div>
@@ -143,7 +146,7 @@ export function PublicHomeLanding() {
               Ready to claim your booth?
             </h3>
             <p className="font-code text-xs md:text-sm text-fuchsia-300/90">
-              Free public music home · The Scene · full studio one click in
+              Free public home · Wall &amp; Scene feed · studio one click in
               {firstDropsOn ? ' · Releases' : ''}
             </p>
             <p className="font-code text-[10px] md:text-xs text-muted-foreground">

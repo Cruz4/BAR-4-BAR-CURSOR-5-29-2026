@@ -17,15 +17,31 @@ export function CommodiousWorksFooter({ className }: { className?: string }) {
 }
 
 /** Feed footer — legal + optional tip link; not artist home. */
-export function AppFeedChrome({ className }: { className?: string }) {
+export function AppFeedChrome({
+  className,
+  showTipJar = true,
+  promoLink,
+}: {
+  className?: string;
+  showTipJar?: boolean;
+  promoLink?: { href: string; label: string };
+}) {
   return (
     <div className={cn('mt-10 border-t border-white/10 pt-8', className)}>
-      <SiteLegalFooter />
+      <SiteLegalFooter showTipJar={showTipJar} promoLink={promoLink} />
     </div>
   );
 }
 
-export function SiteLegalFooter({ className }: { className?: string }) {
+export function SiteLegalFooter({
+  className,
+  showTipJar = true,
+  promoLink,
+}: {
+  className?: string;
+  showTipJar?: boolean;
+  promoLink?: { href: string; label: string };
+}) {
   return (
     <div className={cn('space-y-4', className)}>
       <nav
@@ -35,14 +51,16 @@ export function SiteLegalFooter({ className }: { className?: string }) {
         <a href={SUPPORT_MAILTO} className="hover:text-primary transition-colors">
           Contact Us / Support
         </a>
-        <a
-          href={BUY_ME_COFFEE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-normal normal-case tracking-normal opacity-70 hover:text-primary hover:opacity-100 transition-colors"
-        >
-          Tip jar
-        </a>
+        {showTipJar ? (
+          <a
+            href={BUY_ME_COFFEE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-normal normal-case tracking-normal opacity-70 hover:text-primary hover:opacity-100 transition-colors"
+          >
+            Tip jar
+          </a>
+        ) : null}
         <Link href="/terms" className="hover:text-primary transition-colors">
           Terms of Service
         </Link>
@@ -53,6 +71,16 @@ export function SiteLegalFooter({ className }: { className?: string }) {
           Cookie Policy
         </Link>
       </nav>
+      {promoLink ? (
+        <p className="text-center">
+          <Link
+            href={promoLink.href}
+            className="text-[10px] font-code font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary"
+          >
+            {promoLink.label}
+          </Link>
+        </p>
+      ) : null}
       <CommodiousWorksFooter />
     </div>
   );

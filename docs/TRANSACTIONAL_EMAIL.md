@@ -44,6 +44,14 @@ RESEND_FROM_EMAIL=AKAsheet <akasheet.support@gmail.com>
 
 Optional: leave `RESEND_FROM_EMAIL` unset to use Resend’s onboarding sender for testing only.
 
+Optional — physical mailing line in every branded footer (PO box or registered agent; not a home address):
+
+```bash
+LEGAL_MAILING_ADDRESS=Commodious Works LLC, P.O. Box …, City, ST ZIP
+```
+
+If unset, footers still show **Commodious Works LLC**, support email, Privacy/Terms/Settings links, and transactional (non-newsletter) notice.
+
 ### 4. Redeploy
 
 ```bash
@@ -66,8 +74,16 @@ In Stripe Dashboard → Settings → Customer emails, enable **Successful paymen
 
 Idempotency keys live in Firestore `studio_emails_sent` so webhook retries don’t double-send.
 
+## Email footer (all `wrapStudioEmail` messages)
+
+- Operator: Commodious Works LLC
+- Links: Privacy, Terms, Account & billing (`/usage`)
+- Copy: account/billing only (not a marketing list); to stop email, delete the account in Settings
+- Shared layout: `src/lib/server/mail/email-layout.ts`
+
 ## Code map
 
 - `src/lib/server/mail/mailer.ts` — Resend client
+- `src/lib/server/mail/email-layout.ts` — HTML/text shell + legal footer
 - `src/lib/server/mail/lifecycle-emails.ts` — templates + send helpers
 - Hooks: `usage-init.ts`, `stripe/webhook/route.ts`, `eradicate-user.ts`

@@ -128,10 +128,34 @@ function draftToProfile(draft: GuestPressingDraft): PublicProfileData {
   };
 }
 
+function guestPlaygroundAuthorMeta(draft: GuestPressingDraft): Pick<
+  ProfilePost,
+  'ownerAvatarUrl' | 'ownerStarMarkUseStar' | 'ownerStarMarkSeed'
+> {
+  const customPhoto =
+    draft.profilePhotoMode === 'custom' && draft.profilePhotoDataUrl?.trim()
+      ? draft.profilePhotoDataUrl.trim()
+      : '';
+  if (customPhoto) {
+    return {
+      ownerAvatarUrl: customPhoto,
+      ownerStarMarkUseStar: false,
+    };
+  }
+  if (draft.starMarkUseStar === true) {
+    return {
+      ownerStarMarkUseStar: true,
+      ownerStarMarkSeed: draft.starMarkSeed ?? 0,
+    };
+  }
+  return { ownerStarMarkUseStar: false };
+}
+
 function toProfilePosts(
   posts: GuestWallDraftPost[],
   ownerName: string,
-  ownerSlug: string
+  ownerSlug: string,
+  authorMeta: Pick<ProfilePost, 'ownerAvatarUrl' | 'ownerStarMarkUseStar' | 'ownerStarMarkSeed'>
 ): ProfilePost[] {
   return posts.map((p) => {
     const parsed = p.embedUrl ? parseEmbedUrl(p.embedUrl) : null;
@@ -141,6 +165,7 @@ function toProfilePosts(
       ownerName,
       ownerSlug,
       text: p.text,
+      ...authorMeta,
       ...(p.embedUrl ? { embedUrl: p.embedUrl } : {}),
       ...(parsed ? { embedProvider: parsed.provider } : {}),
       ...(p.imageUrl ? { imageUrl: p.imageUrl } : {}),
@@ -334,16 +359,30 @@ function GuestPressingLandingInner() {
   }, []);
 
   const playgroundWall = useMemo(
-    () => ({
-      posts: toProfilePosts(
-        draft.wallPosts,
-        draft.displayName.trim() || 'Your Name',
-        profile.slug || 'your-name'
-      ),
-      onPost: onWallPost,
-      onDelete: onWallDelete,
-    }),
-    [draft.wallPosts, draft.displayName, profile.slug, onWallPost, onWallDelete]
+    () => {
+      const authorMeta = guestPlaygroundAuthorMeta(draft);
+      return {
+        posts: toProfilePosts(
+          draft.wallPosts,
+          draft.displayName.trim() || 'Your Name',
+          profile.slug || 'your-name',
+          authorMeta
+        ),
+        onPost: onWallPost,
+        onDelete: onWallDelete,
+      };
+    },
+    [
+      draft.wallPosts,
+      draft.displayName,
+      draft.profilePhotoMode,
+      draft.profilePhotoDataUrl,
+      draft.starMarkUseStar,
+      draft.starMarkSeed,
+      profile.slug,
+      onWallPost,
+      onWallDelete,
+    ]
   );
 
   const playgroundFriends = useMemo(
@@ -446,15 +485,20 @@ function GuestPressingLandingInner() {
               Your Public Music Home
             </p>
             <DialogTitle className="font-headline text-2xl font-bold tracking-tight">
-              This would be your AKAsheet profile.
+              Welcome to your music home on the web.
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-zinc-400">
-              Everything behind this tip is a live preview of your public page—Wall, friends,
-              guestbook, the works. <span className="font-medium text-zinc-200">It is free for artists, creators, and Music Fans</span>
-              {' '}— no Pro required to claim or go live. Add public identity and taste, feature a track you released or purchased, then use{' '}
-              <span className="font-medium text-zinc-200">The Pressing</span> is the customization
-              tool: type a bar or sentence and the whole page skins itself in real time.
+              <span className="font-medium text-zinc-200">AKAsheet is a social studio</span> — a public
+              Artist Home with a Wall, friends, and guestbook, plus The Scene when you&apos;re signed in
+              to discover posts, love bars, and follow artists and Music Fans who match your taste.
+              Everything behind this dialog is a live preview of that page.
             </DialogDescription>
+            <p className="text-sm leading-relaxed text-zinc-400">
+              Use <span className="font-medium text-zinc-200">The Pressing</span> at the bottom: type a
+              bar or sentence and the whole page skins itself in real time. Claim free when you&apos;re
+              ready to keep this look on a real profile — artists, creators, and Music Fans can start at
+              no cost.
+            </p>
           </DialogHeader>
           <ul className="mt-2 space-y-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-3 text-[13px] text-zinc-300">
             <li className="flex gap-2">
@@ -614,7 +658,10 @@ function GuestPressingLandingInner() {
           studioHomeLabel="About AKAsheet"
         />
         <div className="mx-auto max-w-[1200px] px-3 pt-6 sm:px-6">
-          <AppFeedChrome />
+          <AppFeedChrome
+            showTipJar={false}
+            promoLink={{ href: '/welcome', label: 'Full Features' }}
+          />
         </div>
       </div>
 

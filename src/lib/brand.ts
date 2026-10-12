@@ -40,3 +40,6 @@ export const SHARE_HASHTAG = '#AKAsheet';
 export const SUPPORT_EMAIL = 'akasheet.support@gmail.com';
 export const NOREPLY_EMAIL = `noreply@${APP_DOMAIN}`;
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
+
+/** Operator name for legal footers (email, site chrome). */
+export const LEGAL_ENTITY_NAME = 'Commodious Works LLC';

@@ -1,7 +1,59 @@
 /** Shared HTML shell for AKAsheet transactional emails. */
 
 import { getPublicAppUrl } from '@/lib/app-url';
+import { LEGAL_ENTITY_NAME } from '@/lib/brand';
 import { SUPPORT_EMAIL } from '@/lib/support';
+
+const FOOTER_LINK_STYLE =
+  'color:#93c5fd;text-decoration:none';
+
+function legalMailingAddress(): string | null {
+  const line = process.env.LEGAL_MAILING_ADDRESS?.trim();
+  return line || null;
+}
+
+function studioEmailLegalFooterHtml(baseUrl: string): string {
+  const privacy = `${baseUrl}/privacy`;
+  const terms = `${baseUrl}/terms`;
+  const usage = `${baseUrl}/usage`;
+  const address = legalMailingAddress();
+  const addressBlock = address
+    ? `<p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">${escapeHtml(address)}</p>`
+    : '';
+
+  return `
+              <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:16px 0" />
+              <p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
+                ${escapeHtml(LEGAL_ENTITY_NAME)}
+              </p>
+              ${addressBlock}
+              <p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
+                <a href="${escapeHtml(privacy)}" style="${FOOTER_LINK_STYLE}">Privacy</a>
+                · <a href="${escapeHtml(terms)}" style="${FOOTER_LINK_STYLE}">Terms</a>
+                · <a href="${escapeHtml(usage)}" style="${FOOTER_LINK_STYLE}">Account &amp; billing</a>
+              </p>
+              <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
+                These are account and billing messages about your AKAsheet studio — not a marketing newsletter.
+                They are sent while your account is active. To stop all email from us, delete your account in
+                <a href="${escapeHtml(usage)}" style="${FOOTER_LINK_STYLE}">Settings</a>.
+              </p>`;
+}
+
+function studioEmailLegalFooterText(baseUrl: string): string {
+  const address = legalMailingAddress();
+  return [
+    LEGAL_ENTITY_NAME,
+    address || '',
+    `Privacy: ${baseUrl}/privacy`,
+    `Terms: ${baseUrl}/terms`,
+    `Account & billing: ${baseUrl}/usage`,
+    '',
+    'These are account and billing messages about your AKAsheet studio — not a marketing newsletter.',
+    'They are sent while your account is active. To stop all email from us, delete your account in Settings.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
 
 export function wrapStudioEmail(opts: {
   preheader: string;
@@ -11,7 +63,8 @@ export function wrapStudioEmail(opts: {
   ctaUrl?: string;
   footerNote?: string;
 }): { html: string; text: string } {
-  const logoSrc = `${getPublicAppUrl()}/Logo.png`;
+  const baseUrl = getPublicAppUrl();
+  const logoSrc = `${baseUrl}/Logo.png`;
   const cta =
     opts.ctaLabel && opts.ctaUrl
       ? `<p style="margin:28px 0 8px;text-align:center">
@@ -54,11 +107,12 @@ export function wrapStudioEmail(opts: {
               <p style="margin:0 0 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
                 ${escapeHtml(opts.footerNote || 'You’re getting this because of activity on your AKAsheet studio account.')}
               </p>
-              <p style="margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
+              <p style="margin:0 0 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;color:#6b6b76">
                 This mailbox isn’t monitored. Questions? Email
                 <a href="mailto:${escapeHtml(SUPPORT_EMAIL)}" style="color:#93c5fd;text-decoration:none">${escapeHtml(SUPPORT_EMAIL)}</a>
                 — or just reply and it’ll reach us.
               </p>
+              ${studioEmailLegalFooterHtml(baseUrl)}
             </td>
           </tr>
         </table>
@@ -76,6 +130,8 @@ export function wrapStudioEmail(opts: {
     '',
     opts.footerNote || 'You’re getting this because of activity on your AKAsheet studio account.',
     `This mailbox isn’t monitored. Questions? Email ${SUPPORT_EMAIL} — or just reply and it’ll reach us.`,
+    '',
+    studioEmailLegalFooterText(baseUrl),
   ]
     .filter(Boolean)
     .join('\n');

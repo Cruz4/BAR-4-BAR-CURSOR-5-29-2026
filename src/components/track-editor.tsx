@@ -257,6 +257,7 @@ import {
   mergeVibeVaultPresets,
 } from '@/lib/system-presets';
 import { GenerateSongDraftDialog } from './generate-song-draft-dialog';
+import { CoWriterAiDisclosureStrip } from './co-writer-ai-disclosure';
 import { GenerateSongCoWriterPanel } from './generate-song-cowriter-panel';
 import { ExportDialog } from './export-dialog';
 import { ShareDialog } from './share-dialog';
@@ -2852,6 +2853,7 @@ function RightPanel({ track, album, onUpdateTrack, styleProfile, updateStyleProf
           </Button>
         )}
       </div>
+      <CoWriterAiDisclosureStrip />
       <div className="flex-grow overflow-y-auto studio-scrollbar">
         <div className={cn('p-4 space-y-4 co-writer-body', tourMobilePad ? 'pb-36' : 'pb-32')}>
           {completeLocked && (
