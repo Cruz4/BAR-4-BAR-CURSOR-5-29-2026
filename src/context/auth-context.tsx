@@ -137,6 +137,16 @@ function userFromCachedOnly(cached: CachedUserProfile): User {
   };
 }
 
+const SIGNED_IN_COOKIE = 'b4b_signed_in';
+
+/** Lets the static /studio4000 page know a real AKAsheet session exists. */
+function writeSignedInCookie(signedIn: boolean) {
+  if (typeof document === 'undefined') return;
+  document.cookie = signedIn
+    ? `${SIGNED_IN_COOKIE}=1; Path=/; Max-Age=2592000; SameSite=Lax`
+    : `${SIGNED_IN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -164,6 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await prepareFirestoreForSignOut();
       clearReleaseCatalogNavigationState();
       await signOut(auth);
+      writeSignedInCookie(false);
       saveLastAuthUserId(null);
       if (uid) clearCachedUserProfile(uid);
       flushSync(() => {
@@ -177,6 +188,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signingOutRef.current = false;
     }
   }, [router, user?.id]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    writeSignedInCookie(Boolean(user));
+  }, [user, authReady]);
 
   useLayoutEffect(() => {
     const cached = loadLastCachedUserProfile();

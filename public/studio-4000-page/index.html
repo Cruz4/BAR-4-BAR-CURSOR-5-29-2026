@@ -16,11 +16,9 @@
   name is, and go to its browser_download_url. That is the zip on the release
   GitHub marks Latest at that moment.
 
-  The href before JavaScript runs is only
-    https://github.com/Cruz4/Studio-4000/releases/latest
-  which is the latest release page, not a pinned zip.
-
-  Do not cache the zip on the other domain. The button must keep asking GitHub.
+  The href before JavaScript runs is the AKAsheet signup step, with a return
+  to /studio4000. A signed-in session (b4b_signed_in cookie) is what starts the
+  zip. Do not point the button at a pinned Studio4000-*-win64.zip name.
 
   LINKS THAT STAY
   https://github.com/Cruz4/Studio-4000
@@ -85,6 +83,16 @@
     .brand b { font-size: 13px; letter-spacing: 0.16em; font-weight: 700; }
     .nav a.jump { color: var(--dim); text-decoration: none; font-size: 14px; }
     .nav a.jump:hover { color: var(--text); }
+    .app-nav {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px;
+      padding: 8px 22px;
+      background: rgba(7, 8, 12, 0.92);
+      border-bottom: 1px solid var(--line);
+    }
+    .app-nav a {
+      color: var(--dim); text-decoration: none; font-size: 13px; font-weight: 650;
+    }
+    .app-nav a:hover { color: var(--text); }
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       min-height: 42px; padding: 0 16px;
@@ -215,8 +223,13 @@
     <a class="jump" href="#screens">Screens</a>
     <a class="jump" href="#features">Features</a>
     <a class="jump" href="https://github.com/Cruz4/Studio-4000">GitHub</a>
-    <a class="btn primary" data-download href="https://github.com/Cruz4/Studio-4000/releases/latest">Download</a>
+    <a class="btn primary" data-download href="/login?mode=signup&amp;next=%2Fstudio4000%3Fdownload%3D1">Download</a>
   </header>
+  <nav class="app-nav" aria-label="AKAsheet">
+    <a href="/" id="aka-back">Back</a>
+    <a href="/">Scene</a>
+    <a href="/vault">Vault</a>
+  </nav>
 
   <main id="top">
     <div class="wrap hero">
@@ -225,7 +238,7 @@
         <h1>Record the <span>future.</span></h1>
         <p class="lede">A recording studio on your own computer. Record, arrange, mix, and play with someone else. Fully free means the songs you release too: there is no fee, no account, and the music you make is yours.</p>
         <div class="actions">
-          <a class="btn primary" data-download href="https://github.com/Cruz4/Studio-4000/releases/latest">Download for Windows</a>
+          <a class="btn primary" data-download href="/login?mode=signup&amp;next=%2Fstudio4000%3Fdownload%3D1">Download for Windows</a>
           <a class="btn ghost" href="https://github.com/Cruz4/Studio-4000">Source on GitHub</a>
         </div>
         <p class="fine" id="release-note">Latest Windows build. Unzip the folder and run <b>Studio 4000.exe</b>.</p>
@@ -334,7 +347,7 @@
           <p class="fine" id="release-note-2" style="margin:8px 0 0">The button always downloads the newest Windows zip from the public project. Unzip it and run Studio 4000.exe.</p>
         </div>
         <div class="actions" style="margin-top:0">
-          <a class="btn primary" data-download href="https://github.com/Cruz4/Studio-4000/releases/latest">Download for Windows</a>
+          <a class="btn primary" data-download href="/login?mode=signup&amp;next=%2Fstudio4000%3Fdownload%3D1">Download for Windows</a>
           <a class="btn ghost" href="https://buymeacoffee.com/b4bdev">Buy me a coffee</a>
         </div>
       </div>
@@ -418,19 +431,50 @@
 
       latestZip().then(showRelease);
 
+      var SIGNUP = "/login?mode=signup&next=" + encodeURIComponent("/studio4000?download=1");
+      var RELEASES = "https://github.com/Cruz4/Studio-4000/releases/latest";
+
+      function signedIn() {
+        return /(?:^|; )b4b_signed_in=1(?:;|$)/.test(document.cookie);
+      }
+
+      function beginDownload(link) {
+        if (link) link.setAttribute("aria-busy", "true");
+        latestZip().then(function (found) {
+          if (link) link.removeAttribute("aria-busy");
+          showRelease(found);
+          var url = found && found.asset.browser_download_url;
+          window.location.assign(url || RELEASES);
+        });
+      }
+
       Array.prototype.forEach.call(document.querySelectorAll("[data-download]"), function (link) {
+        link.setAttribute("href", signedIn() ? RELEASES : SIGNUP);
         link.addEventListener("click", function (e) {
           e.preventDefault();
-          link.setAttribute("aria-busy", "true");
-          latestZip().then(function (found) {
-            link.removeAttribute("aria-busy");
-            showRelease(found);
-            var url = found && found.asset.browser_download_url;
-            if (!url) return;
-            window.location.assign(url);
-          });
+          if (!signedIn()) {
+            window.location.assign(SIGNUP);
+            return;
+          }
+          beginDownload(link);
         });
       });
+
+      if (signedIn() && /(?:^|[?&])download=1(?:&|$)/.test(location.search)) {
+        history.replaceState(null, "", "/studio4000");
+        beginDownload(document.querySelector("[data-download]"));
+      }
+
+      var back = document.getElementById("aka-back");
+      if (back) {
+        back.addEventListener("click", function (e) {
+          var ref = document.referrer || "";
+          if (ref.indexOf(location.host) !== -1 && history.length > 1) {
+            e.preventDefault();
+            history.back();
+          }
+        });
+      }
 
       var box = document.getElementById("lightbox");
       var pic = document.getElementById("lightbox-img");

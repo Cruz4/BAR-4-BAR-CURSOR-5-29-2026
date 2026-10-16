@@ -54,6 +54,7 @@ export function Studio4000Link() {
   if (pathname.startsWith('/marketing/capture') || pathname === '/studio4000') return null;
 
   const lyricSheet = isTrackLyricSheetPath(pathname);
+  // Phone track editor: the corner link covers Work, Lyrics, and Co-Write. Desktop keeps it.
   const editorLift = pathname.startsWith('/albums/') || pathname.startsWith('/tracks/');
   const bottom = dockPx > 0
     ? undefined
@@ -74,6 +75,7 @@ export function Studio4000Link() {
       className={cn(
         'fixed left-3 z-[46] flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-full border border-white/15 bg-[#0c0e14]/88 py-1 pl-1 pr-3 text-white no-underline shadow-[0_10px_28px_rgba(0,0,0,0.4)] backdrop-blur-md transition hover:border-[#a08bff]/55 hover:bg-[#141824]',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c5cff]',
+        lyricSheet && 'max-md:hidden',
         bottom
       )}
     >

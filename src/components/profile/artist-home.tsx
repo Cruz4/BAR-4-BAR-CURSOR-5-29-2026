@@ -652,11 +652,13 @@ export function ArtistHome({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)]"
+                className="h-8 gap-1.5 border-[var(--ph-accent)]/45 bg-[var(--ph-accent)]/12 px-2 text-[10px] font-bold uppercase tracking-wide text-[var(--ph-accent)] shadow-none hover:bg-[var(--ph-accent)]/22 hover:text-[var(--ph-accent)] sm:px-3 sm:text-[11px] sm:tracking-widest"
                 asChild
               >
                 <Link href={studioHomeHref}>
-                  <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">{studioHomeLabel}</span>
+                  <ChevronLeft className="h-4 w-4 shrink-0" />
+                  <span className="sm:hidden">{studioHomeHref === '/welcome' ? 'See all features' : studioHomeLabel}</span>
+                  <span className="hidden sm:inline">{studioHomeLabel}</span>
                 </Link>
               </Button>
             )}

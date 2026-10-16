@@ -28,7 +28,7 @@ function parseNextPath(next: string): { pathname: string; search: string } {
   return { pathname, search: search ? `?${search}` : '' };
 }
 
-/** Fresh signups start at the signed-in home (Scene) unless they chose Pro checkout or a share import. */
+/** Fresh signups follow their safe next path, including a return to Studio 4000. Usage settings still open on the Scene. */
 export function resolvePostLoginPath(
   nextParam: string | null | undefined,
   options?: { intent?: string | null; isPro?: boolean }
@@ -46,6 +46,7 @@ export function resolvePostLoginPath(
   const { pathname } = parseNextPath(safeNext);
 
   if (pathname.startsWith('/share/') || pathname.startsWith('/song/')) return safeNext;
+  if (pathname === '/studio4000') return safeNext;
   if (getCheckoutFromPath(safeNext)) return safeNext;
 
   if (pathname === '/usage' || pathname.startsWith('/usage/')) {

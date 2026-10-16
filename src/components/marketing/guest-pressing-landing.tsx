@@ -660,7 +660,7 @@ function GuestPressingLandingInner() {
         <div className="mx-auto max-w-[1200px] px-3 pt-6 sm:px-6">
           <AppFeedChrome
             showTipJar={false}
-            promoLink={{ href: '/welcome', label: 'Full Features' }}
+            promoLink={{ href: '/welcome', label: 'See all features' }}
           />
         </div>
       </div>
@@ -684,6 +684,14 @@ function GuestPressingLandingInner() {
               }
         }
       >
+        <div className="px-3 pt-2 text-center sm:hidden">
+          <Link
+            href="/welcome"
+            className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary hover:underline"
+          >
+            See all features
+          </Link>
+        </div>
         <div className="mx-auto max-w-[1200px] px-3 py-1.5 sm:px-6 sm:py-2.5">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-1 sm:mb-1.5 sm:gap-2">
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary sm:text-[10px] sm:tracking-[0.2em]">
