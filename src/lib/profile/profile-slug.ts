@@ -52,6 +52,8 @@ export const APP_ROOT_SEGMENTS = new Set([
   'maintenance',
   'marketing',
   'studio-progress',
+  'studio4000',
+  'studio-4000-page',
   'msgs',
   'messages',
   'sitemap',

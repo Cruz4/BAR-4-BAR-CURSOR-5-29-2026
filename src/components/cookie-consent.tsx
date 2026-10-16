@@ -57,7 +57,7 @@ export function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:right-auto md:max-w-md z-[500] p-4 rounded-xl border border-white/10 bg-[#0c121d]/95 backdrop-blur-xl shadow-2xl">
+    <div className="fixed bottom-[4.75rem] left-4 right-4 md:right-auto md:max-w-md z-[500] p-4 rounded-xl border border-white/10 bg-[#0c121d]/95 backdrop-blur-xl shadow-2xl">
       <p className="text-xs text-muted-foreground leading-relaxed mb-3 font-code">
         We use essential cookies and local storage to run the studio, plus optional analytics and advertising measurement (including TikTok and AdSense on public pages). See our{' '}
         <Link href="/cookies" className="text-primary hover:underline">Cookie Policy</Link> and{' '}

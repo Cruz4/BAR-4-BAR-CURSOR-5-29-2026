@@ -667,6 +667,7 @@ function GuestPressingLandingInner() {
 
       {/* Live Pressing dock — in-flow on phone (above keyboard); fixed on larger screens */}
       <div
+        data-bottom-dock=""
         className={cn(
           'z-[190] shrink-0 border-t border-white/10 bg-black/80 backdrop-blur-xl',
           'max-sm:relative max-sm:max-h-[min(52dvh,100%)] max-sm:overflow-y-auto max-sm:overscroll-contain',

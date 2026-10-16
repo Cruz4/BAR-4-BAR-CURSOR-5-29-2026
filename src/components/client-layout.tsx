@@ -39,6 +39,7 @@ import { InviteGateGuard } from './invite-gate-guard';
 import { DropPlayerProvider, useOptionalDropPlayer } from '@/context/drop-player-context';
 import { DropCartProvider } from '@/context/drop-cart-context';
 import { DropNowPlayingBar, shouldHideDropNowPlayingBar } from '@/components/library/drop-now-playing-bar';
+import { Studio4000Link } from '@/components/studio-4000-link';
 import { FirstDropLatheHost } from '@/components/first-drop-lathe';
 import { ManualPathCoach } from '@/components/manual-path-coach';
 import { ProFeaturePreviewBanner } from './pro-feature-preview-banner';
@@ -211,6 +212,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {!isSharePage && !isPublicProfilePage && !isMarketingCapture && <StudioTips />}
               {!isSharePage && !isPublicProfilePage && <FloatingInkSpent />}
               {showBottomNowPlaying ? <DropNowPlayingBar /> : null}
+              <Studio4000Link />
               <FirstDropLatheHost />
               {!isSharePage && !isPublicProfilePage && !isMarketingShell && !isMarketingCapture && <ManualPathCoach />}
               <Toaster />

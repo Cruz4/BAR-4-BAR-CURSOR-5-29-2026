@@ -76,6 +76,7 @@ export const PUBLIC_SITEMAP_PATHS: Array<{
   { path: '/discover', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/charts', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/leaderboard', changeFrequency: 'weekly', priority: 0.75 },
+  { path: '/studio4000', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/login', changeFrequency: 'weekly', priority: 0.65 },
   { path: '/terms', changeFrequency: 'monthly', priority: 0.4 },
   { path: '/privacy', changeFrequency: 'monthly', priority: 0.4 },

@@ -7,7 +7,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: data: https://firebasestorage.googleapis.com https://*.firebasestorage.app https://*.googleapis.com",
-  "connect-src 'self' data: blob: https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://analytics.tiktok.com https://analytics-ipv6.tiktok.com https://business-api.tiktok.com https://*.tiktok.com https://*.tiktokw.us https://*.tiktokv.com https://*.pangle-ads.com",
+  "connect-src 'self' data: blob: https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.stripe.com https://api.github.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://analytics.tiktok.com https://analytics-ipv6.tiktok.com https://business-api.tiktok.com https://*.tiktok.com https://*.tiktokw.us https://*.tiktokv.com https://*.pangle-ads.com",
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://akasheet.com https://www.akasheet.com https://bar4bar.ink https://*.firebaseapp.com https://www.google.com https://www.gstatic.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.googlesyndication.com https://*.adtrafficquality.google https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://*.youtube-nocookie.com https://w.soundcloud.com https://*.soundcloud.com https://open.spotify.com https://*.spotify.com https://suno.com https://*.suno.com https://app.suno.ai https://www.tiktok.com https://*.tiktok.com https://www.instagram.com https://*.instagram.com https://www.facebook.com https://*.facebook.com https://facebook.com",
   "object-src 'none'",
   "base-uri 'self'",
@@ -47,6 +47,16 @@ const nextConfig = {
     return [
       { source: '/folds', destination: '/msgs', permanent: true },
       { source: '/folds/:foldId', destination: '/msgs/:foldId', permanent: true },
+      { source: '/studio-4000-page', destination: '/studio4000', permanent: false },
+      { source: '/studio-4000-page/', destination: '/studio4000', permanent: false },
+      { source: '/studio-4000-page/index.html', destination: '/studio4000', permanent: false },
+    ];
+  },
+  async rewrites() {
+    return [
+      { source: '/studio4000', destination: '/studio-4000-page/index.html' },
+      { source: '/studio4000/', destination: '/studio-4000-page/index.html' },
+      { source: '/studio4000/:path*', destination: '/studio-4000-page/:path*' },
     ];
   },
   async headers() {
